@@ -16,6 +16,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get audio player
     audioPlayer = document.getElementById('audioPlayer');
     
+    // Add name input listener
+    const userNameInput = document.getElementById('userName');
+    if (userNameInput) {
+        userNameInput.addEventListener('input', updateUserDisplay);
+        // Load saved name from localStorage if exists
+        const savedName = localStorage.getItem('karaoke_user_name');
+        if (savedName) {
+            userNameInput.value = savedName;
+        }
+    }
+    
     // Load all songs for song book
     loadAllSongs();
     
@@ -377,8 +388,17 @@ function updateUserDisplay() {
     const userDisplayName = document.getElementById('userDisplayName');
     
     if (userNameInput && userDisplayName) {
-        const userName = userNameInput.value.trim() || 'Guest';
-        userDisplayName.textContent = `Welcome, ${userName}`;
+        const userName = userNameInput.value.trim() || 'Enter your name:';
+        
+        if (userName === 'Enter your name:') {
+            userDisplayName.textContent = 'Enter your name:';
+            userDisplayName.style.color = 'rgba(255, 255, 255, 0.6)';
+        } else {
+            userDisplayName.textContent = `🎤 Welcome, ${userName}!`;
+            userDisplayName.style.color = '#f093fb';
+            // Save name to localStorage
+            localStorage.setItem('karaoke_user_name', userName);
+        }
     }
 }
 
