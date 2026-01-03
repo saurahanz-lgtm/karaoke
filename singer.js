@@ -19,11 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add name input listener
     const userNameInput = document.getElementById('userName');
     if (userNameInput) {
-        userNameInput.addEventListener('input', updateUserDisplay);
-        // Load saved name from localStorage if exists
-        const savedName = localStorage.getItem('karaoke_user_name');
-        if (savedName) {
-            userNameInput.value = savedName;
+        // Load logged-in user from localStorage
+        const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
+        if (loggedInUser) {
+            const user = JSON.parse(loggedInUser);
+            userNameInput.value = user.username;
+            localStorage.setItem('karaoke_user_name', user.username);
         }
     }
     
