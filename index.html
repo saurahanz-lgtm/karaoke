@@ -258,6 +258,9 @@
     <!-- Admin Login Modal -->
     <div id="adminLoginModal" class="login-modal-custom">
         <div class="login-title">Admin Login</div>
+        <div style="color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; margin-bottom: 15px; text-align: center;">
+            Demo: admin_user / admin123
+        </div>
         <form onsubmit="validateAdminLogin(event)">
             <div class="login-form-group">
                 <label>Admin Name</label>
@@ -277,6 +280,9 @@
     <!-- Singer Login Modal -->
     <div id="singerLoginModal" class="login-modal-custom">
         <div class="login-title">Singer Login</div>
+        <div style="color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; margin-bottom: 15px; text-align: center;">
+            Demo: john_doe / pass123
+        </div>
         <form onsubmit="validateSingerLogin(event)">
             <div class="login-form-group">
                 <label>Username</label>
@@ -295,7 +301,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Initialize demo data if not exists
+        // Initialize demo data if not exists - Run immediately
         function initializeDemoData() {
             const stored = localStorage.getItem('karaoke_users');
             if (!stored) {
@@ -309,7 +315,9 @@
             }
         }
 
-        // Initialize on page load
+        // Initialize immediately on page load
+        initializeDemoData();
+        // Also initialize when DOMContentLoaded
         document.addEventListener('DOMContentLoaded', initializeDemoData);
         // Open Admin Login Modal
         function openAdminLogin() {
