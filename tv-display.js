@@ -135,6 +135,21 @@ function displayCurrentSong() {
     const displayContainer = document.getElementById('currentSongDisplay');
     const centerSingerName = document.getElementById('centerSingerName');
 
+    // If no current song, automatically play first song from queue
+    if (!currentSong || !currentSong.title) {
+        if (tvQueue.length > 0) {
+            // Auto-play first queued song
+            const firstSong = tvQueue[0];
+            currentSong = {
+                title: firstSong.title,
+                artist: firstSong.artist,
+                videoId: firstSong.videoId,
+                singer: firstSong.requestedBy
+            };
+            localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
+        }
+    }
+
     if (currentSong && currentSong.title) {
         // Play video if videoId exists
         if (currentSong.videoId) {
