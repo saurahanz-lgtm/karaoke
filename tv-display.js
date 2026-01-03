@@ -242,20 +242,24 @@ function displayQueue() {
 function updateReserveList() {
     const reserveListItems = document.getElementById('reserveListItems');
     
-    if (!tvQueue || tvQueue.length === 0) {
-        reserveListItems.innerHTML = '<div style="color: rgba(255, 255, 255, 0.5); font-size: 0.9rem;">No upcoming songs</div>';
+    // Load reserved songs from localStorage
+    const reservedSongs = JSON.parse(localStorage.getItem('karaoke_reserved_songs') || '[]');
+    const songsToDisplay = tvQueue.length > 0 ? tvQueue : reservedSongs;
+    
+    if (!songsToDisplay || songsToDisplay.length === 0) {
+        reserveListItems.innerHTML = '<div style="color: rgba(255, 255, 255, 0.5); font-size: 0.9rem;">No songs available</div>';
         return;
     }
 
     // Show first 5 songs in reserve list
     let html = '';
-    tvQueue.slice(0, 5).forEach((song, index) => {
+    songsToDisplay.slice(0, 5).forEach((song, index) => {
         html += `
             <div class="reserve-item">
                 <div class="reserve-item-number">${index + 1}</div>
                 <div class="reserve-item-title">${song.title}</div>
                 <div class="reserve-item-artist">${song.artist}</div>
-                <div class="reserve-item-singer">${song.requestedBy}</div>
+                <div class="reserve-item-singer">${song.requestedBy || 'Song Book'}</div>
             </div>
         `;
     });
