@@ -168,6 +168,118 @@ body{
   padding:8px;
   border-radius:8px;
 }
+
+/* Mobile Responsive Design */
+@media (max-width: 768px) {
+  .container-main {
+    padding: 15px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .card-ui {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .card-ui h3 {
+    font-size: 1.1rem;
+  }
+
+  .searchbox {
+    flex-direction: column;
+  }
+
+  .searchbox input {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .searchbtn {
+    width: 100%;
+    padding: 12px 18px;
+  }
+
+  .controls {
+    gap: 8px;
+  }
+
+  .controls button {
+    padding: 14px;
+    font-size: 18px;
+  }
+
+  .disconnect {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+  }
+
+  .video-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .song-item {
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .song-item button {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container-main {
+    max-width: 100%;
+    padding: 12px;
+  }
+
+  .header h1 {
+    font-size: 1.3rem;
+  }
+
+  .card-ui {
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+
+  .card-ui h3 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+
+  .controls button {
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .searchbox input {
+    font-size: 16px; /* Prevents iOS zoom on input focus */
+  }
+
+  .disconnect {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  #userDisplayName {
+    font-size: 1.1rem !important;
+  }
+
+  #userName {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+}
 </style>
 </head>
 

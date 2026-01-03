@@ -317,7 +317,11 @@ body {
 
 @media (max-width: 600px) {
     .select-btn {
-        padding: 4px 10px;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        min-height: 36px;
+        min-width: 70px;
+    }
         font-size: 0.75rem;
     }
 }
