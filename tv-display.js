@@ -79,8 +79,8 @@ function updateFullscreenButton() {
         reserveList.classList.add('show');
     } else {
         btn.textContent = '⛶ Full Screen';
-        // Hide reserve list when not in fullscreen
-        reserveList.classList.remove('show');
+        // Keep reserve list visible always
+        reserveList.classList.add('show');
     }
 }
 
