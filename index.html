@@ -85,7 +85,7 @@
             .login-modal-custom {
                 background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 100%);
                 border-radius: 20px;
-                padding: 40px;
+                padding: clamp(20px, 5vw, 40px);
                 color: white;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
                 max-width: 400px;
@@ -96,6 +96,8 @@
                 left: 50%;
                 transform: translate(-50%, -50%);
                 z-index: 1000;
+                max-height: 90vh;
+                overflow-y: auto;
             }
 
             .login-modal-custom.show {
@@ -111,6 +113,45 @@
                 bottom: 0;
                 display: none;
                 z-index: 999;
+            }
+
+            .login-modal-overlay.show {
+                display: block;
+            }
+
+            /* Mobile responsive login modal */
+            @media (max-width: 480px) {
+                .login-modal-custom {
+                    width: 95%;
+                    max-width: 100%;
+                }
+
+                .login-title {
+                    font-size: 1.4rem;
+                }
+
+                .login-form-group input {
+                    padding: 10px 12px;
+                    font-size: 16px; /* Prevent zoom on iOS */
+                }
+
+                .login-buttons {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
+                .login-btn {
+                    padding: 12px 15px;
+                    font-size: 1rem;
+                }
+
+                .role-container {
+                    flex-direction: column;
+                }
+
+                .role-btn {
+                    width: 100% !important;
+                }
             }
 
             .login-modal-overlay.show {
