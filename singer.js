@@ -42,10 +42,13 @@ function disconnect() {
 // Handle search form submission
 async function handleSearch(e) {
     e.preventDefault();
+    console.log('Search initiated');
     
     const searchInput = document.getElementById('searchInput');
     const userNameInput = document.getElementById('userName');
-    const searchQuery = searchInput.value.trim();
+    const searchQuery = searchInput ? searchInput.value.trim() : '';
+    
+    console.log('Search query:', searchQuery);
 
     if (!searchQuery) {
         alert('Please enter a song name');
@@ -54,14 +57,19 @@ async function handleSearch(e) {
 
     // Disable button during search
     const searchBtn = document.querySelector('.searchbtn');
+    console.log('Search button found:', !!searchBtn);
+    
     if (searchBtn) {
         searchBtn.disabled = true;
         searchBtn.textContent = '⏳ Searching...';
     }
 
     try {
+        console.log('Starting YouTube search for:', searchQuery);
+        
         // Use YouTube API through wrapper
         searchResults = await performSearch(searchQuery);
+        console.log('Search results:', searchResults);
         
         const userName = userNameInput ? userNameInput.value : 'Guest';
         displaySearchResults(searchResults, userName);
