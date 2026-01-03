@@ -22,30 +22,28 @@
             const minWidth = 768; // Tablet minimum width
             if (window.innerWidth < minWidth) {
                 // Show restriction message and redirect
-                document.body.innerHTML = `
+                const restrictionHTML = `
                     <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 50%, #0f0f1e 100%); font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; color: white; padding: 20px; text-align: center;">
                         <div style="max-width: 400px;">
                             <div style="font-size: 3rem; margin-bottom: 20px;">📺</div>
                             <h1 style="font-size: 1.8rem; margin-bottom: 15px; color: #667eea;">TV Display Only</h1>
                             <p style="font-size: 1.1rem; margin-bottom: 20px; opacity: 0.9;">This page is designed for large screens (tablets, desktops, and TVs).</p>
                             <p style="font-size: 0.95rem; margin-bottom: 30px; opacity: 0.7;">Please use a device with screen width of 768px or larger.</p>
-                            <p style="font-size: 0.85rem; margin-bottom: 30px; color: #f093fb;">Your screen: ${window.innerWidth}px × ${window.innerHeight}px</p>
+                            <p style="font-size: 0.85rem; margin-bottom: 30px; color: #f093fb;">Your screen: ` + window.innerWidth + `px × ` + window.innerHeight + `px</p>
                             <a href="index.html" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">← Back to Home</a>
                         </div>
                     </div>
                 `;
+                document.documentElement.innerHTML = restrictionHTML;
                 return false;
             }
             return true;
         }
         
-        // Check on load and on resize
-        if (!checkDeviceSize()) {
-            // Prevent rest of page from loading if too small
-            document.addEventListener('DOMContentLoaded', function(e) {
-                e.preventDefault();
-            });
-        }
+        // Check on load
+        window.addEventListener('load', function() {
+            checkDeviceSize();
+        });
         
         // Re-check on window resize (for responsive behavior)
         window.addEventListener('resize', checkDeviceSize);
