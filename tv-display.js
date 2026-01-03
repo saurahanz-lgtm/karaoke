@@ -134,7 +134,6 @@ function loadQueueData() {
 function displayCurrentSong() {
     const displayContainer = document.getElementById('currentSongDisplay');
     const centerSingerName = document.getElementById('centerSingerName');
-    const singNowHeader = document.getElementById('singNowHeader');
 
     if (currentSong && currentSong.title) {
         // Play video if videoId exists
@@ -147,9 +146,6 @@ function displayCurrentSong() {
             <div class="video-song-artist">🎤 ${currentSong.artist}</div>
             <div class="video-song-singer">Sung by: ${currentSong.singer}</div>
         `;
-        
-        // Show "KANTAHAN NA" header
-        singNowHeader.classList.add('show');
         
         // Show center singer name with mic icon
         centerSingerName.innerHTML = `
@@ -167,7 +163,6 @@ function displayCurrentSong() {
         displayContainer.innerHTML = `
             <div class="waiting-message">📋 Please select a song to begin!</div>
         `;
-        singNowHeader.classList.remove('show');
         centerSingerName.classList.remove('show');
         centerSingerName.innerHTML = '';
     }

@@ -129,38 +129,6 @@
             opacity: 1;
         }
 
-        .sing-now-header {
-            position: absolute;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 15;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .sing-now-header.show {
-            opacity: 1;
-        }
-
-        .sing-now-text {
-            font-size: 3rem;
-            font-weight: 900;
-            color: white;
-            text-shadow: 4px 4px 12px rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            letter-spacing: 3px;
-        }
-
-        .sing-now-mic {
-            font-size: 3rem;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
         .singer-name-display {
             font-size: 3.5rem;
             font-weight: 900;
@@ -470,14 +438,6 @@
         <div class="now-playing-section">
             <div class="now-playing-card">
                 <div id="videoPlayer"></div>
-                <!-- Sing Now Header -->
-                <div id="singNowHeader" class="sing-now-header">
-                    <div class="sing-now-text">
-                        <span class="sing-now-mic">🎤</span>
-                        <span>KANTAHAN NA</span>
-                        <span class="sing-now-mic">🎤</span>
-                    </div>
-                </div>
                 <!-- Center Singer Name Display -->
                 <div id="centerSingerName" class="center-singer-name"></div>
                 <div id="currentSongDisplay" class="video-info-overlay">
