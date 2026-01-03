@@ -225,6 +225,9 @@ function checkAndPlayCurrentSong() {
         // Play video if videoId exists
         playVideo(currentSong.videoId, currentSong.title, currentSong.artist, currentSong.singer);
         
+        // Display current song info as lyrics alternative
+        displaySongInfo(currentSong);
+        
         displayContainer.innerHTML = '';
         centerSingerName.innerHTML = '';
         centerSingerName.classList.remove('show');
@@ -233,9 +236,31 @@ function checkAndPlayCurrentSong() {
         const placeholderVideoId = 'dQw4w9WgXcQ'; // YouTube rickroll as placeholder
         playVideo(placeholderVideoId, 'Ready for your song', 'SDkaraoke', 'Waiting...');
         
+        // Show placeholder lyrics
+        displaySongInfo(null);
+        
         displayContainer.innerHTML = '';
         centerSingerName.classList.remove('show');
         centerSingerName.innerHTML = '';
+    }
+}
+
+// Display song information in lyrics section
+function displaySongInfo(song) {
+    const lyricsContent = document.getElementById('lyricsContent');
+    
+    if (!lyricsContent) return;
+    
+    if (song && song.title) {
+        lyricsContent.innerHTML = `
+            <div class="lyrics-text" style="animation: fadeInLyrics 0.8s ease-in;">
+                <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; color: #f093fb;">🎤 ${song.title}</div>
+                <div style="font-size: 1.5rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 15px;">by ${song.artist}</div>
+                <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.7);">Sung by: ${song.singer || 'Guest'}</div>
+            </div>
+        `;
+    } else {
+        lyricsContent.innerHTML = '<div class="lyrics-placeholder">♪ Lyrics will appear here ♪</div>';
     }
 }
 
