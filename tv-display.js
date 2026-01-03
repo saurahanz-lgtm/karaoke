@@ -160,16 +160,16 @@ function displayCurrentSong() {
         `;
         centerSingerName.classList.add('show');
     } else {
+        // Play placeholder video when no song is selected
+        const placeholderVideoId = 'dQw4w9WgXcQ'; // YouTube rickroll as placeholder
+        playVideo(placeholderVideoId, 'Ready for your song', 'SDkaraoke', 'Waiting...');
+        
         displayContainer.innerHTML = `
-            <div class="waiting-message">⏳ Waiting for next song...</div>
+            <div class="waiting-message">📋 Please select a song to begin!</div>
         `;
         singNowHeader.classList.remove('show');
         centerSingerName.classList.remove('show');
         centerSingerName.innerHTML = '';
-        // Destroy player if no song
-        if (player) {
-            player.stopVideo();
-        }
     }
 }
 
