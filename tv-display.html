@@ -247,6 +247,40 @@
             font-weight: 400;
         }
 
+        .queue-item-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .control-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(240, 147, 251, 0.8));
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .skip-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
         .empty-message {
             text-align: center;
             padding: 60px 40px;
@@ -403,6 +437,81 @@
         /* Scrollbar for reserve list */
         .reserve-list::-webkit-scrollbar {
             display: none;
+        }
+
+        /* Mobile responsive controls */
+        @media (max-width: 1024px) {
+            .queue-item-card {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 15px;
+                gap: 15px;
+            }
+
+            .queue-item-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .queue-number-large {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+
+            .queue-item-title {
+                font-size: 1.1rem;
+            }
+
+            .queue-item-artist {
+                font-size: 0.95rem;
+            }
+
+            .control-btn {
+                flex: 1;
+                min-width: 100px;
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .queue-section {
+                padding: 20px 15px;
+            }
+
+            .queue-item-card {
+                padding: 12px;
+                border-radius: 15px;
+            }
+
+            .queue-number-large {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .queue-item-title {
+                font-size: 0.95rem;
+            }
+
+            .queue-item-artist {
+                font-size: 0.85rem;
+            }
+
+            .queue-item-singer {
+                font-size: 0.8rem;
+            }
+
+            .control-btn {
+                flex: 1;
+                padding: 8px 10px;
+                font-size: 0.75rem;
+            }
+
+            .queue-title {
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>

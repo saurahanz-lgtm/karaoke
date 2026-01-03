@@ -231,6 +231,10 @@ function displayQueue() {
                     <div class="queue-item-artist">🎤 ${song.artist}</div>
                     <div class="queue-item-singer">👤 ${song.requestedBy}</div>
                 </div>
+                <div class="queue-item-controls">
+                    ${index === 0 ? `<button class="control-btn skip-btn" onclick="skipToNextSong()" title="Skip to next song">⏭️ Skip</button>` : ''}
+                    <button class="control-btn delete-btn" onclick="removeSongFromQueue(${song.id})" title="Remove song from queue">🗑️ Delete</button>
+                </div>
             </div>
         `;
     });
