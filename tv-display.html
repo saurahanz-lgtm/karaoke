@@ -17,26 +17,9 @@
     
     <!-- Device Restriction Check -->
     <script>
-        // Restrict to larger devices (tablet+ min 768px width)
+        // Device size check - allow mobile access for remote controls
         function checkDeviceSize() {
-            const minWidth = 768; // Tablet minimum width
-            if (window.innerWidth < minWidth) {
-                // Show restriction message and redirect
-                const restrictionHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 50%, #0f0f1e 100%); font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; color: white; padding: 20px; text-align: center;">
-                        <div style="max-width: 400px;">
-                            <div style="font-size: 3rem; margin-bottom: 20px;">📺</div>
-                            <h1 style="font-size: 1.8rem; margin-bottom: 15px; color: #667eea;">TV Display Only</h1>
-                            <p style="font-size: 1.1rem; margin-bottom: 20px; opacity: 0.9;">This page is designed for large screens (tablets, desktops, and TVs).</p>
-                            <p style="font-size: 0.95rem; margin-bottom: 30px; opacity: 0.7;">Please use a device with screen width of 768px or larger.</p>
-                            <p style="font-size: 0.85rem; margin-bottom: 30px; color: #f093fb;">Your screen: ` + window.innerWidth + `px × ` + window.innerHeight + `px</p>
-                            <a href="index.html" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">← Back to Home</a>
-                        </div>
-                    </div>
-                `;
-                document.documentElement.innerHTML = restrictionHTML;
-                return false;
-            }
+            // Allow all device sizes to access TV display for remote controls
             return true;
         }
         
@@ -560,6 +543,94 @@
 
             .queue-title {
                 font-size: 1.2rem;
+            }
+
+            /* Better mobile touch targets for control buttons */
+            .control-btn {
+                min-height: 44px;
+                min-width: 44px;
+                padding: 10px 12px;
+                font-size: 0.8rem;
+            }
+
+            .queue-item-card {
+                margin-bottom: 10px;
+            }
+
+            .reserve-list {
+                display: none;
+            }
+
+            .now-playing-section {
+                height: auto;
+                min-height: 50vh;
+            }
+
+            .lyrics-section {
+                height: 20%;
+                padding: 20px 15px 20px;
+            }
+
+            .lyrics-text {
+                font-size: 1.5rem;
+            }
+
+            .queue-section {
+                min-height: auto;
+            }
+        }
+
+        /* Extra small phones */
+        @media (max-width: 480px) {
+            .queue-section {
+                padding: 15px 10px;
+            }
+
+            .queue-item-card {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .queue-number-large {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+
+            .queue-item-title {
+                font-size: 0.85rem;
+            }
+
+            .queue-item-artist {
+                font-size: 0.75rem;
+            }
+
+            .control-btn {
+                flex: 1;
+                padding: 10px 8px;
+                font-size: 0.7rem;
+                min-height: 40px;
+            }
+
+            .skip-btn::before {
+                content: "⏭️";
+            }
+
+            .delete-btn::before {
+                content: "🗑️";
+            }
+
+            .lyrics-section {
+                height: 15%;
+                padding: 15px 10px;
+            }
+
+            .lyrics-text {
+                font-size: 1.2rem;
+            }
+
+            .lyrics-text > div {
+                margin-bottom: 5px !important;
             }
         }
     </style>
