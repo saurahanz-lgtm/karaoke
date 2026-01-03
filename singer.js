@@ -9,7 +9,9 @@ let reservedSongs = [];
 // Initialize singer page
 document.addEventListener('DOMContentLoaded', function() {
     const searchForm = document.getElementById('searchForm');
-    searchForm.addEventListener('submit', handleSearch);
+    if (searchForm) {
+        searchForm.addEventListener('submit', handleSearch);
+    }
     
     // Get audio player
     audioPlayer = document.getElementById('audioPlayer');
@@ -61,7 +63,8 @@ async function handleSearch(e) {
         // Use YouTube API through wrapper
         searchResults = await performSearch(searchQuery);
         
-        displaySearchResults(searchResults, userNameInput.value);
+        const userName = userNameInput ? userNameInput.value : 'Guest';
+        displaySearchResults(searchResults, userName);
     } catch (error) {
         console.error('Search error:', error);
         showAlert('Error searching for songs. Please try again.', 'danger');
@@ -362,8 +365,13 @@ function requestSongFromBook(title, artist) {
 
 // Update user display name
 function updateUserDisplay() {
-    const userName = document.getElementById('userName').value.trim() || 'Guest';
-    document.getElementById('userDisplayName').textContent = `Welcome, ${userName}`;
+    const userNameInput = document.getElementById('userName');
+    const userDisplayName = document.getElementById('userDisplayName');
+    
+    if (userNameInput && userDisplayName) {
+        const userName = userNameInput.value.trim() || 'Guest';
+        userDisplayName.textContent = `Welcome, ${userName}`;
+    }
 }
 
 // Reload player
