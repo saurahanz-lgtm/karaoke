@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDkaraoke - Home</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home-page">
+    <div class="min-vh-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <style>
+            .home-container {
+                width: 100%;
+                max-width: 600px;
+                padding: clamp(20px, 5vw, 40px);
+                text-align: center;
+                color: white;
+            }
+
+            .title-glow {
+                font-size: clamp(2.5rem, 8vw, 4rem);
+                font-weight: 900;
+                text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+                animation: gradient 3s ease infinite;
+                background-size: 200% 200%;
+                letter-spacing: 2px;
+                margin-bottom: clamp(20px, 5vw, 40px);
+            }
+
+            .subtitle {
+                font-size: clamp(1rem, 3vw, 1.3rem);
+                font-weight: 500;
+                margin-bottom: clamp(30px, 8vw, 50px);
+            }
+
+            .role-container {
+                display: flex;
+                gap: clamp(1.5rem, 4vw, 3rem);
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .role-btn {
+                padding: clamp(20px, 4vw, 35px) clamp(15px, 4vw, 30px) !important;
+                border-radius: 20px;
+                transition: all 0.3s ease;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                min-width: 160px;
+                font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+                border: none;
+                font-weight: 600;
+            }
+
+            .role-btn:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            }
+
+            .role-icon {
+                font-size: clamp(2.5rem, 10vw, 3.5rem);
+                margin-bottom: clamp(8px, 2vw, 15px);
+                display: block;
+            }
+
+            .role-label {
+                display: block;
+                margin-bottom: clamp(5px, 1.5vw, 10px);
+            }
+
+            .role-desc {
+                font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+                opacity: 0.9;
+                display: block;
+            }
+            
+            .login-modal-custom {
+                background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 100%);
+                border-radius: 20px;
+                padding: 40px;
+                color: white;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                max-width: 400px;
+                width: 90%;
+                display: none;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 1000;
+            }
+
+            .login-modal-custom.show {
+                display: block;
+            }
+
+            .login-modal-overlay {
+                background: rgba(0, 0, 0, 0.7);
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                display: none;
+                z-index: 999;
+            }
+
+            .login-modal-overlay.show {
+                display: block;
+            }
+
+            .login-title {
+                font-size: 1.8rem;
+                font-weight: 700;
+                margin-bottom: 30px;
+                text-align: center;
+            }
+
+            .login-form-group {
+                margin-bottom: 20px;
+            }
+
+            .login-form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+            }
+
+            .login-form-group input {
+                width: 100%;
+                padding: 12px 15px;
+                border: 2px solid rgba(102, 126, 234, 0.4);
+                border-radius: 10px;
+                background: rgba(102, 126, 234, 0.1);
+                color: white;
+                font-size: 1rem;
+                box-sizing: border-box;
+            }
+
+            .login-form-group input::placeholder {
+                color: rgba(255, 255, 255, 0.5);
+            }
+
+            .login-form-group input:focus {
+                outline: none;
+                border-color: #667eea;
+                background: rgba(102, 126, 234, 0.2);
+            }
+
+            .login-buttons {
+                display: flex;
+                gap: 10px;
+                margin-top: 30px;
+            }
+
+            .login-btn {
+                flex: 1;
+                padding: 12px 20px;
+                border: none;
+                border-radius: 10px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .login-btn-submit {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+            }
+
+            .login-btn-submit:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            }
+
+            .login-btn-cancel {
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+            }
+
+            .login-btn-cancel:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+        </style>
+        
+        <div class="home-container">
+            <div class="title-glow">🎤 KANTAHAN NA</div>
+            
+            <p class="subtitle">Choose your role:</p>
+            <div class="role-container">
+                <button class="role-btn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;" onclick="openAdminLogin()">
+                    <span class="role-icon">👨‍💼</span>
+                    <span class="role-label">Admin</span>
+                    <span class="role-desc">View Queue & Control</span>
+                </button>
+                <button class="role-btn" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white;" onclick="openSingerLogin()">
+                    <span class="role-icon">🎤</span>
+                    <span class="role-label">Singer</span>
+                    <span class="role-desc">Remote Control</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal Overlay -->
+    <div id="loginOverlay" class="login-modal-overlay"></div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminLoginModal" class="login-modal-custom">
+        <div class="login-title">Admin Login</div>
+        <form onsubmit="validateAdminLogin(event)">
+            <div class="login-form-group">
+                <label>Admin Name</label>
+                <input type="text" id="adminName" placeholder="Enter admin name" required>
+            </div>
+            <div class="login-form-group">
+                <label>Password</label>
+                <input type="password" id="adminPassword" placeholder="Enter password" required>
+            </div>
+            <div class="login-buttons">
+                <button type="submit" class="login-btn login-btn-submit">Login</button>
+                <button type="button" class="login-btn login-btn-cancel" onclick="closeLoginModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Singer Login Modal -->
+    <div id="singerLoginModal" class="login-modal-custom">
+        <div class="login-title">Singer Login</div>
+        <form onsubmit="validateSingerLogin(event)">
+            <div class="login-form-group">
+                <label>Username</label>
+                <input type="text" id="singerUsername" placeholder="Enter your name" required>
+            </div>
+            <div class="login-form-group">
+                <label>Password</label>
+                <input type="password" id="singerPassword" placeholder="Enter password" required>
+            </div>
+            <div class="login-buttons">
+                <button type="submit" class="login-btn login-btn-submit">Login</button>
+                <button type="button" class="login-btn login-btn-cancel" onclick="closeLoginModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize demo data if not exists
+        function initializeDemoData() {
+            const stored = localStorage.getItem('karaoke_users');
+            if (!stored) {
+                const demoUsers = [
+                    { id: 1, username: "john_doe", password: "pass123", role: "user", joined: "2024-01-01" },
+                    { id: 2, username: "maria_santos", password: "pass123", role: "user", joined: "2024-01-02" },
+                    { id: 3, username: "sarah_johnson", password: "pass123", role: "user", joined: "2024-01-03" },
+                    { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01" }
+                ];
+                localStorage.setItem('karaoke_users', JSON.stringify(demoUsers));
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializeDemoData);
+        // Open Admin Login Modal
+        function openAdminLogin() {
+            document.getElementById('loginOverlay').classList.add('show');
+            document.getElementById('adminLoginModal').classList.add('show');
+            document.getElementById('adminName').focus();
+        }
+
+        // Open Singer Login Modal
+        function openSingerLogin() {
+            document.getElementById('loginOverlay').classList.add('show');
+            document.getElementById('singerLoginModal').classList.add('show');
+            document.getElementById('singerUsername').focus();
+        }
+
+        // Close Login Modal
+        function closeLoginModal() {
+            document.getElementById('loginOverlay').classList.remove('show');
+            document.getElementById('adminLoginModal').classList.remove('show');
+            document.getElementById('singerLoginModal').classList.remove('show');
+        }
+
+        // Validate Admin Login
+        function validateAdminLogin(event) {
+            event.preventDefault();
+            const adminName = document.getElementById('adminName').value.trim();
+            const adminPassword = document.getElementById('adminPassword').value;
+
+            // Get users from localStorage
+            const users = JSON.parse(localStorage.getItem('karaoke_users') || '[]');
+            const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
+
+            if (adminUser) {
+                // Store logged-in user
+                localStorage.setItem('karaoke_logged_in_user', JSON.stringify(adminUser));
+                window.location.href = 'admin.html';
+            } else {
+                alert('❌ Invalid admin credentials. Please check your username and password.');
+                document.getElementById('adminName').focus();
+            }
+        }
+
+        // Validate Singer Login
+        function validateSingerLogin(event) {
+            event.preventDefault();
+            const singerUsername = document.getElementById('singerUsername').value.trim();
+            const singerPassword = document.getElementById('singerPassword').value;
+
+            // Get users from localStorage
+            const users = JSON.parse(localStorage.getItem('karaoke_users') || '[]');
+            const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
+
+            if (singerUser) {
+                // Store logged-in user
+                localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
+                window.location.href = 'singer.html';
+            } else {
+                alert('❌ Invalid credentials. Please check your username and password.');
+                document.getElementById('singerUsername').focus();
+            }
+        }
+
+        // Close modal when clicking overlay
+        document.getElementById('loginOverlay').addEventListener('click', closeLoginModal);
+    </script>
+</body>
+</html>

@@ -1,22 +1,13 @@
 {
   "name": "sdkaraoke",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "SDkaraoke - Interactive karaoke application",
+  "main": "index.html",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "serve",
+    "build": "echo 'No build needed for static site'"
   },
-  "dependencies": {
-    "next": "16.1.1",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.1",
-    "tailwindcss": "^4"
-  }
+  "keywords": ["karaoke", "singing"],
+  "author": "",
+  "license": "ISC"
 }
