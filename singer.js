@@ -164,17 +164,15 @@ function displaySearchResults(results, userName) {
         html += `
             <div class="video-card">
                 <div class="video-thumbnail">
-                    <img src="${thumbnailUrl}" alt="${song.title}" onerror="this.src='https://via.placeholder.com/320x180?text=No+Image'">
-                    <div class="video-overlay">
-                        <button class="select-btn" onclick="requestSong('${song.title.replace(/'/g, "\\'")}'                     , '${song.artist.replace(/'/g, "\\'")}', '${song.videoId}', '${userName}', this)">
-                            ✓ Select
-                        </button>
-                    </div>
+                    <img src="${thumbnailUrl}" alt="${song.title}" onerror="this.src='https://via.placeholder.com/120x68?text=No+Image'">
                 </div>
                 <div class="video-info">
                     <h5 class="video-title" title="${song.title}">${song.title}</h5>
                     <p class="video-artist">🎤 ${song.artist}</p>
                 </div>
+                <button class="select-btn" onclick="requestSong('${song.title.replace(/'/g, "\\'")}'                     , '${song.artist.replace(/'/g, "\\'")}', '${song.videoId}', '${userName}', this)">
+                    ✓ Select
+                </button>
             </div>
         `;
     });
