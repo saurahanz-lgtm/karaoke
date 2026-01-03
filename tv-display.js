@@ -141,28 +141,15 @@ function displayCurrentSong() {
             playVideo(currentSong.videoId, currentSong.title, currentSong.artist, currentSong.singer);
         }
         
-        displayContainer.innerHTML = `
-            <div class="video-song-title">${currentSong.title}</div>
-            <div class="video-song-artist">🎤 ${currentSong.artist}</div>
-            <div class="video-song-singer">Sung by: ${currentSong.singer}</div>
-        `;
-        
-        // Show center singer name with mic icon
-        centerSingerName.innerHTML = `
-            <div class="singer-name-display">
-                <span class="mic-icon">🎤</span>
-                <span>${currentSong.singer}</span>
-            </div>
-        `;
-        centerSingerName.classList.add('show');
+        displayContainer.innerHTML = '';
+        centerSingerName.innerHTML = '';
+        centerSingerName.classList.remove('show');
     } else {
         // Play placeholder video when no song is selected
         const placeholderVideoId = 'dQw4w9WgXcQ'; // YouTube rickroll as placeholder
         playVideo(placeholderVideoId, 'Ready for your song', 'SDkaraoke', 'Waiting...');
         
-        displayContainer.innerHTML = `
-            <div class="waiting-message">📋 Please select a song to begin!</div>
-        `;
+        displayContainer.innerHTML = '';
         centerSingerName.classList.remove('show');
         centerSingerName.innerHTML = '';
     }
