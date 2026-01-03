@@ -56,8 +56,7 @@ async function handleSearch(e) {
     searchBtn.textContent = '⏳ Searching...';
 
     try {
-        // Demo: Simulated search results
-        // In a real app, this would call your backend API
+        // Use YouTube API through wrapper
         searchResults = await performSearch(searchQuery);
         
         displaySearchResults(searchResults, userNameInput.value);
@@ -70,28 +69,17 @@ async function handleSearch(e) {
     }
 }
 
-// YouTube API search function
+// YouTube API search function using youtube-api.js wrapper
 async function performSearch(query) {
-    // YouTube API Key
-    const API_KEY = 'AIzaSyDHwTm9Fw80vVfpaZwuzBAUJF4ZNfi-SDk';
-    const API_URL = 'https://www.googleapis.com/youtube/v3/search';
-
     try {
-        const response = await fetch(
-            `${API_URL}?part=snippet&q=${encodeURIComponent(query + ' karaoke')}&type=video&maxResults=10&key=${API_KEY}`
-        );
+        // Use the searchYouTubeKaraoke function from youtube-api.js
+        const results = await searchYouTubeKaraoke(query);
         
-        if (!response.ok) {
-            throw new Error('YouTube API error');
-        }
-
-        const data = await response.json();
-        
-        return data.items.map(item => ({
-            title: item.snippet.title,
-            artist: item.snippet.channelTitle,
-            videoId: item.id.videoId,
-            thumbnail: item.snippet.thumbnails.default.url
+        return results.map(item => ({
+            title: item.title,
+            artist: item.artist,
+            videoId: item.videoId,
+            thumbnail: item.thumbnail
         }));
     } catch (error) {
         console.error('YouTube API Error:', error);
