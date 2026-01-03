@@ -218,6 +218,108 @@ body {
     cursor: not-allowed;
 }
 
+/* ===== SEARCH RESULTS GRID ===== */
+.search-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.video-card {
+    background: rgba(20, 20, 30, 0.8);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.video-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+.video-thumbnail {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%;
+    background: #000;
+    overflow: hidden;
+}
+
+.video-thumbnail img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.video-card:hover .video-overlay {
+    opacity: 1;
+}
+
+.select-btn {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+}
+
+.select-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 30px rgba(40, 167, 69, 0.5);
+}
+
+.select-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.video-info {
+    padding: 12px;
+    background: rgba(15, 15, 30, 0.9);
+}
+
+.video-title {
+    color: #fff;
+    margin: 0 0 6px 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.video-artist {
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+    font-size: 0.85rem;
+}
+
 /* ===== LOADING STATE ===== */
 .spinner-border {
     color: #667eea !important;

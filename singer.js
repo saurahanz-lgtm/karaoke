@@ -157,21 +157,23 @@ function displaySearchResults(results, userName) {
         return;
     }
 
-    let html = `<h3 class="text-white mb-4" style="font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3><div class="row">`;
+    let html = `<h3 class="text-white mb-4" style="font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3><div class="search-results-grid">`;
 
     results.forEach((song, index) => {
+        const thumbnailUrl = `https://i.ytimg.com/vi/${song.videoId}/maxresdefault.jpg`;
         html += `
-            <div class="col-12 mb-4">
-                <div class="result-card text-white">
-                    <h5 class="card-title mb-2" style="font-weight: 600; font-size: 1.1rem;">
-                        ${song.title}
-                    </h5>
-                    <p class="mb-3" style="font-size: 0.9rem; opacity: 0.8;">
-                        🎤 ${song.artist}
-                    </p>
-                    <button class="btn request-btn text-white" onclick="requestSong('${song.title}', '${song.artist}', '${song.videoId}', '${userName}', this)">
-                        ✓ Request Song
-                    </button>
+            <div class="video-card">
+                <div class="video-thumbnail">
+                    <img src="${thumbnailUrl}" alt="${song.title}" onerror="this.src='https://via.placeholder.com/320x180?text=No+Image'">
+                    <div class="video-overlay">
+                        <button class="select-btn" onclick="requestSong('${song.title.replace(/'/g, "\\'")}'                     , '${song.artist.replace(/'/g, "\\'")}', '${song.videoId}', '${userName}', this)">
+                            ✓ Select
+                        </button>
+                    </div>
+                </div>
+                <div class="video-info">
+                    <h5 class="video-title" title="${song.title}">${song.title}</h5>
+                    <p class="video-artist">🎤 ${song.artist}</p>
                 </div>
             </div>
         `;
@@ -190,16 +192,9 @@ function requestSong(title, artist, videoId, userName, btn) {
 
     // Disable button during submission
     btn.disabled = true;
-    btn.textContent = '⏳ Adding to Queue...';
+    btn.textContent = '⏳ Adding...';
 
     try {
-        // In a real app, send to backend:
-        // const response = await fetch('/api/queue', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({ title, artist, videoId, requestedBy: userName })
-        // });
-
         // Save to localStorage (shared with TV display)
         const queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
         const newSong = {
@@ -225,21 +220,21 @@ function requestSong(title, artist, videoId, userName, btn) {
         
         // Simulate API response
         setTimeout(() => {
-            showAlert(`✅ "${title}" added to queue!`, 'success');
+            showAlert(`✅ "${title}" added to Reserved Songs!`, 'success');
             
             // Clear inputs
             document.getElementById('searchInput').value = '';
             document.getElementById('resultsContainer').innerHTML = '';
             
             btn.disabled = false;
-            btn.textContent = '✓ Request Song';
+            btn.textContent = '✓ Select';
         }, 500);
 
     } catch (error) {
         console.error('Error requesting song:', error);
-        showAlert('Error adding song to queue', 'danger');
+        showAlert('Error adding song to reserved songs', 'danger');
         btn.disabled = false;
-        btn.textContent = '✓ Request Song';
+        btn.textContent = '✓ Select';
     }
 }
 
