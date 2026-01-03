@@ -146,7 +146,8 @@ function displaySearchResults(results, userName) {
     const container = document.getElementById('resultsContainer');
 
     if (results.length === 0) {
-        const query = document.getElementById('searchInput').value;
+        const searchInput = document.getElementById('searchInput');
+        const query = searchInput ? searchInput.value : '';
         container.innerHTML = `
             <div class="alert alert-custom">
                 ❌ No results found for "${query}"
@@ -321,10 +322,15 @@ function displayReservedSongs() {
 
 // Request song from reserved songs
 function requestSongFromReserved(title, artist, videoId) {
-    const userName = document.getElementById('userName').value.trim();
+    const userNameInput = document.getElementById('userName');
+    if (!userNameInput) {
+        alert('Please enter your name first');
+        return;
+    }
+    const userName = userNameInput.value.trim();
     if (!userName) {
         alert('Please enter your name first');
-        document.getElementById('userName').focus();
+        userNameInput.focus();
         return;
     }
 
@@ -374,10 +380,15 @@ function displaySongBook() {
 
 // Request song from song book
 function requestSongFromBook(title, artist) {
-    const userName = document.getElementById('userName').value.trim();
+    const userNameInput = document.getElementById('userName');
+    if (!userNameInput) {
+        alert('Please enter your name first');
+        return;
+    }
+    const userName = userNameInput.value.trim();
     if (!userName) {
         alert('Please enter your name first');
-        document.getElementById('userName').focus();
+        userNameInput.focus();
         return;
     }
 
