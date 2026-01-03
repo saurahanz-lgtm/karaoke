@@ -51,9 +51,11 @@ async function handleSearch(e) {
     }
 
     // Disable button during search
-    const searchBtn = document.querySelector('.search-btn');
-    searchBtn.disabled = true;
-    searchBtn.textContent = '⏳ Searching...';
+    const searchBtn = document.querySelector('.searchbtn');
+    if (searchBtn) {
+        searchBtn.disabled = true;
+        searchBtn.textContent = '⏳ Searching...';
+    }
 
     try {
         // Use YouTube API through wrapper
@@ -64,8 +66,10 @@ async function handleSearch(e) {
         console.error('Search error:', error);
         showAlert('Error searching for songs. Please try again.', 'danger');
     } finally {
-        searchBtn.disabled = false;
-        searchBtn.textContent = '🔍 Search';
+        if (searchBtn) {
+            searchBtn.disabled = false;
+            searchBtn.textContent = '🔍 Search';
+        }
     }
 }
 
