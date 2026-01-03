@@ -4,6 +4,7 @@
 let tvQueue = [];
 let currentSong = null;
 let player;
+let youtubeAPIReady = false;
 
 // Initialize TV display
 document.addEventListener('DOMContentLoaded', function() {
@@ -11,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     generateQRCode();
     
     loadQueueData();
-    displayCurrentSong();
     displayQueue();
+    checkAndPlayCurrentSong();
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenButton);
@@ -23,17 +24,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-refresh every 3 seconds to check for updates
     setInterval(() => {
         loadQueueData();
-        displayCurrentSong();
         displayQueue();
+        checkAndPlayCurrentSong();
     }, 3000);
 });
 
 // On YouTube API ready
 function onYouTubeIframeAPIReady() {
-    // Initialize empty player
-    if (currentSong && currentSong.videoId) {
-        playVideo(currentSong.videoId, currentSong.title, currentSong.artist, currentSong.singer);
-    }
+    youtubeAPIReady = true;
+    // Check if there's a current song to play
+    checkAndPlayCurrentSong();
 }
 
 // Toggle fullscreen mode
@@ -130,8 +130,13 @@ function loadQueueData() {
     }
 }
 
-// Display current song with video
-function displayCurrentSong() {
+// Check and play current song (only when YouTube API is ready)
+function checkAndPlayCurrentSong() {
+    if (!youtubeAPIReady) {
+        // YouTube API not ready yet, wait
+        return;
+    }
+
     const displayContainer = document.getElementById('currentSongDisplay');
     const centerSingerName = document.getElementById('centerSingerName');
 
@@ -144,17 +149,16 @@ function displayCurrentSong() {
                 title: firstSong.title,
                 artist: firstSong.artist,
                 videoId: firstSong.videoId,
+                requestedBy: firstSong.requestedBy,
                 singer: firstSong.requestedBy
             };
             localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
         }
     }
 
-    if (currentSong && currentSong.title) {
+    if (currentSong && currentSong.title && currentSong.videoId) {
         // Play video if videoId exists
-        if (currentSong.videoId) {
-            playVideo(currentSong.videoId, currentSong.title, currentSong.artist, currentSong.singer);
-        }
+        playVideo(currentSong.videoId, currentSong.title, currentSong.artist, currentSong.singer);
         
         displayContainer.innerHTML = '';
         centerSingerName.innerHTML = '';
@@ -287,13 +291,15 @@ function skipToNextSong() {
         currentSong = {
             title: nextSong.title,
             artist: nextSong.artist,
+            videoId: nextSong.videoId,
+            requestedBy: nextSong.requestedBy,
             singer: nextSong.requestedBy
         };
 
         localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
         localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
 
-        displayCurrentSong();
+        checkAndPlayCurrentSong();
         displayQueue();
     }
 }
@@ -325,9 +331,11 @@ function deleteQueue() {
     
     if (confirm('Are you sure you want to clear all songs from the queue?')) {
         tvQueue = [];
+        currentSong = null;
         localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
+        localStorage.removeItem('karaoke_current_song');
         displayQueue();
-        displayCurrentSong();
+        checkAndPlayCurrentSong();
         alert('✅ Queue cleared successfully!');
     }
 }
