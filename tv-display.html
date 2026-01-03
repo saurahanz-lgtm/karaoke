@@ -325,22 +325,23 @@
             top: 30px;
             left: 30px;
             max-width: calc(100% - 120px);
-            background: transparent;
-            backdrop-filter: none;
-            border: none;
-            border-radius: 0;
-            padding: 0;
+            background: linear-gradient(135deg, rgba(15, 15, 30, 0.95), rgba(26, 10, 46, 0.95));
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(102, 126, 234, 0.4);
+            border-radius: 15px;
+            padding: 15px 20px;
             overflow-x: auto;
             overflow-y: hidden;
             z-index: 50;
             pointer-events: auto;
             opacity: 1;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
             display: flex;
             flex-direction: row;
-            gap: 20px;
+            gap: 15px;
             align-items: flex-start;
             white-space: nowrap;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.2);
         }
 
         .reserve-list.show {
@@ -353,53 +354,81 @@
 
         .reserve-item {
             color: white;
-            padding: 0;
-            border: none;
+            padding: 12px 10px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 10px;
             margin: 0;
             font-size: 0.8rem;
-            min-width: 100px;
+            min-width: 110px;
             flex-shrink: 0;
-            display: inline-block;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             text-align: center;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(240, 147, 251, 0.05));
+            transition: all 0.3s ease;
+        }
+
+        .reserve-item:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(240, 147, 251, 0.15));
+            border-color: rgba(102, 126, 234, 0.6);
+            transform: translateY(-2px);
         }
 
         .reserve-item-number {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border-radius: 50%;
-            width: 35px;
-            height: 35px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 0.9rem;
-            margin: 0 auto 6px;
+            font-size: 1.1rem;
+            margin: 0 auto 8px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
         .reserve-item-title {
-            font-weight: 600;
-            color: white;
-            margin-bottom: 2px;
-            font-size: 0.85rem;
-            line-height: 1.1;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+            font-size: 0.75rem;
+            line-height: 1.2;
             word-wrap: break-word;
+            max-width: 100px;
         }
 
         .reserve-item-artist {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.75rem;
+            color: rgba(240, 147, 251, 0.8);
+            font-size: 0.65rem;
             margin-bottom: 2px;
+            font-weight: 500;
         }
 
         .reserve-item-singer {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.6rem;
         }
 
         /* Scrollbar for reserve list */
         .reserve-list::-webkit-scrollbar {
-            display: none;
+            height: 4px;
+        }
+
+        .reserve-list::-webkit-scrollbar-track {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+        }
+
+        .reserve-list::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.4);
+            border-radius: 10px;
+        }
+
+        .reserve-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.6);
         }
     </style>
 </head>
