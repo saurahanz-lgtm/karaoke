@@ -5,29 +5,94 @@ let tvQueue = [];
 let currentSong = null;
 let player;
 let youtubeAPIReady = false;
+let useFirebase = false;
+let firebaseListenersSet = false;
+
+// Check if Firebase is properly configured
+function isFirebaseConfigured() {
+    try {
+        if (typeof firebase !== 'undefined' && firebase.database && firebase.app()) {
+            const config = firebase.app().options;
+            // Check if all required fields are present and not placeholders
+            return config.databaseURL && !config.databaseURL.includes('YOUR_');
+        }
+    } catch (e) {
+        return false;
+    }
+    return false;
+}
 
 // Initialize TV display
 document.addEventListener('DOMContentLoaded', function() {
     // Generate QR code
     generateQRCode();
     
-    loadQueueData();
-    displayQueue();
-    checkAndPlayCurrentSong();
+    // Check if Firebase is available
+    useFirebase = isFirebaseConfigured();
+    
+    if (useFirebase) {
+        // Use Firebase real-time listeners
+        initializeFirebaseListeners();
+    } else {
+        // Fallback to localStorage polling
+        loadQueueData();
+        displayQueue();
+        checkAndPlayCurrentSong();
+        
+        // Auto-refresh every 3 seconds
+        setInterval(() => {
+            loadQueueData();
+            displayQueue();
+            checkAndPlayCurrentSong();
+        }, 3000);
+    }
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenButton);
     document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
     document.addEventListener('mozfullscreenchange', updateFullscreenButton);
     document.addEventListener('msfullscreenchange', updateFullscreenButton);
-    
-    // Auto-refresh every 3 seconds to check for updates
-    setInterval(() => {
+});
+
+// Initialize Firebase real-time listeners
+function initializeFirebaseListeners() {
+    try {
+        const queueRef = firebase.database().ref('queue');
+        const currentSongRef = firebase.database().ref('currentSong');
+        
+        // Listen for queue changes
+        queueRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            tvQueue = data ? Object.values(data) : [];
+            displayQueue();
+            checkAndPlayCurrentSong();
+        });
+        
+        // Listen for current song changes
+        currentSongRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                currentSong = data;
+                checkAndPlayCurrentSong();
+            }
+        });
+        
+        firebaseListenersSet = true;
+        console.log('✅ Firebase real-time listeners initialized');
+    } catch (error) {
+        console.error('❌ Firebase initialization error:', error);
+        // Fallback to localStorage
+        useFirebase = false;
         loadQueueData();
         displayQueue();
         checkAndPlayCurrentSong();
-    }, 3000);
-});
+        setInterval(() => {
+            loadQueueData();
+            displayQueue();
+            checkAndPlayCurrentSong();
+        }, 3000);
+    }
+}
 
 // On YouTube API ready
 function onYouTubeIframeAPIReady() {
@@ -300,8 +365,15 @@ function skipToNextSong() {
             singer: nextSong.requestedBy
         };
 
-        localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
-        localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
+        if (useFirebase) {
+            // Update Firebase
+            firebase.database().ref('currentSong').set(currentSong);
+            firebase.database().ref('queue').set(tvQueue.length > 0 ? tvQueue : null);
+        } else {
+            // Fallback to localStorage
+            localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
+            localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
+        }
 
         checkAndPlayCurrentSong();
         displayQueue();
@@ -311,7 +383,15 @@ function skipToNextSong() {
 // Function to remove song from queue (called from admin)
 function removeSongFromQueue(songId) {
     tvQueue = tvQueue.filter(s => s.id !== songId);
-    localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
+    
+    if (useFirebase) {
+        // Update Firebase
+        firebase.database().ref('queue').set(tvQueue.length > 0 ? tvQueue : null);
+    } else {
+        // Fallback to localStorage
+        localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
+    }
+    
     displayQueue();
 }
 
@@ -336,8 +416,17 @@ function deleteQueue() {
     if (confirm('Are you sure you want to clear all songs from the queue?')) {
         tvQueue = [];
         currentSong = null;
-        localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
-        localStorage.removeItem('karaoke_current_song');
+        
+        if (useFirebase) {
+            // Clear Firebase
+            firebase.database().ref('queue').set(null);
+            firebase.database().ref('currentSong').set(null);
+        } else {
+            // Clear localStorage
+            localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
+            localStorage.removeItem('karaoke_current_song');
+        }
+        
         displayQueue();
         checkAndPlayCurrentSong();
         alert('✅ Queue cleared successfully!');

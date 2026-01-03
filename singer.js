@@ -5,6 +5,24 @@ let searchResults = [];
 let audioPlayer;
 let allSongs = [];
 let reservedSongs = [];
+let useSingerFirebase = false;
+
+// Check if Firebase is properly configured
+function isSingerFirebaseConfigured() {
+    try {
+        if (typeof firebase !== 'undefined' && firebase.database && firebase.app()) {
+            const config = firebase.app().options;
+            // Check if all required fields are present and not placeholders
+            return config.databaseURL && !config.databaseURL.includes('YOUR_');
+        }
+    } catch (e) {
+        return false;
+    }
+    return false;
+}
+
+// Initialize Firebase check
+useSingerFirebase = isSingerFirebaseConfigured();
 
 // Check if user is logged in on page load
 window.addEventListener('load', function() {
@@ -204,8 +222,17 @@ function requestSong(title, artist, videoId, userName, btn) {
     btn.textContent = '⏳ Adding...';
 
     try {
-        // Save to localStorage (shared with TV display)
-        const queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+        // Determine queue source
+        let queue = [];
+        
+        if (useSingerFirebase) {
+            // For Firebase, we'll get the queue from the listener
+            // For now, use localStorage as fallback
+            queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+        } else {
+            queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+        }
+        
         const newSong = {
             id: Math.max(...queue.map(s => s.id || 0), 0) + 1,
             title,
@@ -214,7 +241,20 @@ function requestSong(title, artist, videoId, userName, btn) {
             requestedBy: userName
         };
         queue.push(newSong);
-        localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+        
+        if (useSingerFirebase) {
+            // Write to Firebase
+            try {
+                firebase.database().ref('queue').set(queue);
+                console.log('✅ Song added to Firebase queue');
+            } catch (firebaseError) {
+                console.error('Firebase error, falling back to localStorage:', firebaseError);
+                localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+            }
+        } else {
+            // Use localStorage
+            localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+        }
 
         // Add to reserved songs if not already there
         const songExists = reservedSongs.some(s => s.videoId === videoId);
