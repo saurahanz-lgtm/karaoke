@@ -6,6 +6,17 @@ let audioPlayer;
 let allSongs = [];
 let reservedSongs = [];
 
+// Check if user is logged in on page load
+window.addEventListener('load', function() {
+    const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
+    if (!loggedInUser) {
+        // User is not logged in, redirect to login page
+        alert('Please login first');
+        window.location.href = 'index.html';
+        return;
+    }
+});
+
 // Initialize singer page
 document.addEventListener('DOMContentLoaded', function() {
     const searchForm = document.getElementById('searchForm');
