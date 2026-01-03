@@ -73,7 +73,7 @@ async function handleSearch(e) {
     }
 
     // Disable button during search
-    const searchBtn = document.querySelector('.searchbtn');
+    const searchBtn = document.querySelector('#searchForm .searchbtn') || document.querySelector('.searchbtn');
     console.log('Search button found:', !!searchBtn);
     
     if (searchBtn) {
