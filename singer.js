@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Update activity in admin user list
+    updateSingerActivity();
+    
     // Load all songs for song book
     loadAllSongs();
     
@@ -41,6 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update user display
     updateUserDisplay();
+    
+    // Update activity every 30 seconds
+    setInterval(updateSingerActivity, 30000);
 });
 
 // Disconnect function
@@ -448,3 +454,36 @@ function toggleMute() {
         btn.textContent = audioPlayer.muted ? '🔇 Unmute' : '🔊 Mute';
     }
 }
+
+// Update singer activity in admin list
+function updateSingerActivity() {
+    const singerName = localStorage.getItem('karaoke_user_name');
+    if (!singerName) return;
+    
+    // Get or create users array
+    let users = [];
+    const stored = localStorage.getItem('karaoke_users');
+    if (stored) {
+        users = JSON.parse(stored);
+    }
+    
+    // Find or create user entry
+    let user = users.find(u => u.username === singerName);
+    if (!user) {
+        user = {
+            id: users.length + 1,
+            username: singerName,
+            password: 'singer',
+            role: 'admin',
+            joined: new Date().toISOString().split('T')[0],
+            lastActivity: new Date().getTime()
+        };
+        users.push(user);
+    } else {
+        user.lastActivity = new Date().getTime();
+    }
+    
+    // Save updated users
+    localStorage.setItem('karaoke_users', JSON.stringify(users));
+}
+

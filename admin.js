@@ -52,15 +52,18 @@ function loadUsers() {
     if (stored) {
         users = JSON.parse(stored);
     } else {
-        // Demo data
+        // Demo data - all admin accounts
         users = [
-            { id: 1, username: "john_doe", password: "pass123", role: "user", joined: "2024-01-01" },
-            { id: 2, username: "maria_santos", password: "pass123", role: "user", joined: "2024-01-02" },
-            { id: 3, username: "sarah_johnson", password: "pass123", role: "user", joined: "2024-01-03" },
-            { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01" }
+            { id: 1, username: "john_doe", password: "pass123", role: "admin", joined: "2024-01-01", lastActivity: new Date().getTime() },
+            { id: 2, username: "maria_santos", password: "pass123", role: "admin", joined: "2024-01-02", lastActivity: 0 },
+            { id: 3, username: "sarah_johnson", password: "pass123", role: "admin", joined: "2024-01-03", lastActivity: 0 },
+            { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", lastActivity: new Date().getTime() }
         ];
         saveUsers();
     }
+    
+    // Set up activity tracking
+    setInterval(updateUserActivity, 5000); // Check every 5 seconds
 }
 
 // Save users to localStorage
@@ -145,8 +148,11 @@ function displayUsers() {
     
     let html = '';
     users.forEach((user, index) => {
-        const roleColor = user.role === 'admin' ? '#f093fb' : '#667eea';
-        const roleLabel = user.role === 'admin' ? '👨‍💼 Admin' : '👤 User';
+        const isOnline = isUserOnline(user);
+        const statusColor = isOnline ? '#28a745' : '#6c757d';
+        const statusLabel = isOnline ? '🟢 Online' : '⚫ Offline';
+        const lastActivityText = user.lastActivity ? new Date(user.lastActivity).toLocaleTimeString() : 'Never';
+        
         html += `
             <tr style="border-bottom: 1px solid rgba(102, 126, 234, 0.2);">
                 <td style="padding: 1.2rem;">${index + 1}</td>
@@ -154,15 +160,15 @@ function displayUsers() {
                     <strong>${user.username}</strong>
                 </td>
                 <td style="padding: 1.2rem;">
-                    <span style="background: ${roleColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
-                        ${roleLabel}
+                    <span style="background: ${statusColor}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                        ${statusLabel}
                     </span>
+                </td>
+                <td style="padding: 1.2rem;">
+                    <small style="opacity: 0.8;">Last: ${lastActivityText}</small>
                 </td>
                 <td style="padding: 1.2rem;">${user.joined}</td>
                 <td style="padding: 1.2rem;">
-                    <button class="btn btn-sm btn-primary me-2" onclick="openEditModal(${user.id})" style="background: linear-gradient(135deg, #667eea, #764ba2); border: none;">
-                        ✏️ Edit
-                    </button>
                     <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
                         🗑️ Delete
                     </button>
@@ -177,8 +183,31 @@ function displayUsers() {
 // Update statistics
 function updateStats() {
     document.getElementById('totalUsers').textContent = users.length;
-    document.getElementById('totalRegularUsers').textContent = users.filter(u => u.role === 'user').length;
-    document.getElementById('totalAdmins').textContent = users.filter(u => u.role === 'admin').length;
+    const onlineCount = users.filter(u => isUserOnline(u)).length;
+    document.getElementById('totalRegularUsers').textContent = onlineCount;
+    const offlineCount = users.filter(u => !isUserOnline(u)).length;
+    document.getElementById('totalAdmins').textContent = offlineCount;
+}
+
+// Check if user is online (active in last 5 minutes)
+function isUserOnline(user) {
+    if (!user.lastActivity) return false;
+    const fiveMinutesAgo = new Date().getTime() - (5 * 60 * 1000);
+    return user.lastActivity > fiveMinutesAgo;
+}
+
+// Update user activity when they interact with singer page
+function updateUserActivity() {
+    const singerName = localStorage.getItem('karaoke_user_name');
+    if (singerName) {
+        const user = users.find(u => u.username === singerName);
+        if (user) {
+            user.lastActivity = new Date().getTime();
+            saveUsers();
+            displayUsers();
+            updateStats();
+        }
+    }
 }
 
 // Open edit modal

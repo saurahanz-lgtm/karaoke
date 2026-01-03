@@ -136,42 +136,23 @@
             </div>
         </div>
 
-        <!-- Add New User Button -->
-        <div class="form-section">
-            <button type="button" class="btn search-btn text-white" data-bs-toggle="modal" data-bs-target="#addUserModal" style="font-size: clamp(0.85rem, 2vw, 0.95rem); padding: clamp(10px, 2vw, 14px) clamp(18px, 3vw, 25px);">
-                ➕ Add New User
-            </button>
-        </div>
-
         <!-- Users List -->
         <div>
-            <h2 class="table-title" style="color: #667eea; font-weight: 700;">📋 REGISTERED USERS</h2>
+            <h2 class="table-title" style="color: #667eea; font-weight: 700;">🎤 SINGER STATUS</h2>
             
             <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3 class="text-white mb-2">Total Users</h3>
+                    <h3 class="text-white mb-2">Total Singers</h3>
                     <p class="stat-number" id="totalUsers">0</p>
                 </div>
                 <div class="stat-card">
-                    <h3 class="text-white mb-2">Admins</h3>
-                    <p class="stat-number" id="totalAdmins">0</p>
+                    <h3 class="text-white mb-2" style="color: #28a745;">🟢 Online</h3>
+                    <p class="stat-number" id="totalRegularUsers" style="color: #28a745;">0</p>
                 </div>
                 <div class="stat-card">
-                    <h3 class="text-white mb-2">Regular Users</h3>
-                    <p class="stat-number" id="totalAdmins">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3 class="text-white mb-2">Regular Users</h3>
-                    <p class="stat-number" id="totalRegularUsers">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3 class="text-white mb-2" style="color: #28a745;">🟢 Active</h3>
-                    <p class="stat-number" id="activeUsers" style="color: #28a745;">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3 class="text-white mb-2" style="color: #dc3545;">🔴 Offline</h3>
-                    <p class="stat-number" id="offlineUsers" style="color: #dc3545;">0</p>
+                    <h3 class="text-white mb-2" style="color: #6c757d;">⚫ Offline</h3>
+                    <p class="stat-number" id="totalAdmins" style="color: #6c757d;">0</p>
                 </div>
             </div>
                     <div class="table-responsive">
@@ -179,8 +160,9 @@
                             <thead style="background: linear-gradient(135deg, #667eea, #764ba2);">
                                 <tr>
                                     <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">#</th>
-                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Username</th>
-                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Role</th>
+                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Singer Name</th>
+                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Status</th>
+                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Last Active</th>
                                     <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Joined</th>
                                     <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Actions</th>
                                 </tr>
