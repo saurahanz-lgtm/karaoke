@@ -66,13 +66,41 @@ function loadUsers() {
             }).catch((error) => {
                 console.warn('Firebase error, falling back to localStorage:', error.message);
                 loadFromLocalStorage();
+                displayUsers();
+                updateStats();
             });
         } catch (error) {
             console.warn('Firebase not configured, using localStorage:', error.message);
             loadFromLocalStorage();
+            displayUsers();
+            updateStats();
         }
     } else {
         loadFromLocalStorage();
+        displayUsers();
+        updateStats();
+    }
+    
+    // Set up real-time listener to catch updates from other admin windows
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            const usersRef = firebase.database().ref('users');
+            usersRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const firebaseUsers = Object.values(data);
+                    // Only update display if data actually changed
+                    if (JSON.stringify(firebaseUsers) !== JSON.stringify(users)) {
+                        users = firebaseUsers;
+                        console.log('🔄 Users updated from Firebase listener');
+                        displayUsers();
+                        updateStats();
+                    }
+                }
+            });
+        } catch (error) {
+            console.warn('Firebase listener setup failed:', error.message);
+        }
     }
     
     // Set up activity tracking
@@ -101,7 +129,7 @@ function saveUsers() {
     // Always save to localStorage as backup
     localStorage.setItem('karaoke_users', JSON.stringify(users));
     
-    // Try to save to Firebase
+    // Try to save to Firebase - IMMEDIATE WRITE
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
             const usersRef = firebase.database().ref('users');
@@ -111,21 +139,103 @@ function saveUsers() {
                 usersObj[user.id] = user;
             });
             usersRef.set(usersObj).then(() => {
-                console.log('✅ Users saved to Firebase');
+                console.log('✅ Users IMMEDIATELY saved to Firebase');
+                // Broadcast change to all tabs/windows
+                broadcastUserUpdate();
             }).catch((error) => {
                 console.warn('Firebase save error:', error.message);
+                // Still broadcast even if Firebase fails
+                broadcastUserUpdate();
             });
         } catch (error) {
             console.warn('Firebase not available, saved to localStorage only', error.message);
+            broadcastUserUpdate();
         }
+    } else {
+        // Firebase not available, just broadcast localStorage update
+        broadcastUserUpdate();
     }
-    
+}
+
+// Broadcast user update to all tabs/windows and pages
+function broadcastUserUpdate() {
     // Dispatch custom event to notify other pages of user database changes
     window.dispatchEvent(new CustomEvent('karaoke-users-updated', { 
         detail: { users, timestamp: new Date().getTime() }
     }));
     
     console.log('📊 User database updated and broadcasted');
+}
+
+// Reload users from Firebase to ensure we have latest data
+function reloadUsersFromFirebase(callback) {
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            const usersRef = firebase.database().ref('users');
+            usersRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    users = Object.values(data);
+                    console.log('✅ Users reloaded from Firebase before operation');
+                } else {
+                    loadFromLocalStorage();
+                }
+                if (callback) callback();
+            }).catch((error) => {
+                console.warn('Firebase error, using localStorage:', error.message);
+                loadFromLocalStorage();
+                if (callback) callback();
+            });
+        } catch (error) {
+            console.warn('Firebase error:', error.message);
+            loadFromLocalStorage();
+            if (callback) callback();
+        }
+    } else {
+        loadFromLocalStorage();
+        if (callback) callback();
+    }
+}
+
+// Continue with adding user after reloading from Firebase
+function continueAddUser(username, password, role) {
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+        showNotification(passwordValidation.message, 'warning');
+        return;
+    }
+    
+    // Check if user already exists
+    if (users.some(u => u.username === username)) {
+        showNotification('❌ Username already exists! Use a different name.', 'danger');
+        return;
+    }
+    
+    // Create new user
+    const newUser = {
+        id: Math.max(...users.map(u => u.id || 0), 0) + 1,
+        username,
+        password,
+        role,
+        joined: new Date().toISOString().split('T')[0],
+        lastActivity: new Date().getTime()
+    };
+    
+    users.push(newUser);
+    saveUsers(); // This saves to both Firebase and localStorage
+    
+    // Reset form
+    document.getElementById('addUserForm').reset();
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    showNotification(`✅ User "${username}" added successfully!`, 'success');
+    displayUsers();
+    updateStats();
 }
 
 // Validate password strength
@@ -148,46 +258,11 @@ function handleAddUser(e) {
         showNotification('Please fill in all fields', 'warning');
         return;
     }
-
-    // Validate password strength
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-        showNotification(passwordValidation.message, 'warning');
-        return;
-    }
-
-    // Check if username already exists
-    if (users.some(u => u.username === username)) {
-        showNotification('Username already exists', 'danger');
-        return;
-    }
-
-    // Create new user
-    const newUser = {
-        id: Math.max(...users.map(u => u.id), 0) + 1,
-        username,
-        password,
-        role,
-        joined: new Date().toISOString().split('T')[0]
-    };
-
-    users.push(newUser);
-    saveUsers();
     
-    // Clear form
-    document.getElementById('addUserForm').reset();
-    
-    // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
-    if (modal) {
-        modal.hide();
-    }
-    
-    // Update display
-    displayUsers();
-    updateStats();
-    
-    showNotification(`User "${username}" added successfully!`, 'success');
+    // Reload users from Firebase before adding (ensures we have latest data)
+    reloadUsersFromFirebase(function() {
+        continueAddUser(username, password, role);
+    });
 }
 
 // Display users in table

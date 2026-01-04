@@ -340,8 +340,8 @@
             const adminName = document.getElementById('adminName').value.trim();
             const adminPassword = document.getElementById('adminPassword').value;
 
-            // Try to get users from Firebase first, then fallback to localStorage
-            loadUsersForLogin(function(users) {
+            // Try to get users from Firebase first with a fresh load
+            forceReloadUsersForLogin(function(users) {
                 const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
 
                 if (adminUser) {
@@ -361,8 +361,8 @@
             const singerUsername = document.getElementById('singerUsername').value.trim();
             const singerPassword = document.getElementById('singerPassword').value;
 
-            // Try to get users from Firebase first, then fallback to localStorage
-            loadUsersForLogin(function(users) {
+            // Try to get users from Firebase first with a fresh load
+            forceReloadUsersForLogin(function(users) {
                 const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
 
                 if (singerUser) {
@@ -374,6 +374,45 @@
                     document.getElementById('singerUsername').focus();
                 }
             });
+        }
+        
+        // Force reload users from Firebase - gets latest data from Firebase
+        function forceReloadUsersForLogin(callback) {
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    const usersRef = firebase.database().ref('users');
+                    // Force refresh - bypass cache
+                    usersRef.once('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            const users = Object.values(data);
+                            console.log('✅ Users forcefully loaded from Firebase:', users.length);
+                            callback(users);
+                        } else {
+                            // Firebase is empty, use localStorage
+                            console.log('Firebase empty, using localStorage');
+                            const stored = localStorage.getItem('karaoke_users');
+                            const users = stored ? JSON.parse(stored) : [];
+                            callback(users);
+                        }
+                    }).catch((error) => {
+                        console.warn('Firebase error, falling back to localStorage:', error.message);
+                        const stored = localStorage.getItem('karaoke_users');
+                        const users = stored ? JSON.parse(stored) : [];
+                        callback(users);
+                    });
+                } catch (error) {
+                    console.warn('Firebase not configured, using localStorage:', error.message);
+                    const stored = localStorage.getItem('karaoke_users');
+                    const users = stored ? JSON.parse(stored) : [];
+                    callback(users);
+                }
+            } else {
+                // Firebase not available, use localStorage
+                const stored = localStorage.getItem('karaoke_users');
+                const users = stored ? JSON.parse(stored) : [];
+                callback(users);
+            }
         }
         
         // Load users from Firebase or localStorage
