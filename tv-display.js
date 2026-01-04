@@ -24,8 +24,11 @@ function isFirebaseConfigured() {
 
 // Initialize TV display
 document.addEventListener('DOMContentLoaded', function() {
-    // Generate QR code
+    // Generate QR code on load
     generateQRCode();
+    
+    // Regenerate QR code every 10 seconds to ensure it's always fresh
+    setInterval(generateQRCode, 10000);
     
     // Check if Firebase is available
     useFirebase = isFirebaseConfigured();
@@ -52,6 +55,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
     document.addEventListener('mozfullscreenchange', updateFullscreenButton);
     document.addEventListener('msfullscreenchange', updateFullscreenButton);
+    
+    // Refresh QR code when page becomes visible (user switches back to this tab)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            generateQRCode();
+        }
+    });
 });
 
 // Initialize Firebase real-time listeners
