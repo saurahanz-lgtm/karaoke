@@ -167,14 +167,14 @@ function generateQRCode() {
     
     // Get the current domain and path
     const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -1).join('/');
-    const singerPageUrl = baseUrl + '/index.html?role=singer';
+    const indexPageUrl = baseUrl + '/index.html';
     
     // Debug logging
-    console.log('📱 QR Code URL:', singerPageUrl);
+    console.log('📱 QR Code URL:', indexPageUrl);
     
     // Create QR code (smaller size for bottom right)
     new QRCode(qrContainer, {
-        text: singerPageUrl,
+        text: indexPageUrl,
         width: 110,
         height: 110,
         colorDark: "#000000",
