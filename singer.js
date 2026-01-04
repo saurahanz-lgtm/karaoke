@@ -264,6 +264,11 @@ function requestSong(title, artist, videoId, userName, btn) {
             localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
             displayReservedSongs(); // Refresh reserved songs to show new song
         }
+        
+        // Dispatch custom event to notify other windows/tabs of queue update
+        window.dispatchEvent(new CustomEvent('karaoke-queue-updated', { 
+            detail: { queue, timestamp: new Date().getTime() }
+        }));
 
         console.log(`Song requested: ${title} by ${artist} from ${userName}`);
         

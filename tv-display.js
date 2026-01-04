@@ -62,6 +62,24 @@ document.addEventListener('DOMContentLoaded', function() {
             generateQRCode();
         }
     });
+    
+    // Listen for storage changes from other tabs/windows (real-time sync with singer.html)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'karaoke_queue' || e.key === 'karaoke_current_song') {
+            console.log('📡 Storage change detected, updating display...');
+            loadQueueData();
+            displayQueue();
+            checkAndPlayCurrentSong();
+        }
+    });
+    
+    // Listen for custom karaoke queue update events
+    window.addEventListener('karaoke-queue-updated', function(e) {
+        console.log('🎵 Queue updated from singer control:', e.detail);
+        loadQueueData();
+        displayQueue();
+        checkAndPlayCurrentSong();
+    });
 });
 
 // Initialize Firebase real-time listeners
