@@ -69,6 +69,13 @@ function loadUsers() {
 // Save users to localStorage
 function saveUsers() {
     localStorage.setItem('karaoke_users', JSON.stringify(users));
+    
+    // Dispatch custom event to notify other pages of user database changes
+    window.dispatchEvent(new CustomEvent('karaoke-users-updated', { 
+        detail: { users, timestamp: new Date().getTime() }
+    }));
+    
+    console.log('📊 User database updated and broadcasted');
 }
 
 // Validate password strength

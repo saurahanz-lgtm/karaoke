@@ -77,6 +77,36 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update activity every 30 seconds
     setInterval(updateSingerActivity, 30000);
+    
+    // Listen for user database updates from admin dashboard
+    window.addEventListener('karaoke-users-updated', function(e) {
+        console.log('🔄 User database updated, checking user status...');
+        // Verify current user still exists in updated list
+        const loggedInUser = JSON.parse(localStorage.getItem('karaoke_logged_in_user') || '{}');
+        const users = e.detail.users;
+        const userStillExists = users.some(u => u.id === loggedInUser.id);
+        
+        if (!userStillExists) {
+            alert('Your account has been deleted by admin. Redirecting to login...');
+            window.location.href = 'index.html';
+        }
+    });
+    
+    // Also listen for storage changes for cross-tab sync
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'karaoke_users') {
+            console.log('📡 User database changed in another tab');
+            // Verify current user still exists
+            const loggedInUser = JSON.parse(localStorage.getItem('karaoke_logged_in_user') || '{}');
+            const users = JSON.parse(e.newValue || '[]');
+            const userStillExists = users.some(u => u.id === loggedInUser.id);
+            
+            if (!userStillExists) {
+                alert('Your account has been deleted. Redirecting to login...');
+                window.location.href = 'index.html';
+            }
+        }
+    });
 });
 
 // Disconnect function
