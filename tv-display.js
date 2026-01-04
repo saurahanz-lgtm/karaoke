@@ -157,7 +157,7 @@ function generateQRCode() {
     
     // Get the current domain and path
     const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -1).join('/');
-    const singerPageUrl = baseUrl + '/singer.html';
+    const singerPageUrl = baseUrl + '/qr-login.html';
     
     // Create QR code (smaller size for bottom right)
     new QRCode(qrContainer, {
