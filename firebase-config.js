@@ -3,13 +3,14 @@
 // Get them from Firebase Console: https://console.firebase.google.com/
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "YOUR_DATABASE_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyD3c23oURDtPQdiBRjOoK44A6olwnQej8M",
+    authDomain: "mykaraoke-586d9.firebaseapp.com",
+    databaseURL: "https://mykaraoke-586d9-default-rtdb.firebaseio.com",
+    projectId: "mykaraoke-586d9",
+    storageBucket: "mykaraoke-586d9.firebasestorage.app",
+    messagingSenderId: "157595077690",
+    appId: "1:157595077690:web:3e563ac4662444c4387903",
+    measurementId: "G-Z3EJTSHQXT"
 };
 
 // Initialize Firebase only if firebase is defined and not already initialized
