@@ -378,12 +378,21 @@
         document.getElementById('loginOverlay').addEventListener('click', closeLoginModal);
         
         // Check URL parameters to auto-open singer login (for QR code access)
-        document.addEventListener('DOMContentLoaded', function() {
+        function checkQRAccess() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('role') === 'singer') {
-                openSingerLogin();
+                // Use setTimeout to ensure UI is ready
+                setTimeout(function() {
+                    openSingerLogin();
+                }, 100);
             }
-        });
+        }
+        
+        // Check on initial load
+        checkQRAccess();
+        
+        // Also check on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', checkQRAccess);
     </script>
 </body>
 </html>
