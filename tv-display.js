@@ -241,6 +241,9 @@ function checkAndPlayCurrentSong() {
         // Display current song info as lyrics alternative
         displaySongInfo(currentSong);
         
+        // Update next song display
+        updateNextSongDisplay();
+        
         displayContainer.innerHTML = '';
         centerSingerName.innerHTML = '';
         centerSingerName.classList.remove('show');
@@ -343,7 +346,40 @@ function displayQueue() {
     });
 
     queueContainer.innerHTML = html;
+    updateNextSongDisplay();
     updateReserveList();
+}
+
+// Update next song display (horizontal, in upper left)
+function updateNextSongDisplay() {
+    const nextSongDisplay = document.getElementById('nextSongDisplay');
+    const nextSongTitle = document.getElementById('nextSongTitle');
+    const nextSongArtist = document.getElementById('nextSongArtist');
+    
+    if (!nextSongDisplay) return; // Element might not exist yet
+    
+    // Get the next song (skip the current playing song)
+    let nextSong = null;
+    
+    if (tvQueue.length > 0) {
+        // If there's a current song and it matches the first in queue, show second song
+        if (currentSong && currentSong.title === tvQueue[0].title) {
+            nextSong = tvQueue.length > 1 ? tvQueue[1] : null;
+        } else {
+            // Otherwise show the first song in queue
+            nextSong = tvQueue[0];
+        }
+    }
+    
+    if (nextSong) {
+        nextSongTitle.textContent = nextSong.title;
+        nextSongArtist.textContent = `by ${nextSong.artist}`;
+        nextSongDisplay.style.display = 'flex';
+    } else {
+        nextSongTitle.textContent = 'Waiting for next song...';
+        nextSongArtist.textContent = '-';
+        nextSongDisplay.style.display = 'flex';
+    }
 }
 
 // Update reserve list in top right corner
