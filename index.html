@@ -340,18 +340,19 @@
             const adminName = document.getElementById('adminName').value.trim();
             const adminPassword = document.getElementById('adminPassword').value;
 
-            // Get users from localStorage
-            const users = JSON.parse(localStorage.getItem('karaoke_users') || '[]');
-            const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
+            // Try to get users from Firebase first, then fallback to localStorage
+            loadUsersForLogin(function(users) {
+                const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
 
-            if (adminUser) {
-                // Store logged-in user
-                localStorage.setItem('karaoke_logged_in_user', JSON.stringify(adminUser));
-                window.location.href = 'admin.html';
-            } else {
-                alert('❌ Invalid admin credentials. Please check your username and password.');
-                document.getElementById('adminName').focus();
-            }
+                if (adminUser) {
+                    // Store logged-in user
+                    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(adminUser));
+                    window.location.href = 'admin.html';
+                } else {
+                    alert('❌ Invalid admin credentials. Please check your username and password.');
+                    document.getElementById('adminName').focus();
+                }
+            });
         }
 
         // Validate Singer Login
@@ -360,17 +361,54 @@
             const singerUsername = document.getElementById('singerUsername').value.trim();
             const singerPassword = document.getElementById('singerPassword').value;
 
-            // Get users from localStorage
-            const users = JSON.parse(localStorage.getItem('karaoke_users') || '[]');
-            const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
+            // Try to get users from Firebase first, then fallback to localStorage
+            loadUsersForLogin(function(users) {
+                const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
 
-            if (singerUser) {
-                // Store logged-in user
-                localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
-                window.location.href = 'singer.html';
+                if (singerUser) {
+                    // Store logged-in user
+                    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
+                    window.location.href = 'singer.html';
+                } else {
+                    alert('❌ Invalid credentials. Please check your username and password.');
+                    document.getElementById('singerUsername').focus();
+                }
+            });
+        }
+        
+        // Load users from Firebase or localStorage
+        function loadUsersForLogin(callback) {
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    const usersRef = firebase.database().ref('users');
+                    usersRef.once('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            const users = Object.values(data);
+                            callback(users);
+                        } else {
+                            // Firebase is empty, use localStorage
+                            const stored = localStorage.getItem('karaoke_users');
+                            const users = stored ? JSON.parse(stored) : [];
+                            callback(users);
+                        }
+                    }).catch((error) => {
+                        console.warn('Firebase error, using localStorage:', error.message);
+                        const stored = localStorage.getItem('karaoke_users');
+                        const users = stored ? JSON.parse(stored) : [];
+                        callback(users);
+                    });
+                } catch (error) {
+                    console.warn('Firebase not configured, using localStorage:', error.message);
+                    const stored = localStorage.getItem('karaoke_users');
+                    const users = stored ? JSON.parse(stored) : [];
+                    callback(users);
+                }
             } else {
-                alert('❌ Invalid credentials. Please check your username and password.');
-                document.getElementById('singerUsername').focus();
+                // Firebase not available, use localStorage
+                const stored = localStorage.getItem('karaoke_users');
+                const users = stored ? JSON.parse(stored) : [];
+                callback(users);
             }
         }
 

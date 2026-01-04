@@ -46,8 +46,41 @@ function logout() {
     }
 }
 
-// Load users from localStorage
+// Load users from Firebase/localStorage
 function loadUsers() {
+    // Check if Firebase is available
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            const usersRef = firebase.database().ref('users');
+            usersRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    users = Object.values(data);
+                    console.log('✅ Users loaded from Firebase:', users.length);
+                } else {
+                    // Firebase is empty, use default/localStorage
+                    loadFromLocalStorage();
+                }
+                displayUsers();
+                updateStats();
+            }).catch((error) => {
+                console.warn('Firebase error, falling back to localStorage:', error.message);
+                loadFromLocalStorage();
+            });
+        } catch (error) {
+            console.warn('Firebase not configured, using localStorage:', error.message);
+            loadFromLocalStorage();
+        }
+    } else {
+        loadFromLocalStorage();
+    }
+    
+    // Set up activity tracking
+    setInterval(updateUserActivity, 5000); // Check every 5 seconds
+}
+
+// Load from localStorage fallback
+function loadFromLocalStorage() {
     const stored = localStorage.getItem('karaoke_users');
     if (stored) {
         users = JSON.parse(stored);
@@ -61,14 +94,31 @@ function loadUsers() {
         ];
         saveUsers();
     }
-    
-    // Set up activity tracking
-    setInterval(updateUserActivity, 5000); // Check every 5 seconds
 }
 
-// Save users to localStorage
+// Save users to Firebase/localStorage
 function saveUsers() {
+    // Always save to localStorage as backup
     localStorage.setItem('karaoke_users', JSON.stringify(users));
+    
+    // Try to save to Firebase
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            const usersRef = firebase.database().ref('users');
+            // Convert array to object with IDs as keys for better Firebase structure
+            const usersObj = {};
+            users.forEach(user => {
+                usersObj[user.id] = user;
+            });
+            usersRef.set(usersObj).then(() => {
+                console.log('✅ Users saved to Firebase');
+            }).catch((error) => {
+                console.warn('Firebase save error:', error.message);
+            });
+        } catch (error) {
+            console.warn('Firebase not available, saved to localStorage only', error.message);
+        }
+    }
     
     // Dispatch custom event to notify other pages of user database changes
     window.dispatchEvent(new CustomEvent('karaoke-users-updated', { 
