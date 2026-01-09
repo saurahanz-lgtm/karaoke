@@ -456,12 +456,27 @@ function playVideo(videoId, title, artist, singer) {
 
 /* ===== PLAYER STATE MANAGEMENT ===== */
 
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.ENDED) {
-        // Video finished, play next song
-        console.log('✅ [7/7] Video ended - playing next song');
-        playNextSong();
+// F. STATE HANDLER (VERIFIED SAFE)
+function onPlayerStateChange(e) {
+    const states = {
+        [-1]: 'UNSTARTED',
+        0: 'ENDED',
+        1: 'PLAYING',
+        2: 'PAUSED',
+        3: 'BUFFERING'
+    };
+
+    console.log(`📊 Player state changed to: ${states[e.data]}`);
+
+    if (e.data === YT.PlayerState.ENDED) {
+        showScore();
     }
+}
+
+// Show score/results when video ends
+function showScore() {
+    console.log('✅ [7/7] Video ended - playing next song');
+    playNextSong();
 }
 
 function playNextSong() {
