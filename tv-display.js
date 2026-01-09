@@ -26,10 +26,11 @@ function isFirebaseConfigured() {
 
 // Initialize TV display
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📺 TV Display initialized');
+    console.log('📺 Initializing TV Display...');
     
     // Generate QR code on load
     generateQRCode();
+    console.log('📱 QR Code generated');
     
     // Regenerate QR code every 10 seconds to ensure it's always fresh
     setInterval(generateQRCode, 10000);
@@ -42,12 +43,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
+    console.log('✅ Firebase configured');
+    
     // Now check connection status
     checkPhoneConnection();
     console.log('✅ Initial connection check done');
     
     // Check connection status every 1 second for faster updates
     setInterval(checkPhoneConnection, 1000);
+    console.log('🔄 Connection check interval started (1s)');
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenButton);
@@ -90,17 +94,24 @@ document.addEventListener('DOMContentLoaded', function() {
 /* ===== FIREBASE LISTENERS ===== */
 
 function initializeFirebaseListeners() {
+    console.log('📡 Setting up Firebase listeners...');
+    
     const db = firebase.database();
 
     db.ref('queue').on('value', snapshot => {
         const data = snapshot.val();
-        if (!data) return;
+        if (!data) {
+            console.log('📜 Queue data: null');
+            console.log('❌ Queue is empty');
+            return;
+        }
 
         tvQueue = Object.values(data);
         console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
 
         // 🔥 AUTO-SET FIRST SONG
         if (!currentSong && tvQueue.length > 0) {
+            console.log('🎵 Auto-setting first song to current');
             firebase.database().ref('currentSong').set(tvQueue[0]);
         }
         
@@ -109,24 +120,35 @@ function initializeFirebaseListeners() {
 
     db.ref('currentSong').on('value', snapshot => {
         const data = snapshot.val();
-        if (!data) return;
+        if (!data) {
+            console.log('🎵 No current song');
+            return;
+        }
 
         currentSong = data;
-        console.log('🎵 Current song loaded from Firebase:', currentSong.title);
+        console.log('🎵 Current song detected:', currentSong.title, 'ID:', currentSong.videoId, 'Timestamp:', Date.now());
 
         // Only try to play if player is ready
         if (youtubeAPIReady && player) {
+            console.log('▶️ Player ready, attempting playback');
             checkAndPlayCurrentSong();
+        } else {
+            console.log('⏳ Player not ready yet, storing pending song');
         }
     });
 
     // 🔥 Listen for activity updates
     db.ref('activity').on('value', snapshot => {
         const activityData = snapshot.val();
-        if (!activityData) return;
+        if (!activityData) {
+            console.log('📱 No activity data');
+            return;
+        }
 
-        console.log('📱 Activity updated from Firebase:', activityData.timestamp);
+        console.log('📱 Activity updated from Firebase:', new Date(activityData.timestamp).toLocaleTimeString());
     });
+
+    console.log('✅ Firebase listeners initialized');
 }
 
 // Set current song from queue item
@@ -149,6 +171,11 @@ function setCurrentFromQueue(song) {
 /* ===== YOUTUBE IFRAME PLAYER ===== */
 
 function onYouTubeIframeAPIReady() {
+    console.log('🔍 Checking YouTube API availability... ' + (typeof YT !== 'undefined') + ' ' + (typeof YT.Player !== 'undefined'));
+    console.log('✅ YouTube API ready, initializing player...');
+    
+    console.log('📋 Creating new YT.Player for iframe#player');
+    
     player = new YT.Player('player', {
         height: '100%',
         width: '100%',
@@ -162,20 +189,28 @@ function onYouTubeIframeAPIReady() {
         events: {
             onReady: () => {
                 youtubeAPIReady = true;
-                console.log('✅ YouTube Player READY');
+                console.log('✅ Player object created and tvPlayer set: true');
+                console.log('🎬 YouTube Player Ready - Starting playback');
 
                 // 🔥 Initialize Firebase listeners AFTER player is ready
                 if (useFirebase) {
+                    console.log('📡 Initializing Firebase listeners...');
                     initializeFirebaseListeners();
                 }
 
                 // 🔥 PLAY PENDING SONG
                 if (pendingSongToPlay) {
-                    console.log('▶ Playing pending song');
+                    console.log('▶️ Playback started via onReady callback');
                     checkAndPlayCurrentSong();
                 }
             },
-            onStateChange: onPlayerStateChange
+            onStateChange: onPlayerStateChange,
+            onError: (event) => {
+                console.error('❌ YouTube player error:', event.data);
+                if (event.data === 150 || event.data === 101) {
+                    console.warn('⚠️ Video is restricted from embedding on this site');
+                }
+            }
         }
     });
 }
@@ -304,12 +339,14 @@ function checkAndPlayCurrentSong() {
         return;
     }
 
-    console.log('▶ Playing now:', currentSong.title);
+    console.log('▶ Loading new video:', currentSong.videoId);
 
     player.loadVideoById({
         videoId: currentSong.videoId,
         startSeconds: 0
     });
+
+    console.log('✅ Video loaded:', currentSong.title);
 
     displaySongInfo(currentSong);
     updateNextSongDisplay();
@@ -369,10 +406,25 @@ function playVideo(videoId, title, artist, singer) {
 /* ===== PLAYER STATE MANAGEMENT ===== */
 
 function onPlayerStateChange(event) {
+    console.log('📊 Player state changed to:', getPlayerStateName(event.data));
+    
     if (event.data === YT.PlayerState.ENDED) {
+        console.log('⏹️ Video ended - playing next song');
         // Video finished, play next song
         playNextSong();
     }
+}
+
+function getPlayerStateName(state) {
+    const states = {
+        '-1': 'UNSTARTED',
+        '0': 'ENDED',
+        '1': 'PLAYING',
+        '2': 'PAUSED',
+        '3': 'BUFFERING',
+        '5': 'CUED'
+    };
+    return states[state] || 'UNKNOWN (' + state + ')';
 }
 
 function playNextSong() {
@@ -415,9 +467,11 @@ function displayQueue() {
         // Display queue from tvQueue (loaded from Firebase)
         if (tvQueue && tvQueue.length > 0) {
             const nextSong = tvQueue[0];
+            console.log('📋 Queue display updated: ' + tvQueue.length + ' songs');
             nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${nextSong.title}`;
             nextSongArtist.textContent = `by ${nextSong.artist} - ${nextSong.requestedBy}`;
         } else {
+            console.log('📋 Queue is empty');
             nextSongTitle.textContent = 'No songs in queue';
             nextSongArtist.textContent = '-';
         }
