@@ -4,6 +4,7 @@
 let users = [];
 let currentEditingUserId = null;
 let loggedInUser = null;
+let currentFilter = 'total'; // Default filter is all users
 
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', function() {
@@ -270,16 +271,25 @@ function displayUsers() {
     const tbody = document.getElementById('usersTableBody');
     const emptyMessage = document.getElementById('emptyMessage');
     
-    if (users.length === 0) {
+    // Filter users based on current filter
+    let filteredUsers = users;
+    if (currentFilter === 'online') {
+        filteredUsers = users.filter(u => isUserOnline(u));
+    } else if (currentFilter === 'offline') {
+        filteredUsers = users.filter(u => !isUserOnline(u));
+    }
+    
+    if (filteredUsers.length === 0) {
         tbody.innerHTML = '';
         emptyMessage.style.display = 'block';
+        emptyMessage.innerHTML = `<p style="font-size: clamp(1rem, 2.5vw, 1.2rem); color: #999; opacity: 0.7;">No ${currentFilter === 'online' ? 'online' : currentFilter === 'offline' ? 'offline' : ''} singers found...</p>`;
         return;
     }
     
     emptyMessage.style.display = 'none';
     
     let html = '';
-    users.forEach((user, index) => {
+    filteredUsers.forEach((user, index) => {
         const isOnline = isUserOnline(user);
         const statusColor = isOnline ? '#28a745' : '#6c757d';
         const statusLabel = isOnline ? '🟢 Online' : '⚫ Offline';
@@ -326,6 +336,41 @@ function isUserOnline(user) {
     if (!user.lastActivity) return false;
     const fiveMinutesAgo = new Date().getTime() - (5 * 60 * 1000);
     return user.lastActivity > fiveMinutesAgo;
+}
+
+// Filter singers by status
+function filterSingers(filter) {
+    currentFilter = filter;
+    console.log('🔍 Filtering singers by:', filter);
+    updateFilterButtons();
+    displayUsers();
+}
+
+// Update filter button styles
+function updateFilterButtons() {
+    const filterTotal = document.getElementById('filterTotal');
+    const filterOnline = document.getElementById('filterOnline');
+    const filterOffline = document.getElementById('filterOffline');
+    
+    // Reset all buttons
+    if (filterTotal) {
+        filterTotal.style.background = 'rgba(102, 126, 234, 0.3)';
+    }
+    if (filterOnline) {
+        filterOnline.style.background = 'rgba(102, 126, 234, 0.3)';
+    }
+    if (filterOffline) {
+        filterOffline.style.background = 'rgba(102, 126, 234, 0.3)';
+    }
+    
+    // Highlight active button
+    if (currentFilter === 'total' && filterTotal) {
+        filterTotal.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+    } else if (currentFilter === 'online' && filterOnline) {
+        filterOnline.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+    } else if (currentFilter === 'offline' && filterOffline) {
+        filterOffline.style.background = 'linear-gradient(135deg, #6c757d, #5a6268)';
+    }
 }
 
 // Update user activity when they interact with singer page

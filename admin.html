@@ -142,6 +142,19 @@
         <div>
             <h2 class="table-title" style="color: #667eea; font-weight: 700;">🎤 SINGER STATUS</h2>
             
+            <!-- Filter Buttons -->
+            <div style="display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap;">
+                <button onclick="filterSingers('total')" id="filterTotal" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+                    👥 Total Singer
+                </button>
+                <button onclick="filterSingers('online')" id="filterOnline" style="padding: 10px 20px; background: rgba(102, 126, 234, 0.3); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+                    🟢 Online
+                </button>
+                <button onclick="filterSingers('offline')" id="filterOffline" style="padding: 10px 20px; background: rgba(102, 126, 234, 0.3); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+                    ⚫ Offline
+                </button>
+            </div>
+            
             <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
