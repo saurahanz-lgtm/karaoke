@@ -17,6 +17,11 @@ let playerReady = false;
 let isLoadingSong = false;
 let currentVideoId = null;
 
+// Boot-up video configuration
+let bootUpVideoId = 'dQw4w9WgXcQ'; // Change this to your desired boot-up video ID
+let isPlayingBootUpVideo = false;
+let bootUpVideoPlayed = false;
+
 // Boot-up splash screen management
 let bootupStartTime = Date.now();
 let bootupHidden = false;
@@ -316,6 +321,34 @@ function toggleFullscreen() {
 // D. LOAD SONG - Unified playback handler
 // E. PLAYER CREATION (ONCE LANG)
 function loadSong(song) {
+    // If boot-up video hasn't played yet, play it first
+    if (!bootUpVideoPlayed && !window.tvPlayer) {
+        console.log('🎬 Playing boot-up video first');
+        isPlayingBootUpVideo = true;
+        currentVideoId = bootUpVideoId;
+
+        window.tvPlayer = new YT.Player('player', {
+            videoId: bootUpVideoId,
+            playerVars: {
+                autoplay: 1,
+                controls: 0,
+                enablejsapi: 1,
+                modestbranding: 1
+            },
+            events: {
+                onReady: () => {
+                    console.log('🎬 Boot-up Video Ready - Starting playback');
+                    playerReady = true;
+                    checkBootupCompletion();
+                    window.tvPlayer.playVideo();
+                },
+                onStateChange: onPlayerStateChange
+            }
+        });
+        return;
+    }
+
+    // Regular song playback after boot-up video
     currentVideoId = song.videoId;
 
     if (!window.tvPlayer) {
@@ -521,7 +554,23 @@ function onPlayerStateChange(e) {
     console.log(`📊 Player state changed to: ${states[e.data]}`);
 
     if (e.data === YT.PlayerState.ENDED) {
-        showScore();
+        // Check if boot-up video just finished
+        if (isPlayingBootUpVideo) {
+            console.log('✅ Boot-up video finished - transitioning to karaoke');
+            isPlayingBootUpVideo = false;
+            bootUpVideoPlayed = true;
+            hideBootupSplash(); // Hide splash after boot-up video ends
+            
+            // Transition to actual karaoke song
+            if (currentSong && currentSong.videoId) {
+                console.log('📺 Loading karaoke song:', currentSong.title);
+                window.tvPlayer.loadVideoById(currentSong.videoId);
+                currentVideoId = currentSong.videoId;
+            }
+        } else {
+            // Regular song ended - play next
+            showScore();
+        }
     }
 }
 
