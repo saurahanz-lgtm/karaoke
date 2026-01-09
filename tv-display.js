@@ -163,17 +163,19 @@ function toggleFullscreen() {
 // Update fullscreen button text
 function updateFullscreenButton() {
     const btn = document.getElementById('fullscreenBtn');
-    const reserveList = document.getElementById('reserveList');
+    const reserveList = document.querySelector('.reserve-list');
+    
+    if (!btn) return; // Guard against null
     
     if (document.fullscreenElement || document.webkitFullscreenElement || 
         document.mozFullScreenElement || document.msFullscreenElement) {
         btn.textContent = '⛶ Exit Fullscreen';
         // Show reserve list in fullscreen
-        reserveList.classList.add('show');
+        if (reserveList) reserveList.classList.add('show');
     } else {
         btn.textContent = '⛶ Full Screen';
         // Keep reserve list visible always
-        reserveList.classList.add('show');
+        if (reserveList) reserveList.classList.add('show');
     }
 }
 
@@ -403,12 +405,15 @@ function updateNextSongDisplay() {
 
 // Update reserve list in top right corner
 function updateReserveList() {
+    let reserveListItems = document.getElementById('reserveListItems');
+    
     if (!reserveListItems) {
-    const container = document.createElement('div');
-    container.id = 'reserveListItems';
-    container.className = 'reserve-list';
-    document.body.appendChild(container);
-}
+        const container = document.createElement('div');
+        container.id = 'reserveListItems';
+        container.className = 'reserve-list';
+        document.body.appendChild(container);
+        reserveListItems = container;
+    }
     
     // Load reserved songs from localStorage
     const reservedSongs = JSON.parse(localStorage.getItem('karaoke_reserved_songs') || '[]');
