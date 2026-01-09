@@ -284,6 +284,21 @@
             audioPlayer = document.getElementById('audioPlayer');
             if (!audioPlayer) {
                 console.error('❌ Audio player element not found!');
+            } else {
+                console.log('✅ Audio player initialized');
+                // Set up audio event listeners
+                audioPlayer.addEventListener('ended', function() {
+                    console.log('🔚 Song ended');
+                    const btn = document.getElementById('playPauseBtn');
+                    if (btn) {
+                        btn.textContent = '▶';
+                        btn.classList.remove('play');
+                        btn.classList.add('pause');
+                    }
+                });
+                audioPlayer.addEventListener('error', function(e) {
+                    console.warn('⚠️ Audio error:', e.message);
+                });
             }
             
             const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
@@ -540,6 +555,13 @@
             // Save to localStorage
             localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
 
+            // Set audio source for singer to hear preview/karaoke track
+            if (audioPlayer && song.videoId) {
+                // Use YouTube embed for audio (unofficial but works for preview)
+                audioPlayer.src = `https://www.youtube.com/watch?v=${song.videoId}`;
+                console.log('🎵 Audio source set for:', song.title);
+            }
+
             // Update Firebase if available
             if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
                 try {
@@ -667,51 +689,79 @@
         // Reload player
         function reloadPlayer() {
             if (!audioPlayer) {
-                console.error('Audio player not initialized');
+                console.error('❌ Audio player not initialized');
+                showAlert('Audio player not initialized', 'danger');
                 return;
             }
-            audioPlayer.currentTime = 0;
-            audioPlayer.play().catch(e => console.log('Play failed:', e));
+            try {
+                audioPlayer.currentTime = 0;
+                audioPlayer.play().then(() => {
+                    console.log('▶️ Player reloaded and playing');
+                }).catch(e => {
+                    console.log('⚠️ Play failed:', e.message);
+                    showAlert('Unable to play audio. Make sure a song is selected.', 'warning');
+                });
+            } catch (error) {
+                console.error('Error in reloadPlayer:', error);
+            }
         }
 
         // Toggle play/pause
         function togglePlayPause() {
             const btn = document.getElementById('playPauseBtn');
             if (!audioPlayer) {
-                console.error('Audio player not initialized');
-                return;
-            }
-            if (!audioPlayer.src) {
-                showAlert('No song loaded. Search and select a song first.', 'warning');
+                console.error('❌ Audio player not initialized');
+                showAlert('Audio player not initialized', 'danger');
                 return;
             }
 
-            if (audioPlayer.paused) {
-                audioPlayer.play().catch(e => console.log('Play failed:', e));
-                btn.textContent = '⏸';
-                btn.classList.remove('pause');
-                btn.classList.add('play');
-            } else {
-                audioPlayer.pause();
-                btn.textContent = '▶';
-                btn.classList.remove('play');
-                btn.classList.add('pause');
+            try {
+                if (audioPlayer.paused) {
+                    audioPlayer.play().then(() => {
+                        console.log('▶️ Now playing');
+                        if (btn) {
+                            btn.textContent = '⏸';
+                            btn.classList.remove('pause');
+                            btn.classList.add('play');
+                        }
+                    }).catch(e => {
+                        console.log('⚠️ Play failed:', e.message);
+                        if (btn) {
+                            btn.textContent = '▶';
+                        }
+                    });
+                } else {
+                    audioPlayer.pause();
+                    console.log('⏸️ Paused');
+                    if (btn) {
+                        btn.textContent = '▶';
+                        btn.classList.remove('play');
+                        btn.classList.add('pause');
+                    }
+                }
+            } catch (error) {
+                console.error('Error in togglePlayPause:', error);
             }
         }
 
         // Stop player
         function stopPlayer() {
             if (!audioPlayer) {
-                console.error('Audio player not initialized');
+                console.error('❌ Audio player not initialized');
                 return;
             }
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
-            const btn = document.getElementById('playPauseBtn');
-            if (btn) {
-                btn.textContent = '▶';
-                btn.classList.remove('play');
-                btn.classList.add('pause');
+            try {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                console.log('■ Stopped');
+                const btn = document.getElementById('playPauseBtn');
+                if (btn) {
+                    btn.textContent = '▶';
+                    btn.classList.remove('play');
+                    btn.classList.add('pause');
+                }
+            } catch (error) {
+                console.error('Error in stopPlayer:', error);
             }
         }
 
@@ -719,12 +769,17 @@
         function toggleMute() {
             const btn = document.getElementById('muteBtn');
             if (!audioPlayer) {
-                console.error('Audio player not initialized');
+                console.error('❌ Audio player not initialized');
                 return;
             }
-            audioPlayer.muted = !audioPlayer.muted;
-            if (btn) {
-                btn.textContent = audioPlayer.muted ? '🔇' : '🔊';
+            try {
+                audioPlayer.muted = !audioPlayer.muted;
+                console.log(audioPlayer.muted ? '🔇 Muted' : '🔊 Unmuted');
+                if (btn) {
+                    btn.textContent = audioPlayer.muted ? '🔇' : '🔊';
+                }
+            } catch (error) {
+                console.error('Error in toggleMute:', error);
             }
         }
 
