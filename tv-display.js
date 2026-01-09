@@ -345,34 +345,22 @@ function loadQueueDataFromLocalStorage() {
 
 // Check and play current song (only when YouTube API is ready)
 function checkAndPlayCurrentSong() {
-    if (!youtubeAPIReady) return;
-
-    // ✅ If walang currentSong pero may laman ang queue → auto-play first song
-    if ((!currentSong || !currentSong.videoId) && tvQueue.length > 0) {
-        const firstSong = tvQueue[0];
-
-        currentSong = {
-            title: firstSong.title,
-            artist: firstSong.artist,
-            videoId: firstSong.videoId,
-            requestedBy: firstSong.requestedBy,
-            singer: firstSong.requestedBy
-        };
-
-        // Sync to Firebase (TV is source of truth)
-        if (useFirebase && typeof firebase !== 'undefined') {
-            firebase.database().ref('currentSong').set(currentSong);
-        }
+    if (!youtubeAPIReady || !player) {
+        console.warn('⏳ Player not ready yet');
+        return;
     }
 
-    if (!currentSong || !currentSong.videoId) return;
+    if (!currentSong || !currentSong.videoId) {
+        console.warn('⚠ No current song to play');
+        return;
+    }
 
-    playVideo(
-        currentSong.videoId,
-        currentSong.title,
-        currentSong.artist,
-        currentSong.singer
-    );
+    console.log('▶ Auto-playing:', currentSong.title);
+
+    player.loadVideoById({
+        videoId: currentSong.videoId,
+        startSeconds: 0
+    });
 
     displaySongInfo(currentSong);
     updateNextSongDisplay();
