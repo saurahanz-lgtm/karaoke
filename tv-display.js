@@ -110,44 +110,43 @@ document.addEventListener('DOMContentLoaded', function() {
 /* ===== FIREBASE LISTENERS ===== */
 
 function initializeFirebaseListeners() {
-    try {
-        const queueRef = firebase.database().ref('queue');
-        const currentSongRef = firebase.database().ref('currentSong');
-        
-        // Listen for queue changes (real-time sync from Singer)
-        queueRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            tvQueue = data ? Object.values(data) : [];
-            console.log('📡 Queue updated from Firebase:', tvQueue.length, 'songs');
-            displayQueue();
-            
-            // Auto-play if queue has songs and nothing playing
-            if (!isPlaying && tvQueue.length > 0) {
-                playNextSong();
-            }
-        });
-        
-        // Listen for current song changes (real-time sync from Singer)
-        currentSongRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                currentSong = data;
-                console.log('🎵 Current song updated from Firebase:', data.title);
-                isPlaying = true;
-                checkAndPlayCurrentSong();
-            }
-        });
-        
-        firebaseListenersSet = true;
-        console.log('✅ Firebase real-time listeners initialized - TV will sync from Singer in real-time');
-    } catch (error) {
-        console.error('❌ Firebase initialization error:', error);
-        // Fallback to localStorage
-        useFirebase = false;
-        loadQueueData();
+    const db = firebase.database();
+
+    db.ref('queue').on('value', snapshot => {
+        const data = snapshot.val();
+        tvQueue = data ? Object.values(data) : [];
+
         displayQueue();
-        checkAndPlayCurrentSong();
-    }
+
+        // 🔥 AUTO-PLAY FIRST SONG
+        if (!currentSong && tvQueue.length > 0) {
+            setCurrentFromQueue(tvQueue[0]);
+        }
+    });
+
+    db.ref('currentSong').on('value', snapshot => {
+        const data = snapshot.val();
+        if (data) {
+            currentSong = data;
+            checkAndPlayCurrentSong();
+        }
+    });
+}
+
+// Set current song from queue item
+function setCurrentFromQueue(song) {
+    currentSong = {
+        title: song.title,
+        artist: song.artist,
+        videoId: song.videoId,
+        requestedBy: song.requestedBy
+    };
+    
+    // Update Firebase
+    firebase.database().ref('currentSong').set(currentSong);
+    
+    isPlaying = true;
+    checkAndPlayCurrentSong();
 }
 
 /* ===== YOUTUBE IFRAME PLAYER ===== */
