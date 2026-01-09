@@ -3,13 +3,13 @@
 // Get them from Firebase Console: https://console.firebase.google.com/
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCBc4N2ubtBMm784oP1XnPxxrt9LeTVWY8",
-    authDomain: "sdkaraoke-2534a.firebaseapp.com",
-    databaseURL: "https://sdkaraoke-2534a-default-rtdb.firebaseio.com",
-    projectId: "sdkaraoke-2534a",
-    storageBucket: "sdkaraoke-2534a.firebasestorage.app",
-    messagingSenderId: "532495318004",
-    appId: "1:532495318004:web:d86d12d0f97b35b82e57a1"
+    apiKey: "AIzaSyDYb-5yacfYrk41YwwQD1hqvricJJk1viI",
+    authDomain: "karaoke-58233.firebaseapp.com",
+    databaseURL: "https://karaoke-58233-default-rtdb.firebaseio.com",
+    projectId: "karaoke-58233",
+    storageBucket: "karaoke-58233.firebasestorage.app",
+    messagingSenderId: "950264063313",
+    appId: "1:950264063313:web:862ac7f406eea00c715f70"
 };
 
 // Initialize Firebase only if firebase is defined and not already initialized
