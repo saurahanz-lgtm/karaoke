@@ -24,6 +24,12 @@ function isFirebaseConfigured() {
 
 // Initialize TV display
 document.addEventListener('DOMContentLoaded', function() {
+    // Generate QR code on load
+    generateQRCode();
+    
+    // Regenerate QR code every 10 seconds to ensure it's always fresh
+    setInterval(generateQRCode, 10000);
+    
     // Check if Firebase is available
     useFirebase = isFirebaseConfigured();
     
@@ -46,6 +52,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+    document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+    document.addEventListener('msfullscreenchange', updateFullscreenButton);
+    
+    // Refresh QR code when page becomes visible (user switches back to this tab)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            generateQRCode();
+        }
+    });
     
     // Listen for storage changes from other tabs/windows (real-time sync with singer.html)
     window.addEventListener('storage', function(e) {
@@ -165,8 +181,26 @@ function updateFullscreenButton() {
 
 // Generate QR code for singer page
 function generateQRCode() {
-    // QR code removed - minimal design
-    return;
+    const qrContainer = document.getElementById('qrcode');
+    // Clear previous QR code if exists
+    qrContainer.innerHTML = '';
+    
+    // Get the current domain and path
+    const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -1).join('/');
+    const indexPageUrl = baseUrl + '/index.html';
+    
+    // Debug logging
+    console.log('📱 QR Code URL:', indexPageUrl);
+    
+    // Create QR code (smaller size for bottom right)
+    new QRCode(qrContainer, {
+        text: indexPageUrl,
+        width: 110,
+        height: 110,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
 }
 
 // Load queue data from localStorage (shared with admin)

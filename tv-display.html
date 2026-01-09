@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDkaraoke - TV Display</title>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+<!-- Firebase SDK (Compat Version) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<!-- YouTube API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<!-- QRCode -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🎤</text></svg>" type="image/svg+xml">
+
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 50%, #0f0f1e 100%);
+    font-family: 'Roboto', sans-serif;
+    overflow: hidden;
+    color: white;
+}
+
+/* TV Container */
+.tv-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    padding: 40px;
+    position: relative;
+}
+
+/* Video Player / Now Playing */
+.now-playing-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.now-playing-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background: #000;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+}
+
+/* Video */
+#videoPlayer {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Next Song Display (Top Left) */
+#nextSongDisplay {
+    position: fixed;
+    top: 30px;
+    left: 30px;
+    background: rgba(30,30,50,0.85);
+    backdrop-filter: blur(6px);
+    padding: 12px 20px;
+    border-radius: 20px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    min-width: 300px;
+}
+
+#nextSongDisplay span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Fullscreen & Clear Queue Buttons (Top Right) */
+.button-group {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    display: flex;
+    gap: 12px;
+    z-index: 100;
+}
+
+.button-group button {
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
+    border: none;
+    color: white;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+}
+
+#fullscreenBtn {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+#fullscreenBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+#clearQueueBtn {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+#clearQueueBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 30px rgba(220, 53, 69, 0.4);
+}
+
+/* QR Code Bottom Right */
+#qrcode-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: rgba(255,255,255,0.95);
+    padding: 12px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    z-index: 100;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666;
+}
+
+/* Center Singer Name */
+.center-singer-name {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 15;
+    text-align: center;
+    font-size: 3rem;
+    font-weight: 900;
+    color: white;
+    text-shadow: 3px 3px 15px rgba(0,0,0,0.7);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.center-singer-name.show {
+    opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .tv-container {
+        padding: 20px;
+    }
+
+    #nextSongDisplay {
+        top: 15px;
+        left: 15px;
+        min-width: 250px;
+        font-size: 0.9rem;
+    }
+
+    .button-group {
+        top: 15px;
+        right: 15px;
+        gap: 8px;
+    }
+
+    .button-group button {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #nextSongDisplay {
+        min-width: 200px;
+        font-size: 0.8rem;
+        padding: 8px 12px;
+    }
+
+    .button-group {
+        gap: 6px;
+    }
+
+    .button-group button {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+
+    .center-singer-name {
+        font-size: 2rem;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="tv-container">
+    <!-- Video Player -->
+    <div class="now-playing-section">
+        <div class="now-playing-card">
+            <div id="videoPlayer"></div>
+            <div id="centerSingerName" class="center-singer-name"></div>
+        </div>
+    </div>
+
+    <!-- Next Song Display (Top Left) -->
+    <div id="nextSongDisplay">
+        <span>Next:</span>
+        <span id="nextSongTitle">Waiting for next song...</span>
+        <span id="nextSongArtist">-</span>
+    </div>
+
+    <!-- Buttons (Top Right) -->
+    <div class="button-group">
+        <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Full Screen</button>
+        <button id="clearQueueBtn" onclick="deleteQueue()">🗑️ Clear Queue</button>
+    </div>
+
+    <!-- QR Code -->
+    <div id="qrcode-container">
+        <div id="qrcode"></div>
+        <div>Scan to Remote</div>
+    </div>
+</div>
+
+<script src="tv-display.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
