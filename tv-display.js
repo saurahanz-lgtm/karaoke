@@ -19,23 +19,39 @@ let currentVideoId = null;
 
 // Boot-up splash screen management
 let bootupStartTime = Date.now();
+let bootupHidden = false;
 
 function hideBootupSplash() {
+    if (bootupHidden) return; // Only hide once
+    bootupHidden = true;
+    
     const splash = document.getElementById('bootupSplash');
     if (splash) {
-        setTimeout(() => {
-            splash.classList.add('hidden');
-        }, 3500); // Show splash for 3.5 seconds minimum
+        splash.classList.add('hidden');
+        console.log('✅ Boot-up splash hidden');
     }
 }
 
 function checkBootupCompletion() {
     const timeSinceStart = Date.now() - bootupStartTime;
-    // Hide splash when: minimum 3.5 seconds passed AND (ytReady AND firebaseReady AND playerReady)
-    if (timeSinceStart >= 3500 && ytReady && firebaseReady && playerReady) {
+    
+    // Log current status for debugging
+    const statusMsg = `[Bootup: ${timeSinceStart}ms] ytReady=${ytReady}, firebaseReady=${firebaseReady}, playerReady=${playerReady}`;
+    
+    // Condition 1: All systems ready (ytReady AND firebaseReady AND playerReady)
+    if (ytReady && firebaseReady && playerReady && timeSinceStart >= 3000) {
+        console.log('✅ All systems ready - hiding splash', statusMsg);
         hideBootupSplash();
         return true;
     }
+    
+    // Condition 2: Fallback timeout - hide after 8 seconds regardless
+    if (timeSinceStart >= 8000) {
+        console.log('⏱️ Boot-up timeout - hiding splash', statusMsg);
+        hideBootupSplash();
+        return true;
+    }
+    
     return false;
 }
 
@@ -71,8 +87,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    firebaseReady = true;
-    console.log('🔥 [READY] Firebase configured');
+    console.log('🔥 Firebase configured, waiting for data...');
+    
+    // Check boot-up completion every 500ms
+    const bootupCheckInterval = setInterval(() => {
+        if (checkBootupCompletion()) {
+            clearInterval(bootupCheckInterval);
+        }
+    }, 500);
     
     // Now check connection status
     checkPhoneConnection();
@@ -117,6 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeFirebaseListeners() {
     console.log('🔥 [3/7] Attaching Firebase listeners');
+    firebaseListenersSet = true; // Mark as initialized
     const db = firebase.database();
 
     db.ref('queue').on('value', snapshot => {
@@ -125,6 +148,12 @@ function initializeFirebaseListeners() {
 
         tvQueue = Object.values(data);
         console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
+
+        // Mark Firebase as ready once we get queue data
+        firebaseReady = true;
+        
+        // Check if bootup can be hidden
+        checkBootupCompletion();
 
         // 🔥 AUTO-SET FIRST SONG
         if (!currentSong && tvQueue.length > 0) {
