@@ -257,7 +257,7 @@ function setCurrentFromQueue(song) {
 
 function onYouTubeIframeAPIReady() {
     console.log('✅ YouTube IFrame API Ready');
-    console.log('🔍 Checking for #player container:', !!document.getElementById('player'));
+    console.log('🔍 Checking for #videoPlayer container:', !!document.getElementById('videoPlayer'));
     ytReady = true;
     createYouTubePlayer();
 }
@@ -335,7 +335,7 @@ function loadSong(song) {
         isPlayingBootUpVideo = true;
         currentVideoId = bootUpVideoId;
 
-        window.tvPlayer = new YT.Player('player', {
+        window.tvPlayer = new YT.Player('videoPlayer', {
             videoId: bootUpVideoId,
             playerVars: {
                 autoplay: 1,
@@ -388,7 +388,7 @@ function loadSong(song) {
     if (!window.tvPlayer) {
         console.log('📋 [NORMAL] Creating new YT.Player');
 
-        window.tvPlayer = new YT.Player('player', {
+        window.tvPlayer = new YT.Player('videoPlayer', {
             videoId: song.videoId,
             playerVars: {
                 autoplay: 1,
