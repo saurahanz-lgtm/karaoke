@@ -47,7 +47,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!useFirebase) {
         console.error('❌ Firebase not configured - TV Display requires Firebase');
         return;
-    }    firebaseReady = true;    console.log('🔥 [READY] Firebase configured');
+    }
+    
+    firebaseReady = true;
+    console.log('🔥 [READY] Firebase configured');
     
     // Now check connection status
     checkPhoneConnection();
