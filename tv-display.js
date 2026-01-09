@@ -182,16 +182,13 @@ function onYouTubeIframeAPIReady() {
         events: {
             onReady: () => {
                 youtubeAPIReady = true;
-                console.log('▶ YouTube Player READY');
+                console.log('✅ YouTube Player READY');
 
-                // 🔥 Initialize Firebase listeners AFTER player is ready
-                if (useFirebase) {
-                    initializeFirebaseListeners();
+                // 🔥 PLAY PENDING SONG
+                if (pendingSongToPlay) {
+                    console.log('▶ Playing pending song');
+                    checkAndPlayCurrentSong();
                 }
-                
-                // Load and play current song
-                loadQueueData();
-                checkAndPlayCurrentSong();
             },
             onStateChange: onPlayerStateChange
         }
