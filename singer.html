@@ -285,14 +285,17 @@
             
             // Update activity timestamp for TV display connection status
             function updateActivityTimestamp() {
-                localStorage.setItem('karaoke_singer_activity', Date.now().toString());
+                const timestamp = Date.now().toString();
+                localStorage.setItem('karaoke_singer_activity', timestamp);
+                console.log('📱 Activity timestamp updated:', new Date(parseInt(timestamp)).toLocaleTimeString());
             }
             
             // Update timestamp on page load
+            console.log('🎤 Singer page loaded - setting initial activity timestamp');
             updateActivityTimestamp();
             
-            // Update timestamp every 10 seconds while page is open
-            setInterval(updateActivityTimestamp, 10000);
+            // Update timestamp every 5 seconds while page is open (faster than before)
+            setInterval(updateActivityTimestamp, 5000);
             
             // Update timestamp on user interactions
             document.addEventListener('click', updateActivityTimestamp);

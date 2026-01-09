@@ -30,8 +30,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Regenerate QR code every 10 seconds to ensure it's always fresh
     setInterval(generateQRCode, 10000);
     
-    // Check connection status every 2 seconds
-    setInterval(checkPhoneConnection, 2000);
+    // Check connection status immediately on load
+    checkPhoneConnection();
+    console.log('✅ Initial connection check done');
+    
+    // Check connection status every 1 second for better responsiveness
+    setInterval(checkPhoneConnection, 1000);
     
     // Check if Firebase is available
     useFirebase = isFirebaseConfigured();
@@ -203,10 +207,16 @@ function checkPhoneConnection() {
     const connectionStatus = document.getElementById('connectionStatus');
     const connectionText = document.getElementById('connectionText');
     
+    if (!connectionStatus || !connectionText) {
+        console.warn('⚠️ Connection status elements not found');
+        return;
+    }
+    
     if (!lastActivityTime) {
         connectionStatus.classList.remove('connected');
         connectionStatus.classList.add('disconnected');
         connectionText.textContent = '🔴 No Phone Connected';
+        console.log('📱 No activity timestamp found');
         return;
     }
     
@@ -214,18 +224,20 @@ function checkPhoneConnection() {
     const timeDifference = currentTime - parseInt(lastActivityTime);
     const timeoutDuration = 15000; // 15 seconds timeout
     
+    console.log('📱 Activity check - Time diff:', Math.floor(timeDifference / 1000), 'seconds, Timeout:', Math.floor(timeoutDuration / 1000), 'seconds');
+    
     if (timeDifference < timeoutDuration) {
         // Phone is connected
         connectionStatus.classList.remove('disconnected');
         connectionStatus.classList.add('connected');
         connectionText.textContent = '🟢 Phone Connected';
-        console.log('📱 Phone connected - Last activity:', Math.floor(timeDifference / 1000), 'seconds ago');
+        console.log('✅ Phone connected - Last activity:', Math.floor(timeDifference / 1000), 'seconds ago');
     } else {
         // Phone disconnected (no activity for 15 seconds)
         connectionStatus.classList.remove('connected');
         connectionStatus.classList.add('disconnected');
         connectionText.textContent = '🔴 No Phone Connected';
-        console.log('📱 Phone disconnected - No activity for:', Math.floor(timeDifference / 1000), 'seconds');
+        console.log('❌ Phone disconnected - No activity for:', Math.floor(timeDifference / 1000), 'seconds');
     }
 }
 
