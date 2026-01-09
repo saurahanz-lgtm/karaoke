@@ -122,6 +122,14 @@ function initializeFirebaseListeners() {
             checkAndPlayCurrentSong();
         }
     });
+
+    // 🔥 Listen for activity updates
+    db.ref('activity').on('value', snapshot => {
+        const activityData = snapshot.val();
+        if (!activityData) return;
+
+        console.log('📱 Activity updated from Firebase:', activityData.timestamp);
+    });
 }
 
 // Set current song from queue item
@@ -209,7 +217,11 @@ function toggleFullscreen() {
 // Check if phone/singer page is connected
 function checkPhoneConnection() {
     try {
-        const lastActivityTime = localStorage.getItem('karaoke_singer_activity');
+        if (!useFirebase) {
+            console.warn('⚠️ Firebase not available for connection check');
+            return;
+        }
+
         const connectionStatus = document.getElementById('connectionStatus');
         const connectionText = document.getElementById('connectionText');
         
@@ -217,33 +229,43 @@ function checkPhoneConnection() {
             console.warn('⚠️ Connection status elements not found');
             return;
         }
-        
-        if (!lastActivityTime) {
+
+        // Read activity from Firebase
+        firebase.database().ref('activity').once('value', snapshot => {
+            const activityData = snapshot.val();
+            
+            if (!activityData) {
+                connectionStatus.classList.remove('connected');
+                connectionStatus.classList.add('disconnected');
+                connectionText.textContent = '🔴 No Phone Connected';
+                console.log('📱 No activity data found');
+                return;
+            }
+
+            const currentTime = Date.now();
+            const activityTime = activityData.timestamp || 0;
+            const timeDifference = currentTime - activityTime;
+            const timeoutDuration = 15000; // 15 seconds timeout
+            
+            console.log('🔍 Connection check - Last activity:', activityTime, 'Now:', currentTime, 'Difference:', Math.floor(timeDifference / 1000), 'seconds');
+            
+            if (timeDifference < timeoutDuration) {
+                // Phone is connected
+                connectionStatus.classList.remove('disconnected');
+                connectionStatus.classList.add('connected');
+                connectionText.textContent = '🟢 Phone Connected';
+            } else {
+                // Phone disconnected (no activity for 15 seconds)
+                connectionStatus.classList.remove('connected');
+                connectionStatus.classList.add('disconnected');
+                connectionText.textContent = '🔴 No Phone Connected';
+            }
+        }).catch(err => {
+            console.warn('Firebase activity read failed:', err.message);
             connectionStatus.classList.remove('connected');
             connectionStatus.classList.add('disconnected');
             connectionText.textContent = '🔴 No Phone Connected';
-            console.log('📱 No activity timestamp found');
-            return;
-        }
-        
-        const currentTime = Date.now();
-        const activityTime = parseInt(lastActivityTime);
-        const timeDifference = currentTime - activityTime;
-        const timeoutDuration = 15000; // 15 seconds timeout
-        
-        console.log('🔍 Connection check - Last activity:', activityTime, 'Now:', currentTime, 'Difference:', Math.floor(timeDifference / 1000), 'seconds');
-        
-        if (timeDifference < timeoutDuration) {
-            // Phone is connected
-            connectionStatus.classList.remove('disconnected');
-            connectionStatus.classList.add('connected');
-            connectionText.textContent = '🟢 Phone Connected';
-        } else {
-            // Phone disconnected (no activity for 15 seconds)
-            connectionStatus.classList.remove('connected');
-            connectionStatus.classList.add('disconnected');
-            connectionText.textContent = '🔴 No Phone Connected';
-        }
+        });
     } catch (error) {
         console.error('❌ Error in checkPhoneConnection:', error.message);
     }
