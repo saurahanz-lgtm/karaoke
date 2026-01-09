@@ -18,7 +18,7 @@ let isLoadingSong = false;
 let currentVideoId = null;
 
 // Boot-up video configuration
-let bootUpVideoId = 'dQw4w9WgXcQ'; // Change this to your desired boot-up video ID
+let bootUpVideoId = 'dYulp4K87rQ'; // Change this to your desired boot-up video ID
 let isPlayingBootUpVideo = false;
 let bootUpVideoPlayed = false;
 
