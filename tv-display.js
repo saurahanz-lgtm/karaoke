@@ -153,9 +153,27 @@ function setCurrentFromQueue(song) {
 /* ===== YOUTUBE IFRAME PLAYER ===== */
 
 function onYouTubeIframeAPIReady() {
-    youtubeAPIReady = true;
-    console.log('✅ YouTube API loaded');
-    checkAndPlayCurrentSong();
+    player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        playerVars: {
+            autoplay: 1,
+            controls: 1,
+            modestbranding: 1,
+            rel: 0,
+            playsinline: 1
+        },
+        events: {
+            onReady: () => {
+                youtubeAPIReady = true;
+                console.log('▶ YouTube Player READY');
+
+                // 🔥 IMPORTANT
+                checkAndPlayCurrentSong();
+            },
+            onStateChange: onPlayerStateChange
+        }
+    });
 }
 
 /* ===== FULLSCREEN & CONNECTION ===== */
