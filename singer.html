@@ -510,13 +510,16 @@
             queue.push(song);
             localStorage.setItem('karaoke_queue', JSON.stringify(queue));
 
-            // Also add to reserved songs display
-            const songExists = reservedSongs.some(s => s.videoId === song.videoId);
-            if (!songExists) {
-                reservedSongs.push({ title: song.title, artist: song.artist, videoId: song.videoId });
-                localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
-                displayReservedSongs();
-            }
+            // Also add to reserved songs display - always add it
+            const reservedSong = { 
+                title: song.title, 
+                artist: song.artist, 
+                videoId: song.videoId,
+                requestedBy: song.requestedBy
+            };
+            reservedSongs.push(reservedSong);
+            localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
+            displayReservedSongs();
 
             // Notify TV display of queue update
             window.dispatchEvent(new CustomEvent('karaoke-queue-updated', { 
@@ -620,11 +623,12 @@
             }
 
             let html = '';
-            reservedSongs.forEach(song => {
+            reservedSongs.forEach((song, index) => {
                 html += `
                     <div class="song-item">
-                        <div style="font-weight: 600; margin-bottom: 5px;">${song.title}</div>
+                        <div style="font-weight: 600; margin-bottom: 5px;">#${index + 1} ${song.title}</div>
                         <div style="font-size: 0.9rem; opacity: 0.8;">🎤 ${song.artist}</div>
+                        <div style="font-size: 0.85rem; opacity: 0.7; margin-top: 3px;">👤 ${song.requestedBy || 'Unknown'}</div>
                     </div>
                 `;
             });
