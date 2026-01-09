@@ -34,14 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Regenerate QR code every 10 seconds to ensure it's always fresh
     setInterval(generateQRCode, 10000);
     
-    // Check connection status immediately
-    checkPhoneConnection();
-    console.log('✅ Initial connection check done');
-    
-    // Check connection status every 1 second for faster updates
-    setInterval(checkPhoneConnection, 1000);
-    
-    // Check if Firebase is available
+    // Check if Firebase is available FIRST
     useFirebase = isFirebaseConfigured();
     
     if (!useFirebase) {
@@ -49,8 +42,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // Firebase listeners will be initialized after YouTube API is ready
-    // (will be called from onYouTubeIframeAPIReady)
+    // Now check connection status
+    checkPhoneConnection();
+    console.log('✅ Initial connection check done');
+    
+    // Check connection status every 1 second for faster updates
+    setInterval(checkPhoneConnection, 1000);
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenButton);
@@ -217,11 +214,6 @@ function toggleFullscreen() {
 // Check if phone/singer page is connected
 function checkPhoneConnection() {
     try {
-        if (!useFirebase) {
-            console.warn('⚠️ Firebase not available for connection check');
-            return;
-        }
-
         const connectionStatus = document.getElementById('connectionStatus');
         const connectionText = document.getElementById('connectionText');
         
@@ -238,7 +230,6 @@ function checkPhoneConnection() {
                 connectionStatus.classList.remove('connected');
                 connectionStatus.classList.add('disconnected');
                 connectionText.textContent = '🔴 No Phone Connected';
-                console.log('📱 No activity data found');
                 return;
             }
 
@@ -246,8 +237,6 @@ function checkPhoneConnection() {
             const activityTime = activityData.timestamp || 0;
             const timeDifference = currentTime - activityTime;
             const timeoutDuration = 15000; // 15 seconds timeout
-            
-            console.log('🔍 Connection check - Last activity:', activityTime, 'Now:', currentTime, 'Difference:', Math.floor(timeDifference / 1000), 'seconds');
             
             if (timeDifference < timeoutDuration) {
                 // Phone is connected
