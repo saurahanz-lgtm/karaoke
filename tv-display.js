@@ -44,8 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
     useFirebase = isFirebaseConfigured();
     
     if (useFirebase) {
-        // Use Firebase real-time listeners
-        initializeFirebaseListeners();
+        // Initialize Firebase listeners after YouTube API is ready
+        // (will be called from onYouTubeIframeAPIReady)
     } else {
         // Fallback to localStorage polling - more aggressive polling for better responsiveness
         loadQueueData();
@@ -123,6 +123,8 @@ function initializeFirebaseListeners() {
         if (!currentSong && tvQueue.length > 0) {
             firebase.database().ref('currentSong').set(tvQueue[0]);
         }
+        
+        displayQueue();
     });
 
     db.ref('currentSong').on('value', snapshot => {
@@ -132,7 +134,10 @@ function initializeFirebaseListeners() {
         currentSong = data;
         console.log('🎵 Current song loaded from Firebase:', currentSong.title);
 
-        checkAndPlayCurrentSong();
+        // Only try to play if player is ready
+        if (youtubeAPIReady && player) {
+            checkAndPlayCurrentSong();
+        }
     });
 }
 
@@ -171,7 +176,13 @@ function onYouTubeIframeAPIReady() {
                 youtubeAPIReady = true;
                 console.log('▶ YouTube Player READY');
 
-                // 🔥 IMPORTANT
+                // 🔥 Initialize Firebase listeners AFTER player is ready
+                if (useFirebase) {
+                    initializeFirebaseListeners();
+                }
+                
+                // Load and play current song
+                loadQueueData();
                 checkAndPlayCurrentSong();
             },
             onStateChange: onPlayerStateChange
