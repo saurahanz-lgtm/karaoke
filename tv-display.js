@@ -124,7 +124,6 @@ function initializeFirebaseListeners() {
         );
 
         currentSong = data;
-        firebaseReady = true;
         
         // Update display immediately
         displayQueue();
@@ -165,9 +164,9 @@ function initializeFirebaseListeners() {
             updateNextSongDisplay();
             
             // Try to play if player is ready
-            if (youtubeAPIReady && player) {
+            if (youtubeAPIReady && playerReady) {
                 console.log('▶️ [6/7] Initial song - player ready, calling playback');
-                checkAndPlayCurrentSong();
+                tryInitPlayback();
             }
         }
     });
@@ -200,40 +199,8 @@ function onYouTubeIframeAPIReady() {
 
 // B. YouTube API - Initialize player when ready
 function createYouTubePlayer() {
-    console.log('▶️ [2/7] Creating YouTube player');
-    
-    player = new YT.Player('player', {
-        height: '100%',
-        width: '100%',
-        playerVars: {
-            autoplay: 1,
-            controls: 1,
-            modestbranding: 1,
-            rel: 0,
-            playsinline: 1
-        },
-        events: {
-            onReady: () => {
-                youtubeAPIReady = true;
-                playerReady = true;
-                console.log('✅ [5/7] Player onReady - calling playback');
-
-                // 🔥 Initialize Firebase listeners AFTER player is ready (only once)
-                if (useFirebase && !firebaseListenersSet) {
-                    initializeFirebaseListeners();
-                }
-
-                // Try playback after player is ready
-                tryInitPlayback();
-            },
-            onStateChange: (event) => {
-                console.log('🎬 [7/7] Player state changed:', event.data);
-                onPlayerStateChange(event);
-            }
-        }
-    });
-    
-    console.log('✅ [5/7] Player created (ONCE)');
+    console.log('✅ YouTube API Ready, player will be created on first song load');
+    // Player is now created in loadSong() when needed
 }
 
 // D. SINGLE ENTRY POINT (MOST IMPORTANT)
@@ -250,6 +217,11 @@ function tryInitPlayback() {
 
     if (currentVideoId === currentSong?.videoId) {
         console.log('ℹ️ Same song already playing');
+        return;
+    }
+
+    if (!currentSong || !currentSong.videoId) {
+        console.warn('⚠ No current song data');
         return;
     }
 
@@ -288,30 +260,40 @@ function toggleFullscreen() {
 }
 
 // D. LOAD SONG - Unified playback handler
+// E. PLAYER CREATION (ONCE LANG)
 function loadSong(song) {
-    if (!song || !song.videoId) {
-        console.warn('⚠ No song or videoId');
-        return;
-    }
-
-    if (!playerReady) {
-        console.warn('⚠ Player not ready');
-        return;
-    }
-
-    console.log(`🎬 Loading song: ${song.title}`);
     isLoadingSong = true;
     currentVideoId = song.videoId;
 
-    player.loadVideoById({
-        videoId: song.videoId,
-        startSeconds: 0
-    });
+    if (!window.tvPlayer) {
+        console.log('📋 Creating new YT.Player');
 
-    displaySongInfo(song);
-    updateNextSongDisplay();
-    
-    isLoadingSong = false;
+        window.tvPlayer = new YT.Player('player', {
+            videoId: song.videoId,
+            playerVars: {
+                autoplay: 1,
+                controls: 0,
+                enablejsapi: 1,
+                modestbranding: 1
+            },
+            events: {
+                onReady: () => {
+                    console.log('🎬 YouTube Player Ready - Starting playback');
+                    playerReady = true;
+                    window.tvPlayer.playVideo();
+                    isLoadingSong = false;
+                },
+                onStateChange: onPlayerStateChange
+            }
+        });
+
+    } else {
+        console.log('▶️ Loading new video:', song.videoId);
+        window.tvPlayer.loadVideoById(song.videoId);
+        isLoadingSong = false;
+    }
+
+    console.log(`📺 Now playing: ${song.title}`);
 }
 
 // Check if phone/singer page is connected
