@@ -10,6 +10,13 @@ let useFirebase = false;
 let firebaseListenersSet = false;
 let pendingSongToPlay = null;
 
+// A. GLOBAL FLAGS (REQUIRED)
+let ytReady = false;
+let firebaseReady = false;
+let playerReady = false;
+let isLoadingSong = false;
+let currentVideoId = null;
+
 // Check if Firebase is properly configured
 function isFirebaseConfigured() {
     try {
@@ -40,8 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!useFirebase) {
         console.error('❌ Firebase not configured - TV Display requires Firebase');
         return;
-    }
-    console.log('🔥 [READY] Firebase configured');
+    }    firebaseReady = true;    console.log('🔥 [READY] Firebase configured');
     
     // Now check connection status
     checkPhoneConnection();
@@ -187,6 +193,7 @@ function setCurrentFromQueue(song) {
 
 function onYouTubeIframeAPIReady() {
     console.log('▶️ [2/7] YouTube API ready, creating player');
+    ytReady = true;
     
     player = new YT.Player('player', {
         height: '100%',
@@ -201,6 +208,7 @@ function onYouTubeIframeAPIReady() {
         events: {
             onReady: () => {
                 youtubeAPIReady = true;
+                playerReady = true;
                 console.log('✅ [5/7] Player onReady - calling playback');
 
                 // 🔥 Initialize Firebase listeners AFTER player is ready (only once)
@@ -349,6 +357,8 @@ function checkAndPlayCurrentSong() {
     }
 
     console.log('▶ [6/7] Playing now:', currentSong.title);
+    isLoadingSong = true;
+    currentVideoId = currentSong.videoId;
 
     player.loadVideoById({
         videoId: currentSong.videoId,
@@ -359,6 +369,7 @@ function checkAndPlayCurrentSong() {
     updateNextSongDisplay();
 
     pendingSongToPlay = null;
+    isLoadingSong = false;
 }
 
 // Display song information in lyrics section
