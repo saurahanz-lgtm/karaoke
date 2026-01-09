@@ -426,8 +426,26 @@ function playVideo(videoId, title, artist, singer) {
 
 // Display queue
 function displayQueue() {
-    // Queue display removed - minimal design
-    return;
+    // Show reserved songs from queue stored in Firebase/localStorage
+    try {
+        const nextSongTitle = document.getElementById('nextSongTitle');
+        const nextSongArtist = document.getElementById('nextSongArtist');
+        
+        if (!nextSongTitle || !nextSongArtist) return;
+        
+        // Display queue from tvQueue (loaded from Firebase)
+        if (tvQueue && tvQueue.length > 0) {
+            // Show next song from queue
+            const nextSong = tvQueue[0];
+            nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${nextSong.title}`;
+            nextSongArtist.textContent = `by ${nextSong.artist} - ${nextSong.requestedBy}`;
+        } else {
+            nextSongTitle.textContent = 'No songs in queue';
+            nextSongArtist.textContent = '-';
+        }
+    } catch (e) {
+        console.warn('Error displaying queue:', e.message);
+    }
 }
 
 // Update next song display (horizontal, in upper left)
