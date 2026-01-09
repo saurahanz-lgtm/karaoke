@@ -80,6 +80,15 @@ document.addEventListener('DOMContentLoaded', function() {
         displayQueue();
         checkAndPlayCurrentSong();
     });
+
+    // Listen for auto-play trigger from singer page
+    window.addEventListener('karaoke-auto-play', function(e) {
+        console.log('▶️ Auto-play triggered:', e.detail.song);
+        currentSong = e.detail.song;
+        localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
+        loadQueueData();
+        checkAndPlayCurrentSong();
+    });
 });
 
 // Initialize Firebase real-time listeners

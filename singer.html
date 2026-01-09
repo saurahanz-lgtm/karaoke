@@ -475,20 +475,24 @@
                         firebase.database().ref('queue/' + newSong.id).set(newSong).then(() => {
                             console.log('✅ Song added to Firebase queue:', newSong.title);
                             addToLocalQueue(newSong);
+                            setCurrentSongAndAutoPlay(newSong);
                             successCallback(btn, title);
                         }).catch(err => {
                             console.warn('Firebase write failed:', err.message);
                             addToLocalQueue(newSong);
+                            setCurrentSongAndAutoPlay(newSong);
                             successCallback(btn, title);
                         });
                     } catch (fbError) {
                         console.warn('Firebase error:', fbError.message);
                         addToLocalQueue(newSong);
+                        setCurrentSongAndAutoPlay(newSong);
                         successCallback(btn, title);
                     }
                 } else {
                     // Fallback to localStorage
                     addToLocalQueue(newSong);
+                    setCurrentSongAndAutoPlay(newSong);
                     successCallback(btn, title);
                 }
 
@@ -518,6 +522,38 @@
             window.dispatchEvent(new CustomEvent('karaoke-queue-updated', { 
                 detail: { song, queue } 
             }));
+        }
+
+        // Set current song and trigger auto-play
+        function setCurrentSongAndAutoPlay(song) {
+            const currentSong = {
+                title: song.title,
+                artist: song.artist,
+                videoId: song.videoId,
+                requestedBy: song.requestedBy,
+                singer: song.requestedBy
+            };
+
+            // Save to localStorage
+            localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
+
+            // Update Firebase if available
+            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('currentSong').set(currentSong).catch(err => {
+                        console.warn('Firebase currentSong update failed:', err.message);
+                    });
+                } catch (err) {
+                    console.warn('Firebase error:', err.message);
+                }
+            }
+
+            // Trigger custom event for TV display to auto-play
+            window.dispatchEvent(new CustomEvent('karaoke-auto-play', { 
+                detail: { song: currentSong } 
+            }));
+
+            console.log('🎵 Auto-play triggered for:', song.title);
         }
 
         // Helper function for successful request
