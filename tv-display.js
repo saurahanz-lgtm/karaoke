@@ -212,11 +212,6 @@ function tryInitPlayback() {
         return;
     }
 
-    if (isLoadingSong) {
-        console.log('⏳ Already loading a song, skipping...');
-        return;
-    }
-
     if (currentVideoId === currentSong?.videoId) {
         console.log('ℹ️ Same song already playing');
         return;
@@ -264,7 +259,6 @@ function toggleFullscreen() {
 // D. LOAD SONG - Unified playback handler
 // E. PLAYER CREATION (ONCE LANG)
 function loadSong(song) {
-    isLoadingSong = true;
     currentVideoId = song.videoId;
 
     if (!window.tvPlayer) {
@@ -283,7 +277,6 @@ function loadSong(song) {
                     console.log('🎬 YouTube Player Ready - Starting playback');
                     playerReady = true;
                     window.tvPlayer.playVideo();
-                    isLoadingSong = false;
                 },
                 onStateChange: onPlayerStateChange
             }
@@ -292,7 +285,6 @@ function loadSong(song) {
     } else {
         console.log('▶️ Loading new video:', song.videoId);
         window.tvPlayer.loadVideoById(song.videoId);
-        isLoadingSong = false;
     }
 
     console.log(`📺 Now playing: ${song.title}`);
