@@ -235,7 +235,6 @@ function checkAndPlayCurrentSong() {
         return;
     }
 
-    const displayContainer = document.getElementById('currentSongDisplay');
     const centerSingerName = document.getElementById('centerSingerName');
 
     // If no current song, automatically play first song from queue
@@ -258,45 +257,40 @@ function checkAndPlayCurrentSong() {
         // Play video if videoId exists
         playVideo(currentSong.videoId, currentSong.title, currentSong.artist, currentSong.singer);
         
-        // Display current song info as lyrics alternative
+        // Display current song info (show singer name in center)
         displaySongInfo(currentSong);
         
         // Update next song display
         updateNextSongDisplay();
         
-        displayContainer.innerHTML = '';
-        centerSingerName.innerHTML = '';
-        centerSingerName.classList.remove('show');
+        if (centerSingerName) {
+            centerSingerName.classList.add('show');
+        }
     } else {
         // Play placeholder video when no song is selected
         const placeholderVideoId = 'dQw4w9WgXcQ'; // YouTube rickroll as placeholder
         playVideo(placeholderVideoId, 'Ready for your song', 'SDkaraoke', 'Waiting...');
         
-        // Show placeholder lyrics
-        displaySongInfo(null);
-        
-        displayContainer.innerHTML = '';
-        centerSingerName.classList.remove('show');
-        centerSingerName.innerHTML = '';
+        // Hide singer name display
+        if (centerSingerName) {
+            centerSingerName.classList.remove('show');
+            centerSingerName.innerHTML = '';
+        }
     }
 }
 
 // Display song information in lyrics section
 function displaySongInfo(song) {
-    const lyricsContent = document.getElementById('lyricsContent');
+    const centerSingerName = document.getElementById('centerSingerName');
     
-    if (!lyricsContent) return;
+    if (!centerSingerName) return;
     
     if (song && song.title) {
-        lyricsContent.innerHTML = `
-            <div class="lyrics-text" style="animation: fadeInLyrics 0.8s ease-in;">
-                <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; color: #f093fb;">🎤 ${song.title}</div>
-                <div style="font-size: 1.5rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 15px;">by ${song.artist}</div>
-                <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.7);">Sung by: ${song.singer || 'Guest'}</div>
-            </div>
-        `;
+        centerSingerName.innerHTML = `<span class="singer-name-display">🎤 ${song.singer || 'Guest Singer'}</span>`;
+        centerSingerName.classList.add('show');
     } else {
-        lyricsContent.innerHTML = '<div class="lyrics-placeholder">♪ Lyrics will appear here ♪</div>';
+        centerSingerName.classList.remove('show');
+        centerSingerName.innerHTML = '';
     }
 }
 
@@ -337,31 +331,25 @@ function playVideo(videoId, title, artist, singer) {
 // Display queue
 function displayQueue() {
     const queueContainer = document.getElementById('queueDisplay');
-    const queueCount = document.getElementById('queueCount');
+
+    if (!queueContainer) {
+        console.warn('⚠️ Queue display container not found');
+        return;
+    }
 
     if (tvQueue.length === 0) {
-        queueContainer.innerHTML = '<div class="empty-message">No songs in queue</div>';
-        queueCount.textContent = '0';
+        queueContainer.innerHTML = '';
         updateReserveList();
         return;
     }
 
-    queueCount.textContent = tvQueue.length;
-
     let html = '';
     tvQueue.forEach((song, index) => {
         html += `
-            <div class="queue-item-card" style="animation-delay: ${index * 0.1}s;">
-                <div class="queue-number-large">${index + 1}</div>
-                <div class="queue-item-info">
-                    <div class="queue-item-title">${song.title}</div>
-                    <div class="queue-item-artist">🎤 ${song.artist}</div>
-                    <div class="queue-item-singer">👤 ${song.requestedBy}</div>
-                </div>
-                <div class="queue-item-controls">
-                    ${index === 0 ? `<button class="control-btn skip-btn" onclick="skipToNextSong()" title="Skip to next song">⏭️ Skip</button>` : ''}
-                    <button class="control-btn delete-btn" onclick="removeSongFromQueue(${song.id})" title="Remove song from queue">🗑️ Delete</button>
-                </div>
+            <div class="queue-item-card">
+                <div class="queue-item-title">${song.title}</div>
+                <div class="queue-item-artist">🎤 ${song.artist}</div>
+                <div class="queue-item-singer">👤 ${song.requestedBy}</div>
             </div>
         `;
     });
@@ -408,31 +396,27 @@ function updateReserveList() {
     let reserveListItems = document.getElementById('reserveListItems');
     
     if (!reserveListItems) {
-        const container = document.createElement('div');
-        container.id = 'reserveListItems';
-        container.className = 'reserve-list';
-        document.body.appendChild(container);
-        reserveListItems = container;
+        console.warn('⚠️ Reserve list container not found');
+        return;
     }
     
-    // Load reserved songs from localStorage
-    const reservedSongs = JSON.parse(localStorage.getItem('karaoke_reserved_songs') || '[]');
-    const songsToDisplay = tvQueue.length > 0 ? tvQueue : reservedSongs;
+    // Show upcoming songs in reserve list (max 5)
+    const songsToDisplay = tvQueue.slice(0, 5);
     
     if (!songsToDisplay || songsToDisplay.length === 0) {
-        reserveListItems.innerHTML = '<div style="color: rgba(255, 255, 255, 0.5); font-size: 0.9rem;">No songs available</div>';
+        reserveListItems.innerHTML = '';
         return;
     }
 
     // Show first 5 songs in reserve list
     let html = '';
-    songsToDisplay.slice(0, 5).forEach((song, index) => {
+    songsToDisplay.forEach((song, index) => {
         html += `
             <div class="reserve-item">
                 <div class="reserve-item-number">${index + 1}</div>
                 <div class="reserve-item-title">${song.title}</div>
                 <div class="reserve-item-artist">${song.artist}</div>
-                <div class="reserve-item-singer">${song.requestedBy || 'Song Book'}</div>
+                <div class="reserve-item-singer">${song.requestedBy}</div>
             </div>
         `;
     });
