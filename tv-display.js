@@ -115,22 +115,23 @@ function initializeFirebaseListeners() {
         displayQueue();
     });
 
-    db.ref('currentSong').on('value', snapshot => {
-        const data = snapshot.val();
-        if (!data) return;
+    db.ref('currentSong').on('value', snap => {
+        const data = snap.val();
+        if (!data || !data.videoId) return;
+
+        console.log(
+            `🎬 Current song detected: ${data.title} ID: ${data.videoId} Timestamp: ${data.timestamp}`
+        );
 
         currentSong = data;
-        console.log('🎵 [4/7] Current song detected from Firebase:', currentSong.title);
+        firebaseReady = true;
         
         // Update display immediately
         displayQueue();
         updateNextSongDisplay();
 
-        // Only try to play if player is ready
-        if (youtubeAPIReady && player) {
-            console.log('▶️ [6/7] Player ready, calling playback');
-            checkAndPlayCurrentSong();
-        }
+        // Try to initialize and play
+        tryInitPlayback();
     });
 
     // 🔥 Listen for activity updates
