@@ -139,14 +139,11 @@ function setCurrentFromQueue(song) {
         title: song.title,
         artist: song.artist,
         videoId: song.videoId,
-        requestedBy: song.requestedBy
+        requestedBy: song.requestedBy,
+        singer: song.requestedBy
     };
-    
-    // Update Firebase
+
     firebase.database().ref('currentSong').set(currentSong);
-    
-    isPlaying = true;
-    checkAndPlayCurrentSong();
 }
 
 /* ===== YOUTUBE IFRAME PLAYER ===== */
