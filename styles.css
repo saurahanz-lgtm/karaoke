@@ -818,3 +818,27 @@ body {
         font-size: 0.7rem;
     }
 }
+
+/* ===== QUEUE STYLING ===== */
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 18px;
+}
+
+.queue-item .num {
+    opacity: 0.5;
+    width: 24px;
+}
+
+.queue-item .title {
+    flex: 1;
+    font-weight: 600;
+}
+
+.queue-item .name {
+    opacity: 0.7;
+}
