@@ -192,8 +192,14 @@ function setCurrentFromQueue(song) {
 /* ===== YOUTUBE IFRAME PLAYER ===== */
 
 function onYouTubeIframeAPIReady() {
-    console.log('▶️ [2/7] YouTube API ready, creating player');
+    console.log('✅ YouTube API Ready');
     ytReady = true;
+    tryInitPlayback();
+}
+
+// B. YouTube API - Initialize player when ready
+function tryInitPlayback() {
+    console.log('▶️ [2/7] YouTube API ready, creating player');
     
     player = new YT.Player('player', {
         height: '100%',
