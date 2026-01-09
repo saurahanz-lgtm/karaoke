@@ -219,6 +219,54 @@ body {
         font-size: 2rem;
     }
 }
+
+/* Connection Status (Bottom Left) */
+#connectionStatus {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    background: rgba(30,30,50,0.85);
+    backdrop-filter: blur(6px);
+    padding: 12px 20px;
+    border-radius: 20px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    min-width: 180px;
+}
+
+#connectionStatus.connected {
+    color: #22c55e;
+}
+
+#connectionStatus.disconnected {
+    color: #ef4444;
+}
+
+#connectionStatus .status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+#connectionStatus.connected .status-indicator {
+    background: #22c55e;
+    box-shadow: 0 0 10px #22c55e;
+}
+
+#connectionStatus.disconnected .status-indicator {
+    background: #ef4444;
+    animation: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
 </style>
 </head>
 
