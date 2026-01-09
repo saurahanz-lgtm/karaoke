@@ -139,7 +139,8 @@ function setCurrentFromQueue(song) {
         title: song.title,
         artist: song.artist,
         videoId: song.videoId,
-        requestedBy: song.requestedBy
+        requestedBy: song.requestedBy,
+        singer: song.requestedBy
     };
     
     // Update Firebase
@@ -285,6 +286,8 @@ function loadQueueData() {
                 if (data) {
                     currentSong = data;
                     console.log('🎵 Current song loaded from Firebase:', data.title);
+                    // Trigger playback after loading
+                    checkAndPlayCurrentSong();
                 }
             }).catch(err => {
                 console.warn('Firebase currentSong read failed:', err.message);
@@ -292,6 +295,7 @@ function loadQueueData() {
                 const currentSongData = localStorage.getItem('karaoke_current_song');
                 if (currentSongData) {
                     currentSong = JSON.parse(currentSongData);
+                    checkAndPlayCurrentSong();
                 }
             });
         } catch (error) {
@@ -299,12 +303,14 @@ function loadQueueData() {
             const currentSongData = localStorage.getItem('karaoke_current_song');
             if (currentSongData) {
                 currentSong = JSON.parse(currentSongData);
+                checkAndPlayCurrentSong();
             }
         }
     } else {
         const currentSongData = localStorage.getItem('karaoke_current_song');
         if (currentSongData) {
             currentSong = JSON.parse(currentSongData);
+            checkAndPlayCurrentSong();
         }
     }
 }
