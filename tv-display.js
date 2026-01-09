@@ -50,20 +50,27 @@ document.addEventListener('DOMContentLoaded', function() {
         // Fallback to localStorage polling - more aggressive polling for better responsiveness
         loadQueueData();
         displayQueue();
-        checkAndPlayCurrentSong();
+        if (youtubeAPIReady && player) {
+            checkAndPlayCurrentSong();
+        }
         
         // Auto-refresh every 1 second for better real-time updates
         setInterval(() => {
             loadQueueData();
             displayQueue();
-            checkAndPlayCurrentSong();
+            if (youtubeAPIReady && player) {
+                checkAndPlayCurrentSong();
+            }
         }, 1000);
     }
     
     // Always add polling as backup even with Firebase
     setInterval(() => {
         loadQueueData();
-        checkAndPlayCurrentSong();
+        // Only attempt playback if player is ready
+        if (youtubeAPIReady && player) {
+            checkAndPlayCurrentSong();
+        }
     }, 2000);
     
     // Listen for fullscreen changes
