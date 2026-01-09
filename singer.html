@@ -524,6 +524,7 @@
             let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
             queue.push(song);
             localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+            console.log('✅ Song added to queue. Queue length:', queue.length);
 
             // Also add to reserved songs display - always add it
             const reservedSong = { 
@@ -540,6 +541,8 @@
             window.dispatchEvent(new CustomEvent('karaoke-queue-updated', { 
                 detail: { song, queue } 
             }));
+            
+            console.log('📤 Dispatched karaoke-queue-updated event');
         }
 
         // Set current song and trigger auto-play
@@ -552,8 +555,9 @@
                 singer: song.requestedBy
             };
 
-            // Save to localStorage
+            // Save to localStorage - this is the primary way to communicate with TV display
             localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
+            console.log('✅ Current song set in localStorage:', song.title);
 
             // Set audio source for singer to hear preview/karaoke track
             if (audioPlayer && song.videoId) {
@@ -568,12 +572,13 @@
                     firebase.database().ref('currentSong').set(currentSong).catch(err => {
                         console.warn('Firebase currentSong update failed:', err.message);
                     });
+                    console.log('📤 Current song sent to Firebase');
                 } catch (err) {
                     console.warn('Firebase error:', err.message);
                 }
             }
 
-            // Trigger custom event for TV display to auto-play
+            // Trigger custom event for TV display to auto-play (same window only)
             window.dispatchEvent(new CustomEvent('karaoke-auto-play', { 
                 detail: { song: currentSong } 
             }));

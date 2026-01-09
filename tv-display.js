@@ -37,18 +37,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Use Firebase real-time listeners
         initializeFirebaseListeners();
     } else {
-        // Fallback to localStorage polling
+        // Fallback to localStorage polling - more aggressive polling for better responsiveness
         loadQueueData();
         displayQueue();
         checkAndPlayCurrentSong();
         
-        // Auto-refresh every 3 seconds
+        // Auto-refresh every 1 second for better real-time updates
         setInterval(() => {
             loadQueueData();
             displayQueue();
             checkAndPlayCurrentSong();
-        }, 3000);
+        }, 1000);
     }
+    
+    // Always add polling as backup even with Firebase
+    setInterval(() => {
+        loadQueueData();
+        checkAndPlayCurrentSong();
+    }, 2000);
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenButton);
@@ -66,14 +72,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen for storage changes from other tabs/windows (real-time sync with singer.html)
     window.addEventListener('storage', function(e) {
         if (e.key === 'karaoke_queue' || e.key === 'karaoke_current_song') {
-            console.log('📡 Storage change detected, updating display...');
+            console.log('📡 Storage change detected from other tab:', e.key);
             loadQueueData();
             displayQueue();
             checkAndPlayCurrentSong();
         }
     });
     
-    // Listen for custom karaoke queue update events
+    // Listen for custom karaoke queue update events (same window only)
     window.addEventListener('karaoke-queue-updated', function(e) {
         console.log('🎵 Queue updated from singer control:', e.detail);
         loadQueueData();
@@ -81,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
         checkAndPlayCurrentSong();
     });
 
-    // Listen for auto-play trigger from singer page
+    // Listen for auto-play trigger (same window only)
     window.addEventListener('karaoke-auto-play', function(e) {
         console.log('▶️ Auto-play triggered:', e.detail.song);
         currentSong = e.detail.song;
