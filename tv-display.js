@@ -44,35 +44,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if Firebase is available
     useFirebase = isFirebaseConfigured();
     
-    if (useFirebase) {
-        // Initialize Firebase listeners after YouTube API is ready
-        // (will be called from onYouTubeIframeAPIReady)
-    } else {
-        // Fallback to localStorage polling - more aggressive polling for better responsiveness
-        loadQueueData();
-        displayQueue();
-        if (youtubeAPIReady && player) {
-            checkAndPlayCurrentSong();
-        }
-        
-        // Auto-refresh every 1 second for better real-time updates
-        setInterval(() => {
-            loadQueueData();
-            displayQueue();
-            if (youtubeAPIReady && player) {
-                checkAndPlayCurrentSong();
-            }
-        }, 1000);
+    if (!useFirebase) {
+        console.error('❌ Firebase not configured - TV Display requires Firebase');
+        return;
     }
     
-    // Always add polling as backup even with Firebase
-    setInterval(() => {
-        loadQueueData();
-        // Only attempt playback if player is ready
-        if (youtubeAPIReady && player) {
-            checkAndPlayCurrentSong();
-        }
-    }, 2000);
+    // Firebase listeners will be initialized after YouTube API is ready
+    // (will be called from onYouTubeIframeAPIReady)
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenButton);
@@ -91,9 +69,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('storage', function(e) {
         if (e.key === 'karaoke_queue' || e.key === 'karaoke_current_song') {
             console.log('📡 Storage change detected from other tab:', e.key);
-            loadQueueData();
-            displayQueue();
-            checkAndPlayCurrentSong();
         }
     });
     
@@ -183,6 +158,11 @@ function onYouTubeIframeAPIReady() {
             onReady: () => {
                 youtubeAPIReady = true;
                 console.log('✅ YouTube Player READY');
+
+                // 🔥 Initialize Firebase listeners AFTER player is ready
+                if (useFirebase) {
+                    initializeFirebaseListeners();
+                }
 
                 // 🔥 PLAY PENDING SONG
                 if (pendingSongToPlay) {
@@ -293,73 +273,10 @@ function generateQRCode() {
     });
 }
 
-// Load queue data from Firebase (primary) or localStorage (fallback)
+// Load queue data from Firebase only
 function loadQueueData() {
-    // Try Firebase first (primary method)
-    if (useFirebase && typeof firebase !== 'undefined' && firebase.database) {
-        try {
-            firebase.database().ref('queue').once('value', (snapshot) => {
-                const data = snapshot.val();
-                tvQueue = data ? Object.values(data) : [];
-                console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
-            }).catch(err => {
-                console.warn('Firebase queue read failed:', err.message);
-                // Fallback to localStorage
-                loadQueueDataFromLocalStorage();
-            });
-        } catch (error) {
-            console.warn('Firebase error:', error.message);
-            loadQueueDataFromLocalStorage();
-        }
-    } else {
-        loadQueueDataFromLocalStorage();
-    }
-    
-    // Load current song from Firebase (primary)
-    if (useFirebase && typeof firebase !== 'undefined' && firebase.database) {
-        try {
-            firebase.database().ref('currentSong').once('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    currentSong = data;
-                    console.log('🎵 Current song loaded from Firebase:', data.title);
-                    // Trigger playback after loading
-                    checkAndPlayCurrentSong();
-                }
-            }).catch(err => {
-                console.warn('Firebase currentSong read failed:', err.message);
-                // Fallback to localStorage
-                const currentSongData = localStorage.getItem('karaoke_current_song');
-                if (currentSongData) {
-                    currentSong = JSON.parse(currentSongData);
-                    checkAndPlayCurrentSong();
-                }
-            });
-        } catch (error) {
-            console.warn('Firebase error:', error.message);
-            const currentSongData = localStorage.getItem('karaoke_current_song');
-            if (currentSongData) {
-                currentSong = JSON.parse(currentSongData);
-                checkAndPlayCurrentSong();
-            }
-        }
-    } else {
-        const currentSongData = localStorage.getItem('karaoke_current_song');
-        if (currentSongData) {
-            currentSong = JSON.parse(currentSongData);
-            checkAndPlayCurrentSong();
-        }
-    }
-}
-
-// Load queue from localStorage fallback
-function loadQueueDataFromLocalStorage() {
-    const queueData = localStorage.getItem('karaoke_queue');
-    if (queueData) {
-        tvQueue = JSON.parse(queueData);
-    } else {
-        tvQueue = [];
-    }
+    // Firebase listeners handle real-time updates
+    // This function is kept for backward compatibility
 }
 
 // Check and play current song (only when YouTube API is ready)
@@ -468,9 +385,6 @@ function playNextSong() {
     if (useFirebase) {
         firebase.database().ref('currentSong').set(currentSong);
         firebase.database().ref('queue').set(tvQueue.length > 0 ? tvQueue : null);
-    } else {
-        localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
-        localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
     }
     
     displayQueue();
@@ -567,9 +481,6 @@ function removeSongFromQueue(songId) {
     if (useFirebase) {
         // Update Firebase
         firebase.database().ref('queue').set(tvQueue.length > 0 ? tvQueue : null);
-    } else {
-        // Fallback to localStorage
-        localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
     }
     
     displayQueue();
@@ -601,10 +512,6 @@ function deleteQueue() {
             // Clear Firebase
             firebase.database().ref('queue').set(null);
             firebase.database().ref('currentSong').set(null);
-        } else {
-            // Clear localStorage
-            localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
-            localStorage.removeItem('karaoke_current_song');
         }
         
         displayQueue();
