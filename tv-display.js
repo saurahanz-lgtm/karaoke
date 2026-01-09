@@ -56,12 +56,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check connection status every 1 second for faster updates
     setInterval(checkPhoneConnection, 1000);
     
-    // Listen for fullscreen changes
-    document.addEventListener('fullscreenchange', updateFullscreenButton);
-    document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
-    document.addEventListener('mozfullscreenchange', updateFullscreenButton);
-    document.addEventListener('msfullscreenchange', updateFullscreenButton);
-    
     // Refresh QR code when page becomes visible (user switches back to this tab)
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) {
