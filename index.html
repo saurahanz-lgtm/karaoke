@@ -293,8 +293,623 @@
         </form>
     </div>
 
+    <!-- Singer Page (Combined) -->
+    <div id="singerPage" class="singer-page" style="display: none;">
+        <style>
+            .singer-page {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                color: #fff;
+            }
+
+            .container-main {
+                max-width: 900px;
+                margin: auto;
+                padding: 20px;
+            }
+
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+
+            .header h1 {
+                color: #ffffff;
+                font-weight: 700;
+            }
+
+            .header h1 .sd-text {
+                font-family: 'Brush Script MT', 'Lucida Calligraphy', cursive;
+                color: #f093fb;
+                font-size: 1.2em;
+                font-style: italic;
+                text-shadow: 0 0 10px rgba(240, 147, 251, 0.6);
+            }
+
+            .card-ui {
+                background: rgba(102, 126, 234, 0.1);
+                border: 2px solid rgba(102, 126, 234, 0.3);
+                border-radius: 18px;
+                padding: 20px;
+                margin-bottom: 25px;
+                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+            }
+
+            .controls {
+                display: flex;
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+
+            .controls button {
+                flex: 1;
+                border: none;
+                border-radius: 12px;
+                padding: 16px;
+                font-size: 20px;
+                color: white;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .controls button:hover {
+                transform: scale(1.08);
+                box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            }
+
+            .controls button:active {
+                transform: scale(0.95);
+            }
+
+            .play { background: #22c55e; }
+            .pause { background: #6b7280; }
+            .stop { background: #ef4444; }
+            .gray { background: #6b7280; }
+
+            .play:hover { background: #1da850; }
+            .pause:hover { background: #5a5f6b; }
+
+            .disconnect {
+                background: linear-gradient(135deg, #f5576c, #f093fb);
+                border: none;
+                color: white;
+                padding: 10px 18px;
+                border-radius: 10px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .disconnect:hover {
+                box-shadow: 0 12px 30px rgba(245, 87, 108, 0.4);
+                transform: translateY(-3px);
+            }
+
+            .disconnect:active {
+                transform: translateY(-1px);
+            }
+
+            .refresh {
+                background: white;
+                color: black;
+                border-radius: 10px;
+                padding: 12px;
+                text-align: center;
+                margin-bottom: 18px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .refresh:hover {
+                transform: scale(1.05);
+            }
+
+            .searchbox {
+                display: flex;
+                gap: 10px;
+            }
+
+            .searchbox input {
+                flex: 1;
+                padding: 12px;
+                border-radius: 10px;
+                border: none;
+                font-size: 1rem;
+            }
+
+            .searchbtn {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                border: none;
+                color: white;
+                padding: 12px 18px;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .searchbtn:hover {
+                transform: scale(1.05);
+                box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            }
+
+            .searchbtn:active {
+                transform: scale(0.95);
+            }
+
+            .song-item {
+                background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(240, 147, 251, 0.1));
+                border: 2px solid rgba(102, 126, 234, 0.4);
+                border-radius: 12px;
+                padding: 15px;
+                margin-bottom: 12px;
+            }
+
+            .song-item button {
+                width: 100%;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                border: none;
+                color: white;
+                padding: 8px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .song-item button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            }
+
+            #resultsContainer {
+                margin-top: 1rem;
+            }
+
+            .alert-custom {
+                border-radius: 15px;
+                padding: 1.5rem;
+                margin-top: 1rem;
+                border: 2px solid;
+            }
+        </style>
+
+        <div class="container-main">
+            <!-- HEADER -->
+            <div class="header">
+                <h1><span class="sd-text">SD</span>karaoke</h1>
+                <button class="disconnect" onclick="disconnectSinger()">DISCONNECT</button>
+            </div>
+
+            <!-- PLAYER -->
+            <div class="card-ui">
+                <div style="margin-bottom: 15px; font-size: 18px; font-weight: 600;">Welcome</div>
+                <div id="userDisplayName" style="margin-bottom: 12px; font-size: 1.3rem; font-weight: 700; color: #f093fb;">Enter your name:</div>
+                <input type="text" id="userName" placeholder="Your name..." readonly style="width: 100%; padding: 12px; border-radius: 8px; border: none; margin-bottom: 15px; font-size: 1rem;" />
+                
+                <div class="refresh" onclick="reloadPlayer()">🔄</div>
+
+                <div class="controls">
+                    <button class="gray" id="muteBtn" onclick="toggleMute()">🔊</button>
+                    <button class="play" id="playPauseBtn" onclick="togglePlayPause()">▶</button>
+                    <button class="stop" onclick="stopPlayer()">■</button>
+                </div>
+            </div>
+
+            <!-- SEARCH & RESERVE -->
+            <div class="card-ui">
+                <h3>Search & Reserve</h3>
+                <form id="searchForm">
+                    <div class="searchbox">
+                        <input id="searchInput" placeholder="Search..." />
+                        <button type="submit" class="searchbtn">🔍</button>
+                    </div>
+                </form>
+                <div id="resultsContainer"></div>
+            </div>
+
+            <!-- RESERVED -->
+            <div class="card-ui">
+                <h3>Reserved Songs</h3>
+                <div id="reservedSongs"></div>
+            </div>
+        </div>
+
+        <audio id="audioPlayer"></audio>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
+        // ===== SINGER PAGE STATE =====
+        let searchResults = [];
+        let audioPlayer;
+        let allSongs = [];
+        let reservedSongs = [];
+        let useSingerFirebase = false;
+
+        // Check if Firebase is properly configured
+        function isSingerFirebaseConfigured() {
+            try {
+                if (typeof firebase !== 'undefined' && firebase.database && firebase.app()) {
+                    const config = firebase.app().options;
+                    return config.databaseURL && !config.databaseURL.includes('YOUR_');
+                }
+            } catch (e) {
+                return false;
+            }
+            return false;
+        }
+
+        // Initialize Firebase check
+        useSingerFirebase = isSingerFirebaseConfigured();
+
+        // Show singer page and hide home
+        function showSingerPage() {
+            document.querySelector('.home-page').style.display = 'none';
+            document.getElementById('singerPage').style.display = 'block';
+            
+            // Initialize singer page
+            audioPlayer = document.getElementById('audioPlayer');
+            
+            const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
+            if (loggedInUser) {
+                const user = JSON.parse(loggedInUser);
+                document.getElementById('userName').value = user.username;
+                localStorage.setItem('karaoke_user_name', user.username);
+            }
+            
+            const searchForm = document.getElementById('searchForm');
+            if (searchForm) {
+                searchForm.addEventListener('submit', handleSearch);
+            }
+            
+            updateSingerActivity();
+            loadAllSongs();
+            loadReservedSongs();
+            displaySongBook();
+            displayReservedSongs();
+            updateUserDisplay();
+            
+            setInterval(updateSingerActivity, 30000);
+        }
+
+        // Hide singer page and show home
+        function showHomePage() {
+            document.querySelector('.home-page').style.display = 'block';
+            document.getElementById('singerPage').style.display = 'none';
+        }
+
+        // Disconnect singer
+        function disconnectSinger() {
+            if (confirm('Are you sure you want to disconnect?')) {
+                showHomePage();
+            }
+        }
+
+        // ===== SINGER PAGE FUNCTIONS =====
+
+        // Handle search form submission
+        async function handleSearch(e) {
+            e.preventDefault();
+            
+            const searchInput = document.getElementById('searchInput');
+            const userNameInput = document.getElementById('userName');
+            const searchQuery = searchInput ? searchInput.value.trim() : '';
+            
+            if (!searchQuery) {
+                alert('Please enter a song name');
+                return;
+            }
+
+            const searchBtn = document.querySelector('#searchForm .searchbtn');
+            if (searchBtn) {
+                searchBtn.disabled = true;
+                searchBtn.textContent = '⏳ Searching...';
+            }
+
+            try {
+                searchResults = await performSearch(searchQuery);
+                const userName = userNameInput ? userNameInput.value : 'Guest';
+                displaySearchResults(searchResults, userName);
+            } catch (error) {
+                console.error('Search error:', error);
+                showAlert('Error searching for songs. Please try again.', 'danger');
+            } finally {
+                if (searchBtn) {
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = '🔍 Search';
+                }
+            }
+        }
+
+        // YouTube API search function
+        async function performSearch(query) {
+            try {
+                const results = await searchYouTubeKaraoke(query);
+                return results.map(item => ({
+                    title: item.title,
+                    artist: item.artist,
+                    videoId: item.videoId,
+                    thumbnail: item.thumbnail
+                }));
+            } catch (error) {
+                console.error('YouTube API Error:', error);
+                return getFallbackSongs(query);
+            }
+        }
+
+        // Fallback demo data
+        function getFallbackSongs(query) {
+            const allSongs = [
+                { title: "Bohemian Rhapsody - Karaoke", artist: "Queen", videoId: "fJ9rUzIMt7o" },
+                { title: "Hallelujah - Karaoke", artist: "Leonard Cohen", videoId: "YAHxj0k0WL0" },
+                { title: "Someone Like You - Karaoke", artist: "Adele", videoId: "hHUbLv4ThOk" },
+                { title: "Perfect - Karaoke", artist: "Ed Sheeran", videoId: "2takcwFERG0" },
+                { title: "Shape of You - Karaoke", artist: "Ed Sheeran", videoId: "JGwWNGJdvx8" },
+                { title: "Rolling in the Deep - Karaoke", artist: "Adele", videoId: "rYEDA3JcQqw" },
+                { title: "Imagine - Karaoke", artist: "John Lennon", videoId: "DVg2EJvvlF8" },
+                { title: "Wonderwall - Karaoke", artist: "Oasis", videoId: "6hzrDeceEKc" },
+                { title: "Piano Man - Karaoke", artist: "Billy Joel", videoId: "1vrEljMfXWc" },
+                { title: "Don't Stop Believin' - Karaoke", artist: "Journey", videoId: "1k8craCGpgs" }
+            ];
+            return allSongs.filter(song => 
+                song.title.toLowerCase().includes(query.toLowerCase()) ||
+                song.artist.toLowerCase().includes(query.toLowerCase())
+            );
+        }
+
+        // Display search results
+        function displaySearchResults(results, userName) {
+            const container = document.getElementById('resultsContainer');
+
+            if (results.length === 0) {
+                const searchInput = document.getElementById('searchInput');
+                const query = searchInput ? searchInput.value : '';
+                container.innerHTML = `<div class="alert alert-custom">❌ No results found for "${query}"</div>`;
+                return;
+            }
+
+            let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3>`;
+
+            results.forEach((song) => {
+                const thumbnailUrl = `https://i.ytimg.com/vi/${song.videoId}/maxresdefault.jpg`;
+                html += `
+                    <div class="song-item">
+                        <div style="font-weight: 600; margin-bottom: 5px;">${song.title}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">🎤 ${song.artist}</div>
+                        <button class="song-item-btn" onclick="requestSong('${song.title.replace(/'/g, "\\'")}', '${song.artist.replace(/'/g, "\\'")}', '${song.videoId}', '${userName}', this)">
+                            ✓ Select
+                        </button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Request song
+        function requestSong(title, artist, videoId, userName, btn) {
+            if (!userName.trim()) {
+                alert('Please enter your name first');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Adding...';
+
+            try {
+                let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+                
+                const newSong = {
+                    id: Math.max(...queue.map(s => s.id || 0), 0) + 1,
+                    title,
+                    artist,
+                    videoId,
+                    requestedBy: userName
+                };
+                queue.push(newSong);
+                
+                localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+
+                const songExists = reservedSongs.some(s => s.videoId === videoId);
+                if (!songExists) {
+                    reservedSongs.push({ title, artist, videoId });
+                    localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
+                    displayReservedSongs();
+                }
+
+                setTimeout(() => {
+                    showAlert(`✅ "${title}" added to Reserved Songs!`, 'success');
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('resultsContainer').innerHTML = '';
+                    btn.disabled = false;
+                    btn.textContent = '✓ Select';
+                }, 500);
+
+            } catch (error) {
+                console.error('Error requesting song:', error);
+                showAlert('Error adding song', 'danger');
+                btn.disabled = false;
+                btn.textContent = '✓ Select';
+            }
+        }
+
+        // Show alert
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('resultsContainer');
+            let alertStyle = '';
+
+            if (type === 'success') {
+                alertStyle = 'background: rgba(40, 167, 69, 0.1); border-color: rgba(40, 167, 69, 0.5); color: #28a745;';
+            } else if (type === 'danger') {
+                alertStyle = 'background: rgba(220, 53, 69, 0.1); border-color: rgba(220, 53, 69, 0.5); color: #dc3545;';
+            }
+
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-custom';
+            alert.style.cssText = alertStyle;
+            alert.innerHTML = message;
+
+            const existing = container.querySelector('.alert');
+            if (existing) existing.remove();
+
+            container.insertBefore(alert, container.firstChild);
+
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => alert.remove(), 300);
+            }, 3000);
+        }
+
+        // Load reserved songs
+        function loadReservedSongs() {
+            const stored = localStorage.getItem('karaoke_reserved_songs');
+            if (stored) {
+                try {
+                    reservedSongs = JSON.parse(stored);
+                } catch (e) {
+                    reservedSongs = [];
+                }
+            } else {
+                reservedSongs = [];
+            }
+        }
+
+        // Display reserved songs
+        function displayReservedSongs() {
+            const container = document.getElementById('reservedSongs');
+            if (!container) return;
+
+            if (reservedSongs.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem; font-style: italic;">No reserved songs yet. Search and request songs!</div>';
+                return;
+            }
+
+            let html = '';
+            reservedSongs.forEach(song => {
+                html += `
+                    <div class="song-item">
+                        <div style="font-weight: 600; margin-bottom: 5px;">${song.title}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">🎤 ${song.artist}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Load all songs
+        function loadAllSongs() {
+            allSongs = [
+                { title: "Bohemian Rhapsody - Karaoke", artist: "Queen", videoId: "fJ9rUzIMt7o" },
+                { title: "Hallelujah - Karaoke", artist: "Leonard Cohen", videoId: "YAHxj0k0WL0" },
+                { title: "Someone Like You - Karaoke", artist: "Adele", videoId: "hHUbLv4ThOk" }
+            ];
+        }
+
+        // Display song book
+        function displaySongBook() {
+            // Optional: add song book display
+        }
+
+        // Update user display
+        function updateUserDisplay() {
+            const userNameInput = document.getElementById('userName');
+            const userDisplayName = document.getElementById('userDisplayName');
+            
+            if (userNameInput && userDisplayName) {
+                const userName = userNameInput.value.trim() || 'Enter your name:';
+                
+                if (userName === 'Enter your name:') {
+                    userDisplayName.textContent = 'Enter your name:';
+                    userDisplayName.style.color = 'rgba(255, 255, 255, 0.6)';
+                } else {
+                    userDisplayName.textContent = `🎤 Welcome, ${userName}!`;
+                    userDisplayName.style.color = '#f093fb';
+                    localStorage.setItem('karaoke_user_name', userName);
+                }
+            }
+        }
+
+        // Reload player
+        function reloadPlayer() {
+            if (audioPlayer) {
+                audioPlayer.currentTime = 0;
+                audioPlayer.play().catch(e => console.log('Play failed:', e));
+            }
+        }
+
+        // Toggle play/pause
+        function togglePlayPause() {
+            const btn = document.getElementById('playPauseBtn');
+            if (!audioPlayer.src) {
+                alert('No song loaded. Please search for a song first.');
+                return;
+            }
+
+            if (audioPlayer.paused) {
+                audioPlayer.play().catch(e => console.log('Play failed:', e));
+                btn.textContent = '⏸';
+                btn.classList.remove('pause');
+                btn.classList.add('play');
+            } else {
+                audioPlayer.pause();
+                btn.textContent = '▶';
+                btn.classList.remove('play');
+                btn.classList.add('pause');
+            }
+        }
+
+        // Stop player
+        function stopPlayer() {
+            if (audioPlayer) {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                document.getElementById('playPauseBtn').textContent = '▶ Play';
+            }
+        }
+
+        // Toggle mute
+        function toggleMute() {
+            const btn = document.getElementById('muteBtn');
+            if (audioPlayer) {
+                audioPlayer.muted = !audioPlayer.muted;
+                btn.textContent = audioPlayer.muted ? '🔇' : '🔊';
+            }
+        }
+
+        // Update singer activity
+        function updateSingerActivity() {
+            const singerName = localStorage.getItem('karaoke_user_name');
+            if (!singerName) return;
+            
+            let users = [];
+            const stored = localStorage.getItem('karaoke_users');
+            if (stored) {
+                users = JSON.parse(stored);
+            }
+            
+            let user = users.find(u => u.username === singerName);
+            if (!user) {
+                user = {
+                    id: users.length + 1,
+                    username: singerName,
+                    password: 'singer',
+                    role: 'admin',
+                    joined: new Date().toISOString().split('T')[0],
+                    lastActivity: new Date().getTime()
+                };
+                users.push(user);
+            } else {
+                user.lastActivity = new Date().getTime();
+            }
+            
+            localStorage.setItem('karaoke_users', JSON.stringify(users));
+        }
+
+        // ===== HOME PAGE FUNCTIONS =====
+
         // Initialize demo data if not exists - Run immediately
         function initializeDemoData() {
             const stored = localStorage.getItem('karaoke_users');
@@ -368,7 +983,8 @@
                 if (singerUser) {
                     // Store logged-in user
                     localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
-                    window.location.href = 'singer.html';
+                    closeLoginModal();
+                    showSingerPage();
                 } else {
                     alert('❌ Invalid credentials. Please check your username and password.');
                     document.getElementById('singerUsername').focus();
