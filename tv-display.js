@@ -118,6 +118,7 @@ function initializeFirebaseListeners() {
         );
 
         currentSong = data;
+        firebaseReady = true;
         
         // Update display immediately
         displayQueue();
@@ -193,8 +194,12 @@ function onYouTubeIframeAPIReady() {
 
 // B. YouTube API - Initialize player when ready
 function createYouTubePlayer() {
-    console.log('✅ YouTube API Ready, player will be created on first song load');
-    // Player is now created in loadSong() when needed
+    console.log('✅ YouTube API Ready, initializing Firebase listeners');
+    
+    // Initialize Firebase listeners immediately after YouTube API is ready
+    if (useFirebase && !firebaseListenersSet) {
+        initializeFirebaseListeners();
+    }
 }
 
 // D. SINGLE ENTRY POINT (MOST IMPORTANT)
