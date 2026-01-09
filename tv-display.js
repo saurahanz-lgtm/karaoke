@@ -389,13 +389,22 @@ function playVideo(videoId, title, artist, singer) {
             rel: 0,
             showinfo: 0,
             iv_load_policy: 3,
-            origin: window.location.origin
+            fs: 1,
+            playsinline: 1,
+            enablejsapi: 1
         },
         events: {
             'onReady': function(event) {
                 event.target.playVideo();
             },
-            'onStateChange': onPlayerStateChange
+            'onStateChange': onPlayerStateChange,
+            'onError': function(event) {
+                console.error('❌ YouTube player error:', event.data);
+                if (event.data === 150 || event.data === 101) {
+                    // Video restricted from embedding
+                    console.warn('⚠️ Video is restricted from embedding on this site');
+                }
+            }
         }
     });
 }
