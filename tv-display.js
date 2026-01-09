@@ -195,12 +195,12 @@ function setCurrentFromQueue(song) {
 function onYouTubeIframeAPIReady() {
     console.log('✅ YouTube API Ready');
     ytReady = true;
-    tryInitPlayback();
+    createYouTubePlayer();
 }
 
 // B. YouTube API - Initialize player when ready
-function tryInitPlayback() {
-    console.log('▶️ [2/7] YouTube API ready, creating player');
+function createYouTubePlayer() {
+    console.log('▶️ [2/7] Creating YouTube player');
     
     player = new YT.Player('player', {
         height: '100%',
@@ -223,11 +223,8 @@ function tryInitPlayback() {
                     initializeFirebaseListeners();
                 }
 
-                // 🔥 PLAY PENDING SONG
-                if (pendingSongToPlay) {
-                    console.log('▶ Playing pending song');
-                    checkAndPlayCurrentSong();
-                }
+                // Try playback after player is ready
+                tryInitPlayback();
             },
             onStateChange: (event) => {
                 console.log('🎬 [7/7] Player state changed:', event.data);
@@ -237,6 +234,26 @@ function tryInitPlayback() {
     });
     
     console.log('✅ [5/7] Player created (ONCE)');
+}
+
+// D. SINGLE ENTRY POINT (MOST IMPORTANT)
+function tryInitPlayback() {
+    if (!ytReady || !firebaseReady) {
+        console.log(`⏳ Not ready yet: ytReady=${ytReady}, firebaseReady=${firebaseReady}`);
+        return;
+    }
+
+    if (isLoadingSong) {
+        console.log('⏳ Already loading a song, skipping...');
+        return;
+    }
+
+    if (currentVideoId === currentSong?.videoId) {
+        console.log('ℹ️ Same song already playing');
+        return;
+    }
+
+    loadSong(currentSong);
 }
 
 /* ===== FULLSCREEN & CONNECTION ===== */
@@ -268,6 +285,33 @@ function toggleFullscreen() {
             document.msExitFullscreen();
         }
     }
+}
+
+// D. LOAD SONG - Unified playback handler
+function loadSong(song) {
+    if (!song || !song.videoId) {
+        console.warn('⚠ No song or videoId');
+        return;
+    }
+
+    if (!playerReady) {
+        console.warn('⚠ Player not ready');
+        return;
+    }
+
+    console.log(`🎬 Loading song: ${song.title}`);
+    isLoadingSong = true;
+    currentVideoId = song.videoId;
+
+    player.loadVideoById({
+        videoId: song.videoId,
+        startSeconds: 0
+    });
+
+    displaySongInfo(song);
+    updateNextSongDisplay();
+    
+    isLoadingSong = false;
 }
 
 // Check if phone/singer page is connected
