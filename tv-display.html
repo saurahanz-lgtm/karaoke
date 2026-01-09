@@ -69,6 +69,12 @@ body {
 }
 
 /* Video */
+#player {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 #videoPlayer {
     width: 100%;
     height: 100%;
@@ -404,6 +410,7 @@ body {
     <!-- Video Player -->
     <div class="now-playing-section">
         <div class="now-playing-card">
+            <div id="player"></div>
             <div id="videoPlayer"></div>
             <div id="centerSingerName" class="center-singer-name"></div>
         </div>

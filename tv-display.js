@@ -78,6 +78,13 @@ function isFirebaseConfigured() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📺 [1/7] TV Display DOMContentLoaded');
     
+    // Verify YouTube API is available
+    if (typeof YT === 'undefined') {
+        console.error('❌ YouTube API not loaded! Check that https://www.youtube.com/iframe_api is accessible');
+    } else {
+        console.log('✅ YouTube API library loaded');
+    }
+    
     // Generate QR code on load
     generateQRCode();
     
@@ -249,7 +256,8 @@ function setCurrentFromQueue(song) {
 /* ===== YOUTUBE IFRAME PLAYER ===== */
 
 function onYouTubeIframeAPIReady() {
-    console.log('✅ YouTube API Ready');
+    console.log('✅ YouTube IFrame API Ready');
+    console.log('🔍 Checking for #player container:', !!document.getElementById('player'));
     ytReady = true;
     createYouTubePlayer();
 }
@@ -339,6 +347,7 @@ function loadSong(song) {
             events: {
                 onReady: (e) => {
                     console.log('🎬 Boot-up Video Player Ready');
+                    console.log('📊 Player instance:', e.target);
                     playerReady = true;
                     checkBootupCompletion();
                     // Try to play with autoplay - if blocked by browser, will be caught in onError
