@@ -24,12 +24,6 @@ function isFirebaseConfigured() {
 
 // Initialize TV display
 document.addEventListener('DOMContentLoaded', function() {
-    // Generate QR code on load
-    generateQRCode();
-    
-    // Regenerate QR code every 10 seconds to ensure it's always fresh
-    setInterval(generateQRCode, 10000);
-    
     // Check if Firebase is available
     useFirebase = isFirebaseConfigured();
     
@@ -52,16 +46,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenButton);
-    document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
-    document.addEventListener('mozfullscreenchange', updateFullscreenButton);
-    document.addEventListener('msfullscreenchange', updateFullscreenButton);
-    
-    // Refresh QR code when page becomes visible (user switches back to this tab)
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            generateQRCode();
-        }
-    });
     
     // Listen for storage changes from other tabs/windows (real-time sync with singer.html)
     window.addEventListener('storage', function(e) {
@@ -181,26 +165,8 @@ function updateFullscreenButton() {
 
 // Generate QR code for singer page
 function generateQRCode() {
-    const qrContainer = document.getElementById('qrcode');
-    // Clear previous QR code if exists
-    qrContainer.innerHTML = '';
-    
-    // Get the current domain and path
-    const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -1).join('/');
-    const indexPageUrl = baseUrl + '/index.html';
-    
-    // Debug logging
-    console.log('📱 QR Code URL:', indexPageUrl);
-    
-    // Create QR code (smaller size for bottom right)
-    new QRCode(qrContainer, {
-        text: indexPageUrl,
-        width: 110,
-        height: 110,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
+    // QR code removed - minimal design
+    return;
 }
 
 // Load queue data from localStorage (shared with admin)
@@ -330,33 +296,8 @@ function playVideo(videoId, title, artist, singer) {
 
 // Display queue
 function displayQueue() {
-    const queueContainer = document.getElementById('queueDisplay');
-
-    if (!queueContainer) {
-        console.warn('⚠️ Queue display container not found');
-        return;
-    }
-
-    if (tvQueue.length === 0) {
-        queueContainer.innerHTML = '';
-        updateReserveList();
-        return;
-    }
-
-    let html = '';
-    tvQueue.forEach((song, index) => {
-        html += `
-            <div class="queue-item-card">
-                <div class="queue-item-title">${song.title}</div>
-                <div class="queue-item-artist">🎤 ${song.artist}</div>
-                <div class="queue-item-singer">👤 ${song.requestedBy}</div>
-            </div>
-        `;
-    });
-
-    queueContainer.innerHTML = html;
-    updateNextSongDisplay();
-    updateReserveList();
+    // Queue display removed - minimal design
+    return;
 }
 
 // Update next song display (horizontal, in upper left)
@@ -393,35 +334,8 @@ function updateNextSongDisplay() {
 
 // Update reserve list in top right corner
 function updateReserveList() {
-    let reserveListItems = document.getElementById('reserveListItems');
-    
-    if (!reserveListItems) {
-        console.warn('⚠️ Reserve list container not found');
-        return;
-    }
-    
-    // Show upcoming songs in reserve list (max 5)
-    const songsToDisplay = tvQueue.slice(0, 5);
-    
-    if (!songsToDisplay || songsToDisplay.length === 0) {
-        reserveListItems.innerHTML = '';
-        return;
-    }
-
-    // Show first 5 songs in reserve list
-    let html = '';
-    songsToDisplay.forEach((song, index) => {
-        html += `
-            <div class="reserve-item">
-                <div class="reserve-item-number">${index + 1}</div>
-                <div class="reserve-item-title">${song.title}</div>
-                <div class="reserve-item-artist">${song.artist}</div>
-                <div class="reserve-item-singer">${song.requestedBy}</div>
-            </div>
-        `;
-    });
-
-    reserveListItems.innerHTML = html;
+    // Reserve list removed - minimal design
+    return;
 }
 
 // Function to add song to queue (called from singer page)
