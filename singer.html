@@ -283,10 +283,34 @@
             // Initialize singer page
             audioPlayer = document.getElementById('audioPlayer');
             
-            // Update activity timestamp for TV display connection status
+            // Update activity timestamp for TV display connection status AND user database
             function updateActivityTimestamp() {
                 const now = Date.now().toString();
                 localStorage.setItem('karaoke_singer_activity', now);
+                
+                // Also update the user's lastActivity in the database
+                const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
+                if (loggedInUser) {
+                    try {
+                        const user = JSON.parse(loggedInUser);
+                        // Update lastActivity in localStorage
+                        user.lastActivity = Date.now();
+                        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(user));
+                        
+                        // Update in Firebase if available
+                        if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                            try {
+                                firebase.database().ref('users/' + user.id).update({
+                                    lastActivity: Date.now()
+                                }).catch(err => console.warn('Firebase update failed:', err.message));
+                            } catch (fbErr) {
+                                // Firebase error, continue without it
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error updating user activity:', e.message);
+                    }
+                }
                 console.log('🎤 Singer activity updated:', new Date().toLocaleTimeString());
             }
             

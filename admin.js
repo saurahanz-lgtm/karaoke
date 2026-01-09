@@ -104,8 +104,28 @@ function loadUsers() {
         }
     }
     
-    // Set up activity tracking
-    setInterval(updateUserActivity, 5000); // Check every 5 seconds
+    // Set up activity tracking - refresh every 2 seconds to show real-time status
+    setInterval(() => {
+        // Reload users from database to get latest activity
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            try {
+                firebase.database().ref('users').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        users = Object.values(data);
+                        displayUsers();
+                        updateStats();
+                    }
+                });
+            } catch (error) {
+                // Silent fail
+            }
+        } else {
+            loadFromLocalStorage();
+            displayUsers();
+            updateStats();
+        }
+    }, 2000);
 }
 
 // Load from localStorage fallback
