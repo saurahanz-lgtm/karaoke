@@ -278,9 +278,13 @@
             
             // Initialize Firebase check
             useSingerFirebase = isSingerFirebaseConfigured();
+            console.log('Firebase available:', useSingerFirebase);
 
             // Initialize singer page
             audioPlayer = document.getElementById('audioPlayer');
+            if (!audioPlayer) {
+                console.error('❌ Audio player element not found!');
+            }
             
             const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
             if (loggedInUser) {
@@ -294,6 +298,7 @@
             
             const searchForm = document.getElementById('searchForm');
             if (searchForm) {
+                searchForm.removeEventListener('submit', handleSearch);
                 searchForm.addEventListener('submit', handleSearch);
             }
             
@@ -303,6 +308,31 @@
             displayReservedSongs();
             updateUserDisplay();
             updateSingerActivity();
+            
+            // Listen for Firebase queue updates if available
+            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('queue').on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            let queueArray = Object.values(data);
+                            localStorage.setItem('karaoke_queue', JSON.stringify(queueArray));
+                            console.log('📡 Queue synced from Firebase:', queueArray.length, 'songs');
+                        }
+                    });
+                } catch (fbError) {
+                    console.warn('⚠️ Could not set Firebase listener:', fbError.message);
+                }
+            }
+            
+            // Listen for localStorage changes from TV display
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'karaoke_queue') {
+                    console.log('📡 Queue updated from TV display');
+                    loadReservedSongs();
+                    displayReservedSongs();
+                }
+            });
             
             // Auto-refresh activity every 30 seconds
             setInterval(updateSingerActivity, 30000);
@@ -430,33 +460,37 @@
             btn.textContent = '⏳ Adding...';
 
             try {
-                let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
-                
                 const newSong = {
-                    id: Math.max(...queue.map(s => s.id || 0), 0) + 1,
+                    id: Date.now().toString(),
                     title,
                     artist,
                     videoId,
-                    requestedBy: userName
+                    requestedBy: userName,
+                    timestamp: new Date().toLocaleString()
                 };
-                queue.push(newSong);
-                
-                localStorage.setItem('karaoke_queue', JSON.stringify(queue));
 
-                const songExists = reservedSongs.some(s => s.videoId === videoId);
-                if (!songExists) {
-                    reservedSongs.push({ title, artist, videoId });
-                    localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
-                    displayReservedSongs();
+                // Try Firebase first
+                if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                    try {
+                        firebase.database().ref('queue/' + newSong.id).set(newSong).then(() => {
+                            console.log('✅ Song added to Firebase queue:', newSong.title);
+                            addToLocalQueue(newSong);
+                            successCallback(btn, title);
+                        }).catch(err => {
+                            console.warn('Firebase write failed:', err.message);
+                            addToLocalQueue(newSong);
+                            successCallback(btn, title);
+                        });
+                    } catch (fbError) {
+                        console.warn('Firebase error:', fbError.message);
+                        addToLocalQueue(newSong);
+                        successCallback(btn, title);
+                    }
+                } else {
+                    // Fallback to localStorage
+                    addToLocalQueue(newSong);
+                    successCallback(btn, title);
                 }
-
-                setTimeout(() => {
-                    showAlert(`✅ "${title}" added to Reserved Songs!`, 'success');
-                    document.getElementById('searchInput').value = '';
-                    document.getElementById('resultsContainer').innerHTML = '';
-                    btn.disabled = false;
-                    btn.textContent = '✓ Select';
-                }, 500);
 
             } catch (error) {
                 console.error('Error requesting song:', error);
@@ -464,6 +498,37 @@
                 btn.disabled = false;
                 btn.textContent = '✓ Select';
             }
+        }
+
+        // Helper function to add song to local queue
+        function addToLocalQueue(song) {
+            let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+            queue.push(song);
+            localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+
+            // Also add to reserved songs display
+            const songExists = reservedSongs.some(s => s.videoId === song.videoId);
+            if (!songExists) {
+                reservedSongs.push({ title: song.title, artist: song.artist, videoId: song.videoId });
+                localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
+                displayReservedSongs();
+            }
+
+            // Notify TV display of queue update
+            window.dispatchEvent(new CustomEvent('karaoke-queue-updated', { 
+                detail: { song, queue } 
+            }));
+        }
+
+        // Helper function for successful request
+        function successCallback(btn, title) {
+            setTimeout(() => {
+                showAlert(`✅ "${title}" added to Reserved Songs!`, 'success');
+                document.getElementById('searchInput').value = '';
+                document.getElementById('resultsContainer').innerHTML = '';
+                btn.disabled = false;
+                btn.textContent = '✓ Select';
+            }, 500);
         }
 
         // Show alert
@@ -561,17 +626,23 @@
 
         // Reload player
         function reloadPlayer() {
-            if (audioPlayer) {
-                audioPlayer.currentTime = 0;
-                audioPlayer.play().catch(e => console.log('Play failed:', e));
+            if (!audioPlayer) {
+                console.error('Audio player not initialized');
+                return;
             }
+            audioPlayer.currentTime = 0;
+            audioPlayer.play().catch(e => console.log('Play failed:', e));
         }
 
         // Toggle play/pause
         function togglePlayPause() {
             const btn = document.getElementById('playPauseBtn');
+            if (!audioPlayer) {
+                console.error('Audio player not initialized');
+                return;
+            }
             if (!audioPlayer.src) {
-                alert('No song loaded. Please search for a song first.');
+                showAlert('No song loaded. Search and select a song first.', 'warning');
                 return;
             }
 
@@ -590,18 +661,29 @@
 
         // Stop player
         function stopPlayer() {
-            if (audioPlayer) {
-                audioPlayer.pause();
-                audioPlayer.currentTime = 0;
-                document.getElementById('playPauseBtn').textContent = '▶ Play';
+            if (!audioPlayer) {
+                console.error('Audio player not initialized');
+                return;
+            }
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            const btn = document.getElementById('playPauseBtn');
+            if (btn) {
+                btn.textContent = '▶';
+                btn.classList.remove('play');
+                btn.classList.add('pause');
             }
         }
 
         // Toggle mute
         function toggleMute() {
             const btn = document.getElementById('muteBtn');
-            if (audioPlayer) {
-                audioPlayer.muted = !audioPlayer.muted;
+            if (!audioPlayer) {
+                console.error('Audio player not initialized');
+                return;
+            }
+            audioPlayer.muted = !audioPlayer.muted;
+            if (btn) {
                 btn.textContent = audioPlayer.muted ? '🔇' : '🔊';
             }
         }
