@@ -546,32 +546,67 @@
 
         // Show singer page and hide home
         function showSingerPage() {
-            document.querySelector('.home-page').style.display = 'none';
-            document.getElementById('singerPage').style.display = 'block';
-            
-            // Initialize singer page
-            audioPlayer = document.getElementById('audioPlayer');
-            
-            const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
-            if (loggedInUser) {
-                const user = JSON.parse(loggedInUser);
-                document.getElementById('userName').value = user.username;
-                localStorage.setItem('karaoke_user_name', user.username);
+            try {
+                console.log('🎤 Showing singer page...');
+                document.querySelector('.home-page').style.display = 'none';
+                document.getElementById('singerPage').style.display = 'block';
+                
+                // Initialize singer page
+                audioPlayer = document.getElementById('audioPlayer');
+                
+                const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
+                if (loggedInUser) {
+                    const user = JSON.parse(loggedInUser);
+                    const userNameInput = document.getElementById('userName');
+                    if (userNameInput) {
+                        userNameInput.value = user.username;
+                    }
+                    localStorage.setItem('karaoke_user_name', user.username);
+                }
+                
+                const searchForm = document.getElementById('searchForm');
+                if (searchForm) {
+                    searchForm.addEventListener('submit', handleSearch);
+                }
+                
+                try {
+                    updateSingerActivity();
+                } catch (e) {
+                    console.warn('⚠️ updateSingerActivity error:', e.message);
+                }
+                
+                try {
+                    loadAllSongs();
+                } catch (e) {
+                    console.warn('⚠️ loadAllSongs error:', e.message);
+                }
+                
+                try {
+                    loadReservedSongs();
+                    displayReservedSongs();
+                } catch (e) {
+                    console.warn('⚠️ loadReservedSongs error:', e.message);
+                }
+                
+                try {
+                    displaySongBook();
+                } catch (e) {
+                    console.warn('⚠️ displaySongBook error:', e.message);
+                }
+                
+                try {
+                    updateUserDisplay();
+                } catch (e) {
+                    console.warn('⚠️ updateUserDisplay error:', e.message);
+                }
+                
+                setInterval(updateSingerActivity, 30000);
+                console.log('✅ Singer page initialized successfully');
+            } catch (error) {
+                console.error('❌ Error showing singer page:', error);
+                alert('Error loading singer interface. Please try again.');
+                showHomePage();
             }
-            
-            const searchForm = document.getElementById('searchForm');
-            if (searchForm) {
-                searchForm.addEventListener('submit', handleSearch);
-            }
-            
-            updateSingerActivity();
-            loadAllSongs();
-            loadReservedSongs();
-            displaySongBook();
-            displayReservedSongs();
-            updateUserDisplay();
-            
-            setInterval(updateSingerActivity, 30000);
         }
 
         // Hide singer page and show home
