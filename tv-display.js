@@ -3,11 +3,12 @@
 // Queue data storage
 let tvQueue = [];
 let currentSong = null;
-let player;
+let player = null;
 let isPlaying = false;
 let youtubeAPIReady = false;
 let useFirebase = false;
 let firebaseListenersSet = false;
+let pendingSongToPlay = null;
 
 // Check if Firebase is properly configured
 function isFirebaseConfigured() {
