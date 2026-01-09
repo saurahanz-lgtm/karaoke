@@ -315,7 +315,8 @@ function playVideo(videoId, title, artist, singer) {
             modestbranding: 1,
             rel: 0,
             showinfo: 0,
-            iv_load_policy: 3
+            iv_load_policy: 3,
+            origin: window.location.origin
         },
         events: {
             'onReady': function(event) {
@@ -402,7 +403,12 @@ function updateNextSongDisplay() {
 
 // Update reserve list in top right corner
 function updateReserveList() {
-    const reserveListItems = document.getElementById('reserveListItems');
+    if (!reserveListItems) {
+    const container = document.createElement('div');
+    container.id = 'reserveListItems';
+    container.className = 'reserve-list';
+    document.body.appendChild(container);
+}
     
     // Load reserved songs from localStorage
     const reservedSongs = JSON.parse(localStorage.getItem('karaoke_reserved_songs') || '[]');
@@ -457,15 +463,12 @@ function skipToNextSong() {
             singer: nextSong.requestedBy
         };
 
-        if (useFirebase) {
-            // Update Firebase
-            firebase.database().ref('currentSong').set(currentSong);
-            firebase.database().ref('queue').set(tvQueue.length > 0 ? tvQueue : null);
-        } else {
-            // Fallback to localStorage
-            localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
-            localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
-        }
+        if (typeof firebase !== 'undefined' && firebase.apps.length) {
+    useFirebase = true;
+} else {
+    useFirebase = false;
+}
+
 
         checkAndPlayCurrentSong();
         displayQueue();
