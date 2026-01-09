@@ -367,17 +367,19 @@ function loadQueueDataFromLocalStorage() {
 
 // Check and play current song (only when YouTube API is ready)
 function checkAndPlayCurrentSong() {
-    if (!youtubeAPIReady || !player) {
-        console.warn('⏳ Player not ready yet');
-        return;
-    }
-
     if (!currentSong || !currentSong.videoId) {
-        console.warn('⚠ No current song to play');
+        console.warn('⚠ No current song data');
         return;
     }
 
-    console.log('▶ Auto-playing:', currentSong.title);
+    // 🔴 Player NOT ready → store first
+    if (!youtubeAPIReady || !player) {
+        console.log('⏳ Player not ready yet, storing pending song');
+        pendingSongToPlay = currentSong;
+        return;
+    }
+
+    console.log('▶ Playing now:', currentSong.title);
 
     player.loadVideoById({
         videoId: currentSong.videoId,
@@ -386,6 +388,8 @@ function checkAndPlayCurrentSong() {
 
     displaySongInfo(currentSong);
     updateNextSongDisplay();
+
+    pendingSongToPlay = null;
 }
 
 // Display song information in lyrics section
