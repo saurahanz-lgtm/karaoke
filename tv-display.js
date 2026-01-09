@@ -112,25 +112,27 @@ function initializeFirebaseListeners() {
         const queueRef = firebase.database().ref('queue');
         const currentSongRef = firebase.database().ref('currentSong');
         
-        // Listen for queue changes
+        // Listen for queue changes (real-time sync from Singer)
         queueRef.on('value', (snapshot) => {
             const data = snapshot.val();
             tvQueue = data ? Object.values(data) : [];
+            console.log('📡 Queue updated from Firebase:', tvQueue.length, 'songs');
             displayQueue();
             checkAndPlayCurrentSong();
         });
         
-        // Listen for current song changes
+        // Listen for current song changes (real-time sync from Singer)
         currentSongRef.on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 currentSong = data;
+                console.log('🎵 Current song updated from Firebase:', data.title);
                 checkAndPlayCurrentSong();
             }
         });
         
         firebaseListenersSet = true;
-        console.log('✅ Firebase real-time listeners initialized');
+        console.log('✅ Firebase real-time listeners initialized - TV will sync from Singer in real-time');
     } catch (error) {
         console.error('❌ Firebase initialization error:', error);
         // Fallback to localStorage
@@ -138,11 +140,6 @@ function initializeFirebaseListeners() {
         loadQueueData();
         displayQueue();
         checkAndPlayCurrentSong();
-        setInterval(() => {
-            loadQueueData();
-            displayQueue();
-            checkAndPlayCurrentSong();
-        }, 3000);
     }
 }
 
@@ -270,28 +267,67 @@ function generateQRCode() {
     });
 }
 
-// Load queue data from localStorage (shared with admin)
+// Load queue data from Firebase (primary) or localStorage (fallback)
 function loadQueueData() {
-    // Get current song from localStorage
-    const currentSongData = localStorage.getItem('karaoke_current_song');
-    if (currentSongData) {
-        currentSong = JSON.parse(currentSongData);
+    // Try Firebase first (primary method)
+    if (useFirebase && typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            firebase.database().ref('queue').once('value', (snapshot) => {
+                const data = snapshot.val();
+                tvQueue = data ? Object.values(data) : [];
+                console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
+            }).catch(err => {
+                console.warn('Firebase queue read failed:', err.message);
+                // Fallback to localStorage
+                loadQueueDataFromLocalStorage();
+            });
+        } catch (error) {
+            console.warn('Firebase error:', error.message);
+            loadQueueDataFromLocalStorage();
+        }
+    } else {
+        loadQueueDataFromLocalStorage();
     }
+    
+    // Load current song from Firebase (primary)
+    if (useFirebase && typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            firebase.database().ref('currentSong').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    currentSong = data;
+                    console.log('🎵 Current song loaded from Firebase:', data.title);
+                }
+            }).catch(err => {
+                console.warn('Firebase currentSong read failed:', err.message);
+                // Fallback to localStorage
+                const currentSongData = localStorage.getItem('karaoke_current_song');
+                if (currentSongData) {
+                    currentSong = JSON.parse(currentSongData);
+                }
+            });
+        } catch (error) {
+            console.warn('Firebase error:', error.message);
+            const currentSongData = localStorage.getItem('karaoke_current_song');
+            if (currentSongData) {
+                currentSong = JSON.parse(currentSongData);
+            }
+        }
+    } else {
+        const currentSongData = localStorage.getItem('karaoke_current_song');
+        if (currentSongData) {
+            currentSong = JSON.parse(currentSongData);
+        }
+    }
+}
 
-    // Get queue from localStorage
+// Load queue from localStorage fallback
+function loadQueueDataFromLocalStorage() {
     const queueData = localStorage.getItem('karaoke_queue');
     if (queueData) {
         tvQueue = JSON.parse(queueData);
     } else {
-        // Demo data for testing
-        tvQueue = [
-            { id: 1, title: "Bohemian Rhapsody", artist: "Queen", requestedBy: "John" },
-            { id: 2, title: "Hallelujah", artist: "Leonard Cohen", requestedBy: "Maria" },
-            { id: 3, title: "Someone Like You", artist: "Adele", requestedBy: "Sarah" },
-            { id: 4, title: "Perfect", artist: "Ed Sheeran", requestedBy: "Alex" },
-            { id: 5, title: "Shape of You", artist: "Ed Sheeran", requestedBy: "Emma" },
-            { id: 6, title: "Rolling in the Deep", artist: "Adele", requestedBy: "David" }
-        ];
+        tvQueue = [];
     }
 }
 

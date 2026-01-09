@@ -534,7 +534,7 @@
                     timestamp: new Date().toLocaleString()
                 };
 
-                // Try Firebase first
+                // Write to Firebase first (primary method)
                 if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
                     try {
                         firebase.database().ref('queue/' + newSong.id).set(newSong).then(() => {
@@ -544,6 +544,7 @@
                             successCallback(btn, title);
                         }).catch(err => {
                             console.warn('Firebase write failed:', err.message);
+                            // Fallback to localStorage
                             addToLocalQueue(newSong);
                             setCurrentSongAndAutoPlay(newSong);
                             successCallback(btn, title);
