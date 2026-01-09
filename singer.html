@@ -285,22 +285,28 @@
             
             // Update activity timestamp for TV display connection status
             function updateActivityTimestamp() {
-                const timestamp = Date.now().toString();
-                localStorage.setItem('karaoke_singer_activity', timestamp);
-                console.log('📱 Activity timestamp updated:', new Date(parseInt(timestamp)).toLocaleTimeString());
+                const now = Date.now().toString();
+                localStorage.setItem('karaoke_singer_activity', now);
+                console.log('🎤 Singer activity updated:', new Date().toLocaleTimeString());
             }
             
             // Update timestamp on page load
             console.log('🎤 Singer page loaded - setting initial activity timestamp');
             updateActivityTimestamp();
             
-            // Update timestamp every 5 seconds while page is open (faster than before)
-            setInterval(updateActivityTimestamp, 5000);
+            // Update timestamp every 5 seconds while page is open (faster updates)
+            const activityInterval = setInterval(updateActivityTimestamp, 5000);
+            console.log('⏱️ Activity timer started');
             
             // Update timestamp on user interactions
-            document.addEventListener('click', updateActivityTimestamp);
-            document.addEventListener('keypress', updateActivityTimestamp);
-            document.addEventListener('input', updateActivityTimestamp);
+            const updateOnClick = () => updateActivityTimestamp();
+            const updateOnKey = () => updateActivityTimestamp();
+            const updateOnInput = () => updateActivityTimestamp();
+            
+            document.addEventListener('click', updateOnClick);
+            document.addEventListener('keypress', updateOnKey);
+            document.addEventListener('input', updateOnInput);
+            console.log('📡 Activity listeners registered');
             
             if (!audioPlayer) {
                 console.error('❌ Audio player element not found!');

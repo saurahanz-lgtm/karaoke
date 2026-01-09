@@ -24,17 +24,19 @@ function isFirebaseConfigured() {
 
 // Initialize TV display
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('📺 TV Display initialized');
+    
     // Generate QR code on load
     generateQRCode();
     
     // Regenerate QR code every 10 seconds to ensure it's always fresh
     setInterval(generateQRCode, 10000);
     
-    // Check connection status immediately on load
+    // Check connection status immediately
     checkPhoneConnection();
     console.log('✅ Initial connection check done');
     
-    // Check connection status every 1 second for better responsiveness
+    // Check connection status every 1 second for faster updates
     setInterval(checkPhoneConnection, 1000);
     
     // Check if Firebase is available
@@ -203,41 +205,44 @@ function updateFullscreenButton() {
 
 // Check if phone/singer page is connected
 function checkPhoneConnection() {
-    const lastActivityTime = localStorage.getItem('karaoke_singer_activity');
-    const connectionStatus = document.getElementById('connectionStatus');
-    const connectionText = document.getElementById('connectionText');
-    
-    if (!connectionStatus || !connectionText) {
-        console.warn('⚠️ Connection status elements not found');
-        return;
-    }
-    
-    if (!lastActivityTime) {
-        connectionStatus.classList.remove('connected');
-        connectionStatus.classList.add('disconnected');
-        connectionText.textContent = '🔴 No Phone Connected';
-        console.log('📱 No activity timestamp found');
-        return;
-    }
-    
-    const currentTime = Date.now();
-    const timeDifference = currentTime - parseInt(lastActivityTime);
-    const timeoutDuration = 15000; // 15 seconds timeout
-    
-    console.log('📱 Activity check - Time diff:', Math.floor(timeDifference / 1000), 'seconds, Timeout:', Math.floor(timeoutDuration / 1000), 'seconds');
-    
-    if (timeDifference < timeoutDuration) {
-        // Phone is connected
-        connectionStatus.classList.remove('disconnected');
-        connectionStatus.classList.add('connected');
-        connectionText.textContent = '🟢 Phone Connected';
-        console.log('✅ Phone connected - Last activity:', Math.floor(timeDifference / 1000), 'seconds ago');
-    } else {
-        // Phone disconnected (no activity for 15 seconds)
-        connectionStatus.classList.remove('connected');
-        connectionStatus.classList.add('disconnected');
-        connectionText.textContent = '🔴 No Phone Connected';
-        console.log('❌ Phone disconnected - No activity for:', Math.floor(timeDifference / 1000), 'seconds');
+    try {
+        const lastActivityTime = localStorage.getItem('karaoke_singer_activity');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectionText = document.getElementById('connectionText');
+        
+        if (!connectionStatus || !connectionText) {
+            console.warn('⚠️ Connection status elements not found');
+            return;
+        }
+        
+        if (!lastActivityTime) {
+            connectionStatus.classList.remove('connected');
+            connectionStatus.classList.add('disconnected');
+            connectionText.textContent = '🔴 No Phone Connected';
+            console.log('📱 No activity timestamp found');
+            return;
+        }
+        
+        const currentTime = Date.now();
+        const activityTime = parseInt(lastActivityTime);
+        const timeDifference = currentTime - activityTime;
+        const timeoutDuration = 15000; // 15 seconds timeout
+        
+        console.log('🔍 Connection check - Last activity:', activityTime, 'Now:', currentTime, 'Difference:', Math.floor(timeDifference / 1000), 'seconds');
+        
+        if (timeDifference < timeoutDuration) {
+            // Phone is connected
+            connectionStatus.classList.remove('disconnected');
+            connectionStatus.classList.add('connected');
+            connectionText.textContent = '🟢 Phone Connected';
+        } else {
+            // Phone disconnected (no activity for 15 seconds)
+            connectionStatus.classList.remove('connected');
+            connectionStatus.classList.add('disconnected');
+            connectionText.textContent = '🔴 No Phone Connected';
+        }
+    } catch (error) {
+        console.error('❌ Error in checkPhoneConnection:', error.message);
     }
 }
 
