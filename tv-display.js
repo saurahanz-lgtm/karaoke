@@ -114,13 +114,14 @@ function initializeFirebaseListeners() {
 
     db.ref('queue').on('value', snapshot => {
         const data = snapshot.val();
-        tvQueue = data ? Object.values(data) : [];
+        if (!data) return;
 
-        displayQueue();
+        tvQueue = Object.values(data);
+        console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
 
-        // 🔥 AUTO-PLAY FIRST SONG
+        // 🔥 AUTO-SET FIRST SONG
         if (!currentSong && tvQueue.length > 0) {
-            setCurrentFromQueue(tvQueue[0]);
+            firebase.database().ref('currentSong').set(tvQueue[0]);
         }
     });
 
