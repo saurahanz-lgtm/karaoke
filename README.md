@@ -214,8 +214,8 @@ Third-party Services:
 ## 🔐 Security & API Usage
 
 ### API Keys
-- **YouTube API Key:** `AIzaSyDHwTm9Fw80vVfpaZwuzBAUJF4ZNfi-SDk`
-- **Status:** Demo key (shared quota)
+- **YouTube API Key:** `AIzaSyAVq2Rno7lN9xilCpUzgOJMKSZCCqB96jQ`
+- **Status:** Active key
 - **Quota:** 10,000 units/day free
 - **Recommendation:** Create personal key for production
 
