@@ -126,10 +126,12 @@ function initializeFirebaseListeners() {
 
     db.ref('currentSong').on('value', snapshot => {
         const data = snapshot.val();
-        if (data) {
-            currentSong = data;
-            checkAndPlayCurrentSong();
-        }
+        if (!data) return;
+
+        currentSong = data;
+        console.log('🎵 Current song loaded from Firebase:', currentSong.title);
+
+        checkAndPlayCurrentSong();
     });
 }
 
