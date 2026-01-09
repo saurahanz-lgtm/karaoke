@@ -115,6 +115,10 @@ function initializeFirebaseListeners() {
 
         currentSong = data;
         console.log('🎵 [4/7] Current song detected from Firebase:', currentSong.title);
+        
+        // Update display immediately
+        displayQueue();
+        updateNextSongDisplay();
 
         // Only try to play if player is ready
         if (youtubeAPIReady && player) {
@@ -133,6 +137,33 @@ function initializeFirebaseListeners() {
     
     firebaseListenersSet = true;
     console.log('✅ [3/7] Firebase listeners attached');
+    
+    // 🔥 Load initial data after listeners are attached
+    console.log('📡 [3/7] Loading initial songs from Firebase...');
+    db.ref('queue').once('value', snapshot => {
+        const queueData = snapshot.val();
+        if (queueData) {
+            tvQueue = Object.values(queueData);
+            console.log('📡 Initial queue loaded:', tvQueue.length, 'songs');
+            displayQueue();
+        }
+    });
+    
+    db.ref('currentSong').once('value', snapshot => {
+        const songData = snapshot.val();
+        if (songData) {
+            currentSong = songData;
+            console.log('🎵 Initial song loaded:', currentSong.title);
+            displayQueue();
+            updateNextSongDisplay();
+            
+            // Try to play if player is ready
+            if (youtubeAPIReady && player) {
+                console.log('▶️ [6/7] Initial song - player ready, calling playback');
+                checkAndPlayCurrentSong();
+            }
+        }
+    });
 }
 
 // Set current song from queue item
