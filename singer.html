@@ -347,7 +347,14 @@
                     }
                 });
                 audioPlayer.addEventListener('error', function(e) {
-                    console.warn('⚠️ Audio error:', e.message);
+                    const errorCodes = {
+                        1: 'MEDIA_ERR_ABORTED',
+                        2: 'MEDIA_ERR_NETWORK',
+                        3: 'MEDIA_ERR_DECODE',
+                        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+                    };
+                    const errorType = errorCodes[e.target.error?.code] || 'UNKNOWN_ERROR';
+                    console.warn('⚠️ Audio error:', errorType, '(Code:', e.target.error?.code, ')');
                 });
             }
             
@@ -611,10 +618,14 @@
             console.log('✅ Current song set in localStorage:', song.title);
 
             // Set audio source for singer to hear preview/karaoke track
+            // Note: Direct YouTube audio streaming requires special handling
+            // For now, we disable audio preview to avoid errors
             if (audioPlayer && song.videoId) {
-                // Use YouTube embed for audio (unofficial but works for preview)
-                audioPlayer.src = `https://www.youtube.com/watch?v=${song.videoId}`;
-                console.log('🎵 Audio source set for:', song.title);
+                // YouTube watch URLs are not valid audio sources
+                // Audio preview would require server-side processing
+                audioPlayer.src = '';
+                console.log('📻 Audio preview disabled (YouTube videos require special handling)');
+                // Singer can watch the video on TV display for playback timing
             }
 
             // Update Firebase if available
@@ -754,9 +765,13 @@
                 audioPlayer.play().then(() => {
                     console.log('▶️ Player reloaded and playing');
                 }).catch(e => {
-                    console.log('⚠️ Play failed:', e.message);
-                    showAlert('Unable to play audio. Make sure a song is selected.', 'warning');
+                    console.log('⚠️ Play failed:', e?.message || 'Unknown error');
+                    showAlert('Audio preview not available. Watch on TV display for playback.', 'info');
                 });
+            } catch (err) {
+                console.error('❌ Reload error:', err?.message || 'Unknown error');
+            }
+        }
             } catch (error) {
                 console.error('Error in reloadPlayer:', error);
             }
@@ -781,7 +796,7 @@
                             btn.classList.add('play');
                         }
                     }).catch(e => {
-                        console.log('⚠️ Play failed:', e.message);
+                        console.log('⚠️ Play failed:', e?.message || 'Unknown error');
                         if (btn) {
                             btn.textContent = '▶';
                         }
