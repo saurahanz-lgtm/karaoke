@@ -139,11 +139,14 @@ function setCurrentFromQueue(song) {
         title: song.title,
         artist: song.artist,
         videoId: song.videoId,
-        requestedBy: song.requestedBy,
-        singer: song.requestedBy
+        requestedBy: song.requestedBy
     };
-
+    
+    // Update Firebase
     firebase.database().ref('currentSong').set(currentSong);
+    
+    isPlaying = true;
+    checkAndPlayCurrentSong();
 }
 
 /* ===== YOUTUBE IFRAME PLAYER ===== */
@@ -318,50 +321,37 @@ function loadQueueDataFromLocalStorage() {
 
 // Check and play current song (only when YouTube API is ready)
 function checkAndPlayCurrentSong() {
-    if (!youtubeAPIReady) {
-        // YouTube API not ready yet, wait
-        return;
-    }
+    if (!youtubeAPIReady) return;
 
-    const centerSingerName = document.getElementById('centerSingerName');
+    // ✅ If walang currentSong pero may laman ang queue → auto-play first song
+    if ((!currentSong || !currentSong.videoId) && tvQueue.length > 0) {
+        const firstSong = tvQueue[0];
 
-    // If no current song, automatically play first song from queue
-    if (!currentSong || !currentSong.title) {
-        if (tvQueue.length > 0) {
-            // Auto-play first queued song
-            const firstSong = tvQueue[0];
-            currentSong = {
-                title: firstSong.title,
-                artist: firstSong.artist,
-                videoId: firstSong.videoId,
-                requestedBy: firstSong.requestedBy,
-                singer: firstSong.requestedBy
-            };
-            localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
+        currentSong = {
+            title: firstSong.title,
+            artist: firstSong.artist,
+            videoId: firstSong.videoId,
+            requestedBy: firstSong.requestedBy,
+            singer: firstSong.requestedBy
+        };
+
+        // Sync to Firebase (TV is source of truth)
+        if (useFirebase && typeof firebase !== 'undefined') {
+            firebase.database().ref('currentSong').set(currentSong);
         }
     }
 
-    if (currentSong && currentSong.title && currentSong.videoId) {
-        // Play video if videoId exists
-        playVideo(currentSong.videoId, currentSong.title, currentSong.artist, currentSong.singer);
-        
-        // Update next song display
-        updateNextSongDisplay();
-        
-        if (centerSingerName) {
-            centerSingerName.classList.remove('show');
-        }
-    } else {
-        // Play placeholder video when no song is selected
-        const placeholderVideoId = 'dQw4w9WgXcQ'; // YouTube rickroll as placeholder
-        playVideo(placeholderVideoId, 'Ready for your song', 'SDkaraoke', 'Waiting...');
-        
-        // Hide singer name display
-        if (centerSingerName) {
-            centerSingerName.classList.remove('show');
-            centerSingerName.innerHTML = '';
-        }
-    }
+    if (!currentSong || !currentSong.videoId) return;
+
+    playVideo(
+        currentSong.videoId,
+        currentSong.title,
+        currentSong.artist,
+        currentSong.singer
+    );
+
+    displaySongInfo(currentSong);
+    updateNextSongDisplay();
 }
 
 // Display song information in lyrics section
