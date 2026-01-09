@@ -341,6 +341,20 @@ function loadSong(song) {
                     console.log('🎬 Boot-up Video Player Ready');
                     playerReady = true;
                     checkBootupCompletion();
+                    // Try to play with autoplay - if blocked by browser, will be caught in onError
+                    try {
+                        const playPromise = e.target.playVideo();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                console.warn('⚠️ Autoplay prevented:', error);
+                                // Mute and try again
+                                e.target.mute();
+                                e.target.playVideo();
+                            });
+                        }
+                    } catch (err) {
+                        console.warn('⚠️ Play error caught:', err);
+                    }
                 },
                 onStateChange: onPlayerStateChange,
                 onError: (e) => {
@@ -379,6 +393,20 @@ function loadSong(song) {
                     console.log('🎬 Karaoke Player Ready');
                     playerReady = true;
                     checkBootupCompletion();
+                    // Try to play with autoplay - if blocked by browser, will be caught in onError
+                    try {
+                        const playPromise = e.target.playVideo();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                console.warn('⚠️ Autoplay prevented:', error);
+                                // Mute and try again
+                                e.target.mute();
+                                e.target.playVideo();
+                            });
+                        }
+                    } catch (err) {
+                        console.warn('⚠️ Play error caught:', err);
+                    }
                 },
                 onStateChange: onPlayerStateChange,
                 onError: (e) => {
@@ -393,6 +421,14 @@ function loadSong(song) {
             videoId: song.videoId,
             startSeconds: 0
         });
+        // Ensure audio is unmuted for new videos
+        try {
+            if (window.tvPlayer.isMuted && window.tvPlayer.isMuted()) {
+                window.tvPlayer.unMute();
+            }
+        } catch (err) {
+            console.warn('⚠️ Unmute error:', err);
+        }
     }
 
     console.log(`📺 Now playing: ${song.title}`);
@@ -542,13 +578,23 @@ function playVideo(videoId, title, artist, singer) {
         },
         events: {
             'onReady': function(event) {
-                event.target.playVideo();
+                try {
+                    const playPromise = event.target.playVideo();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            console.warn('⚠️ Autoplay prevented:', error);
+                            event.target.mute();
+                            event.target.playVideo();
+                        });
+                    }
+                } catch (err) {
+                    console.warn('⚠️ Play error:', err);
+                }
             },
             'onStateChange': onPlayerStateChange,
             'onError': function(event) {
                 console.error('❌ YouTube player error:', event.data);
                 if (event.data === 150 || event.data === 101) {
-                    // Video restricted from embedding
                     console.warn('⚠️ Video is restricted from embedding on this site');
                 }
             }
