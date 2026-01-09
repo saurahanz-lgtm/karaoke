@@ -17,6 +17,28 @@ let playerReady = false;
 let isLoadingSong = false;
 let currentVideoId = null;
 
+// Boot-up splash screen management
+let bootupStartTime = Date.now();
+
+function hideBootupSplash() {
+    const splash = document.getElementById('bootupSplash');
+    if (splash) {
+        setTimeout(() => {
+            splash.classList.add('hidden');
+        }, 3500); // Show splash for 3.5 seconds minimum
+    }
+}
+
+function checkBootupCompletion() {
+    const timeSinceStart = Date.now() - bootupStartTime;
+    // Hide splash when: minimum 3.5 seconds passed AND (ytReady AND firebaseReady AND playerReady)
+    if (timeSinceStart >= 3500 && ytReady && firebaseReady && playerReady) {
+        hideBootupSplash();
+        return true;
+    }
+    return false;
+}
+
 // Check if Firebase is properly configured
 function isFirebaseConfigured() {
     try {
@@ -126,6 +148,9 @@ function initializeFirebaseListeners() {
         // Update display immediately
         displayQueue();
         updateNextSongDisplay();
+        
+        // Check if bootup can be hidden
+        checkBootupCompletion();
 
         // Try to initialize and play
         tryInitPlayback();
@@ -203,6 +228,9 @@ function createYouTubePlayer() {
     if (useFirebase && !firebaseListenersSet) {
         initializeFirebaseListeners();
     }
+    
+    // Check if bootup splash should be hidden
+    checkBootupCompletion();
 }
 
 // D. SINGLE ENTRY POINT (MOST IMPORTANT)
@@ -276,6 +304,7 @@ function loadSong(song) {
                 onReady: () => {
                     console.log('🎬 YouTube Player Ready - Starting playback');
                     playerReady = true;
+                    checkBootupCompletion(); // Check if bootup can be hidden
                     window.tvPlayer.playVideo();
                 },
                 onStateChange: onPlayerStateChange
