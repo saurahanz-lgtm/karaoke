@@ -321,9 +321,9 @@ function toggleFullscreen() {
 // D. LOAD SONG - Unified playback handler
 // E. PLAYER CREATION (ONCE LANG)
 function loadSong(song) {
-    // If boot-up video hasn't played yet, play it first
-    if (!bootUpVideoPlayed && !window.tvPlayer) {
-        console.log('🎬 Playing boot-up video first');
+    // First time ever - create player with boot-up video
+    if (!window.tvPlayer && !bootUpVideoPlayed) {
+        console.log('🎬 [FIRST LOAD] Creating player with boot-up video');
         isPlayingBootUpVideo = true;
         currentVideoId = bootUpVideoId;
 
@@ -333,26 +333,37 @@ function loadSong(song) {
                 autoplay: 1,
                 controls: 0,
                 enablejsapi: 1,
-                modestbranding: 1
+                modestbranding: 1,
+                fs: 0
             },
             events: {
-                onReady: () => {
-                    console.log('🎬 Boot-up Video Ready - Starting playback');
+                onReady: (e) => {
+                    console.log('🎬 Boot-up Video Player Ready');
                     playerReady = true;
                     checkBootupCompletion();
-                    window.tvPlayer.playVideo();
                 },
-                onStateChange: onPlayerStateChange
+                onStateChange: onPlayerStateChange,
+                onError: (e) => {
+                    console.error('❌ Boot-up video error:', e.data);
+                    // If boot-up video fails, skip it and play karaoke
+                    isPlayingBootUpVideo = false;
+                    bootUpVideoPlayed = true;
+                    if (song && song.videoId) {
+                        console.log('⏭️ Boot-up video failed, skipping to karaoke');
+                        window.tvPlayer.loadVideoById(song.videoId);
+                        currentVideoId = song.videoId;
+                    }
+                }
             }
         });
         return;
     }
 
-    // Regular song playback after boot-up video
+    // After boot-up video, or normal playback
     currentVideoId = song.videoId;
 
     if (!window.tvPlayer) {
-        console.log('📋 Creating new YT.Player');
+        console.log('📋 [NORMAL] Creating new YT.Player');
 
         window.tvPlayer = new YT.Player('player', {
             videoId: song.videoId,
@@ -360,22 +371,28 @@ function loadSong(song) {
                 autoplay: 1,
                 controls: 0,
                 enablejsapi: 1,
-                modestbranding: 1
+                modestbranding: 1,
+                fs: 0
             },
             events: {
-                onReady: () => {
-                    console.log('🎬 YouTube Player Ready - Starting playback');
+                onReady: (e) => {
+                    console.log('🎬 Karaoke Player Ready');
                     playerReady = true;
-                    checkBootupCompletion(); // Check if bootup can be hidden
-                    window.tvPlayer.playVideo();
+                    checkBootupCompletion();
                 },
-                onStateChange: onPlayerStateChange
+                onStateChange: onPlayerStateChange,
+                onError: (e) => {
+                    console.error('❌ Karaoke video error:', e.data);
+                }
             }
         });
 
     } else {
-        console.log('▶️ Loading new video:', song.videoId);
-        window.tvPlayer.loadVideoById(song.videoId);
+        console.log('▶️ [REUSE] Loading video:', song.videoId);
+        window.tvPlayer.loadVideoById({
+            videoId: song.videoId,
+            startSeconds: 0
+        });
     }
 
     console.log(`📺 Now playing: ${song.title}`);
@@ -556,16 +573,21 @@ function onPlayerStateChange(e) {
     if (e.data === YT.PlayerState.ENDED) {
         // Check if boot-up video just finished
         if (isPlayingBootUpVideo) {
-            console.log('✅ Boot-up video finished - transitioning to karaoke');
+            console.log('✅ Boot-up video ended - transitioning to karaoke song');
             isPlayingBootUpVideo = false;
             bootUpVideoPlayed = true;
             hideBootupSplash(); // Hide splash after boot-up video ends
             
-            // Transition to actual karaoke song
-            if (currentSong && currentSong.videoId) {
-                console.log('📺 Loading karaoke song:', currentSong.title);
-                window.tvPlayer.loadVideoById(currentSong.videoId);
+            // Load the actual karaoke song
+            if (currentSong && currentSong.videoId && currentSong.videoId !== bootUpVideoId) {
+                console.log('📺 Auto-loading karaoke:', currentSong.title);
+                window.tvPlayer.loadVideoById({
+                    videoId: currentSong.videoId,
+                    startSeconds: 0
+                });
                 currentVideoId = currentSong.videoId;
+            } else {
+                console.warn('⚠️ No karaoke song ready after boot-up video');
             }
         } else {
             // Regular song ended - play next
