@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Regenerate QR code every 10 seconds to ensure it's always fresh
     setInterval(generateQRCode, 10000);
     
+    // Check connection status every 2 seconds
+    setInterval(checkPhoneConnection, 2000);
+    
     // Check if Firebase is available
     useFirebase = isFirebaseConfigured();
     
@@ -191,6 +194,38 @@ function updateFullscreenButton() {
         btn.textContent = '⛶ Full Screen';
         // Keep reserve list visible always
         if (reserveList) reserveList.classList.add('show');
+    }
+}
+
+// Check if phone/singer page is connected
+function checkPhoneConnection() {
+    const lastActivityTime = localStorage.getItem('karaoke_singer_activity');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const connectionText = document.getElementById('connectionText');
+    
+    if (!lastActivityTime) {
+        connectionStatus.classList.remove('connected');
+        connectionStatus.classList.add('disconnected');
+        connectionText.textContent = '🔴 No Phone Connected';
+        return;
+    }
+    
+    const currentTime = Date.now();
+    const timeDifference = currentTime - parseInt(lastActivityTime);
+    const timeoutDuration = 15000; // 15 seconds timeout
+    
+    if (timeDifference < timeoutDuration) {
+        // Phone is connected
+        connectionStatus.classList.remove('disconnected');
+        connectionStatus.classList.add('connected');
+        connectionText.textContent = '🟢 Phone Connected';
+        console.log('📱 Phone connected - Last activity:', Math.floor(timeDifference / 1000), 'seconds ago');
+    } else {
+        // Phone disconnected (no activity for 15 seconds)
+        connectionStatus.classList.remove('connected');
+        connectionStatus.classList.add('disconnected');
+        connectionText.textContent = '🔴 No Phone Connected';
+        console.log('📱 Phone disconnected - No activity for:', Math.floor(timeDifference / 1000), 'seconds');
     }
 }
 

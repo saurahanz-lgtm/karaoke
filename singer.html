@@ -282,6 +282,23 @@
 
             // Initialize singer page
             audioPlayer = document.getElementById('audioPlayer');
+            
+            // Update activity timestamp for TV display connection status
+            function updateActivityTimestamp() {
+                localStorage.setItem('karaoke_singer_activity', Date.now().toString());
+            }
+            
+            // Update timestamp on page load
+            updateActivityTimestamp();
+            
+            // Update timestamp every 10 seconds while page is open
+            setInterval(updateActivityTimestamp, 10000);
+            
+            // Update timestamp on user interactions
+            document.addEventListener('click', updateActivityTimestamp);
+            document.addEventListener('keypress', updateActivityTimestamp);
+            document.addEventListener('input', updateActivityTimestamp);
+            
             if (!audioPlayer) {
                 console.error('❌ Audio player element not found!');
             } else {
