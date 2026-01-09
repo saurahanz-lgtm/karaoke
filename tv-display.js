@@ -1,9 +1,10 @@
-// ===== TV DISPLAY LOGIC =====
+/* ===== TV DISPLAY LOGIC ===== */
 
 // Queue data storage
 let tvQueue = [];
 let currentSong = null;
 let player;
+let isPlaying = false;
 let youtubeAPIReady = false;
 let useFirebase = false;
 let firebaseListenersSet = false;
@@ -106,7 +107,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Initialize Firebase real-time listeners
+/* ===== FIREBASE LISTENERS ===== */
+
 function initializeFirebaseListeners() {
     try {
         const queueRef = firebase.database().ref('queue');
@@ -118,7 +120,11 @@ function initializeFirebaseListeners() {
             tvQueue = data ? Object.values(data) : [];
             console.log('📡 Queue updated from Firebase:', tvQueue.length, 'songs');
             displayQueue();
-            checkAndPlayCurrentSong();
+            
+            // Auto-play if queue has songs and nothing playing
+            if (!isPlaying && tvQueue.length > 0) {
+                playNextSong();
+            }
         });
         
         // Listen for current song changes (real-time sync from Singer)
@@ -127,6 +133,7 @@ function initializeFirebaseListeners() {
             if (data) {
                 currentSong = data;
                 console.log('🎵 Current song updated from Firebase:', data.title);
+                isPlaying = true;
                 checkAndPlayCurrentSong();
             }
         });
@@ -143,17 +150,18 @@ function initializeFirebaseListeners() {
     }
 }
 
-// On YouTube API ready
+/* ===== YOUTUBE IFRAME PLAYER ===== */
+
 function onYouTubeIframeAPIReady() {
     youtubeAPIReady = true;
-    // Check if there's a current song to play
+    console.log('✅ YouTube API loaded');
     checkAndPlayCurrentSong();
 }
 
-// Toggle fullscreen mode
+/* ===== FULLSCREEN & CONNECTION ===== */
+
 function toggleFullscreen() {
     const tvContainer = document.querySelector('.tv-container');
-    const btn = document.getElementById('fullscreenBtn');
     
     if (!document.fullscreenElement && !document.webkitFullscreenElement && 
         !document.mozFullScreenElement && !document.msFullscreenElement) {
@@ -178,25 +186,6 @@ function toggleFullscreen() {
         } else if (document.msExitFullscreen) {
             document.msExitFullscreen();
         }
-    }
-}
-
-// Update fullscreen button text
-function updateFullscreenButton() {
-    const btn = document.getElementById('fullscreenBtn');
-    const reserveList = document.querySelector('.reserve-list');
-    
-    if (!btn) return; // Guard against null
-    
-    if (document.fullscreenElement || document.webkitFullscreenElement || 
-        document.mozFullScreenElement || document.msFullscreenElement) {
-        btn.textContent = '⛶ Exit Fullscreen';
-        // Show reserve list in fullscreen
-        if (reserveList) reserveList.classList.add('show');
-    } else {
-        btn.textContent = '⛶ Full Screen';
-        // Keep reserve list visible always
-        if (reserveList) reserveList.classList.add('show');
     }
 }
 
@@ -414,19 +403,54 @@ function playVideo(videoId, title, artist, singer) {
             'onReady': function(event) {
                 event.target.playVideo();
             },
-            'onStateChange': function(event) {
-                // When video ends, play next song
-                if (event.data == YT.PlayerState.ENDED) {
-                    skipToNextSong();
-                }
-            }
+            'onStateChange': onPlayerStateChange
         }
     });
 }
 
-// Display queue
+/* ===== PLAYER STATE MANAGEMENT ===== */
+
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.ENDED) {
+        // Video finished, play next song
+        playNextSong();
+    }
+}
+
+function playNextSong() {
+    if (tvQueue.length === 0) {
+        isPlaying = false;
+        return;
+    }
+    
+    const nextSong = tvQueue.shift();
+    currentSong = {
+        title: nextSong.title,
+        artist: nextSong.artist,
+        videoId: nextSong.videoId,
+        requestedBy: nextSong.requestedBy,
+        singer: nextSong.requestedBy
+    };
+    
+    isPlaying = true;
+    
+    // Update Firebase
+    if (useFirebase) {
+        firebase.database().ref('currentSong').set(currentSong);
+        firebase.database().ref('queue').set(tvQueue.length > 0 ? tvQueue : null);
+    } else {
+        localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
+        localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
+    }
+    
+    displayQueue();
+    checkAndPlayCurrentSong();
+}
+
+/* ===== UI RENDERING ===== */
+
 function displayQueue() {
-    // Show reserved songs from queue stored in Firebase/localStorage
+    // Show queue with count and next song info
     try {
         const nextSongTitle = document.getElementById('nextSongTitle');
         const nextSongArtist = document.getElementById('nextSongArtist');
@@ -435,7 +459,6 @@ function displayQueue() {
         
         // Display queue from tvQueue (loaded from Firebase)
         if (tvQueue && tvQueue.length > 0) {
-            // Show next song from queue
             const nextSong = tvQueue[0];
             nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${nextSong.title}`;
             nextSongArtist.textContent = `by ${nextSong.artist} - ${nextSong.requestedBy}`;
@@ -504,26 +527,7 @@ function addSongToQueue(title, artist, requestedBy) {
 
 // Function to skip to next song (called from admin)
 function skipToNextSong() {
-    if (tvQueue.length > 0) {
-        const nextSong = tvQueue.shift();
-        currentSong = {
-            title: nextSong.title,
-            artist: nextSong.artist,
-            videoId: nextSong.videoId,
-            requestedBy: nextSong.requestedBy,
-            singer: nextSong.requestedBy
-        };
-
-        if (typeof firebase !== 'undefined' && firebase.apps.length) {
-    useFirebase = true;
-} else {
-    useFirebase = false;
-}
-
-
-        checkAndPlayCurrentSong();
-        displayQueue();
-    }
+    playNextSong();
 }
 
 // Function to remove song from queue (called from admin)
