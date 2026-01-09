@@ -257,14 +257,11 @@ function checkAndPlayCurrentSong() {
         // Play video if videoId exists
         playVideo(currentSong.videoId, currentSong.title, currentSong.artist, currentSong.singer);
         
-        // Display current song info (show singer name in center)
-        displaySongInfo(currentSong);
-        
         // Update next song display
         updateNextSongDisplay();
         
         if (centerSingerName) {
-            centerSingerName.classList.add('show');
+            centerSingerName.classList.remove('show');
         }
     } else {
         // Play placeholder video when no song is selected
@@ -285,13 +282,9 @@ function displaySongInfo(song) {
     
     if (!centerSingerName) return;
     
-    if (song && song.title) {
-        centerSingerName.innerHTML = `<span class="singer-name-display">🎤 ${song.singer || 'Guest Singer'}</span>`;
-        centerSingerName.classList.add('show');
-    } else {
-        centerSingerName.classList.remove('show');
-        centerSingerName.innerHTML = '';
-    }
+    // Singer name display removed from center
+    centerSingerName.classList.remove('show');
+    centerSingerName.innerHTML = '';
 }
 
 // Play video using YouTube iframe API
