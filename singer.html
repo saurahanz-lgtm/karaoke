@@ -131,7 +131,12 @@
             transform: scale(1.05);
         }
 
-        .refresh.rotating {
+        .refresh-icon {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .refresh.rotating .refresh-icon {
             animation: spinRotate 0.8s linear infinite;
         }
 
@@ -278,10 +283,9 @@
         <!-- PLAYER -->
         <div class="card-ui">
             <div style="margin-bottom: 15px; font-size: 18px; font-weight: 600;">Welcome</div>
-            <div id="userDisplayName" style="margin-bottom: 12px; font-size: 1.3rem; font-weight: 700; color: #f093fb;">Enter your name:</div>
-            <input type="text" id="userName" placeholder="Your name..." readonly style="width: 100%; padding: 12px; border-radius: 8px; border: none; margin-bottom: 15px; font-size: 1rem;" />
+            <div id="userDisplayName" style="margin-bottom: 12px; font-size: 1.3rem; font-weight: 700; color: #f093fb;">🎤 Welcome, mel!</div>
             
-            <div class="refresh" onclick="reloadPlayer()">🔄</div>
+            <div class="refresh" onclick="reloadPlayer()"><span class="refresh-icon">🔄</span></div>
 
             <div class="controls">
                 <button class="gray" id="muteBtn" onclick="toggleMute()">🔊</button>
@@ -463,11 +467,12 @@
                 });
             }
             
-            // Populate singer name in input field
+            // Populate singer name display
             if (loggedInUser) {
-                const userNameInput = document.getElementById('userName');
-                if (userNameInput) {
-                    userNameInput.value = loggedInUser.username;
+                const userDisplayName = document.getElementById('userDisplayName');
+                if (userDisplayName) {
+                    userDisplayName.textContent = `🎤 Welcome, ${loggedInUser.username}!`;
+                    userDisplayName.style.color = '#f093fb';
                 }
                 localStorage.setItem('karaoke_user_name', loggedInUser.username);
             }
@@ -561,7 +566,6 @@
             e.preventDefault();
             
             const searchInput = document.getElementById('searchInput');
-            const userNameInput = document.getElementById('userName');
             const searchQuery = searchInput ? searchInput.value.trim() : '';
             
             if (!searchQuery) {
@@ -577,7 +581,7 @@
 
             try {
                 searchResults = await performSearch(searchQuery);
-                const userName = userNameInput ? userNameInput.value : 'Guest';
+                const userName = loggedInUser ? loggedInUser.username : 'Guest';
                 displaySearchResults(searchResults, userName);
             } catch (error) {
                 console.error('Search error:', error);
@@ -954,20 +958,12 @@
 
         // Update user display
         function updateUserDisplay() {
-            const userNameInput = document.getElementById('userName');
             const userDisplayName = document.getElementById('userDisplayName');
             
-            if (userNameInput && userDisplayName) {
-                const userName = userNameInput.value.trim() || 'Enter your name:';
-                
-                if (userName === 'Enter your name:') {
-                    userDisplayName.textContent = 'Enter your name:';
-                    userDisplayName.style.color = 'rgba(255, 255, 255, 0.6)';
-                } else {
-                    userDisplayName.textContent = `🎤 Welcome, ${userName}!`;
-                    userDisplayName.style.color = '#f093fb';
-                    localStorage.setItem('karaoke_user_name', userName);
-                }
+            if (userDisplayName && loggedInUser) {
+                userDisplayName.textContent = `🎤 Welcome, ${loggedInUser.username}!`;
+                userDisplayName.style.color = '#f093fb';
+                localStorage.setItem('karaoke_user_name', loggedInUser.username);
             }
         }
 
