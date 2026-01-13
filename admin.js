@@ -133,13 +133,19 @@ function loadFromLocalStorage() {
     const stored = localStorage.getItem('karaoke_users');
     if (stored) {
         users = JSON.parse(stored);
+        // Ensure all users have IDs
+        users = users.map((u, idx) => ({
+            ...u,
+            id: u.id || (idx + 1),
+            lastActivity: u.lastActivity || 0
+        }));
     } else {
         // Demo data - all admin accounts
         users = [
-            { id: 1, username: "john_doe", password: "pass123", role: "admin", joined: "2024-01-01", lastActivity: new Date().getTime() },
+            { id: 1, username: "john_doe", password: "pass123", role: "admin", joined: "2024-01-01", lastActivity: 0 },
             { id: 2, username: "maria_santos", password: "pass123", role: "admin", joined: "2024-01-02", lastActivity: 0 },
             { id: 3, username: "sarah_johnson", password: "pass123", role: "admin", joined: "2024-01-03", lastActivity: 0 },
-            { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", lastActivity: new Date().getTime() }
+            { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", lastActivity: 0 }
         ];
         saveUsers();
     }
@@ -353,7 +359,7 @@ function updateStats() {
 
 // Check if user is online (active in last 5 minutes)
 function isUserOnline(user) {
-    if (!user.lastActivity) return false;
+    if (!user.lastActivity || user.lastActivity === 0) return false;
     const fiveMinutesAgo = new Date().getTime() - (5 * 60 * 1000);
     return user.lastActivity > fiveMinutesAgo;
 }

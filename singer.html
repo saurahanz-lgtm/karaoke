@@ -331,6 +331,18 @@
             
             // Update timestamp on page load
             console.log('🎤 Singer page loaded - setting initial activity timestamp');
+            
+            // Ensure user has an ID if not already set
+            const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
+            if (loggedInUser) {
+                const user = JSON.parse(loggedInUser);
+                if (!user.id) {
+                    user.id = 'singer_' + Date.now();
+                    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(user));
+                    console.log('🆔 Assigned ID to user:', user.id);
+                }
+            }
+            
             updateActivityTimestamp();
             
             // Update timestamp every 5 seconds while page is open (faster updates)
