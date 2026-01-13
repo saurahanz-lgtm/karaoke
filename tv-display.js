@@ -840,12 +840,13 @@ function displayScoreModal(singerName, score, hasSung) {
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.8);
+        background: rgba(0, 0, 0, 0.2);
         display: flex;
         justify-content: center;
         align-items: center;
         z-index: 9999;
-        animation: fadeIn 0.3s ease;
+        animation: fadeIn 0.4s ease;
+        backdrop-filter: blur(2px);
     `;
     
     const scoreDisplay = document.createElement('div');
@@ -855,52 +856,111 @@ function displayScoreModal(singerName, score, hasSung) {
         padding: 60px 80px;
         text-align: center;
         color: white;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-        animation: slideUp 0.5s ease;
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.5);
+        animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        transform: scale(1);
     `;
     
     if (hasSung) {
         scoreDisplay.innerHTML = `
-            <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px;">🎤</div>
-            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px;">Maganda!</div>
-            <div style="font-size: 1.8rem; margin-bottom: 30px; opacity: 0.95;">${singerName}</div>
-            <div style="font-size: 4rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);">
+            <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px; animation: popIn 0.5s ease 0.1s both;">🎤</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; animation: slideInDown 0.5s ease 0.2s both;">Maganda!</div>
+            <div style="font-size: 1.8rem; margin-bottom: 30px; opacity: 0.95; animation: slideInDown 0.5s ease 0.3s both;">${singerName}</div>
+            <div style="font-size: 4rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); animation: scaleUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;">
                 ${score}
             </div>
-            <div style="font-size: 1.2rem; margin-top: 30px; opacity: 0.9;">POINTS</div>
+            <div style="font-size: 1.2rem; margin-top: 30px; opacity: 0.9; animation: slideInUp 0.5s ease 0.5s both;">POINTS</div>
         `;
     } else {
         scoreDisplay.innerHTML = `
-            <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px;">🎙️</div>
-            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px;">Song Completed</div>
-            <div style="font-size: 1.8rem; margin-bottom: 30px; opacity: 0.95;">${singerName}</div>
-            <div style="font-size: 4rem; font-weight: 900; color: #ff6b6b;">
+            <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px; animation: popIn 0.5s ease 0.1s both;">🎙️</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; animation: slideInDown 0.5s ease 0.2s both;">Song Completed</div>
+            <div style="font-size: 1.8rem; margin-bottom: 30px; opacity: 0.95; animation: slideInDown 0.5s ease 0.3s both;">${singerName}</div>
+            <div style="font-size: 4rem; font-weight: 900; color: #ff6b6b; animation: scaleUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;">
                 ${score}
             </div>
-            <div style="font-size: 1.2rem; margin-top: 30px; opacity: 0.9;">POINTS<br><span style="font-size: 0.9rem;">(No singing detected)</span></div>
+            <div style="font-size: 1.2rem; margin-top: 30px; opacity: 0.9; animation: slideInUp 0.5s ease 0.5s both;">POINTS<br><span style="font-size: 0.9rem;">(No singing detected)</span></div>
         `;
     }
     
     modal.appendChild(scoreDisplay);
     document.body.appendChild(modal);
     
-    // Add CSS animation
+    // Add CSS animations
     const style = document.createElement('style');
     style.textContent = `
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
-        @keyframes slideUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        @keyframes popIn {
+            0% {
+                transform: scale(0) rotate(-45deg);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideInUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes scaleUp {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
     `;
     document.head.appendChild(style);
     
     // Auto remove after 3 seconds
     setTimeout(() => {
-        modal.remove();
+        modal.style.animation = 'fadeIn 0.4s ease reverse';
+        setTimeout(() => {
+            modal.remove();
+        }, 400);
     }, 3000);
 }
 
