@@ -27,9 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Also track clicks and key presses to update activity
     document.addEventListener('click', updateAdminActivity);
     document.addEventListener('keypress', updateAdminActivity);
-    
-    // Check session validity every 5 seconds
-    setInterval(validateSessionValidity, 5000);
 });
 
 // Validate that the current session is still active (not logged in elsewhere)
@@ -98,6 +95,7 @@ function logout() {
         localStorage.removeItem('karaoke_last_login_user');
         localStorage.removeItem('karaoke_last_session_id');
         localStorage.removeItem('karaoke_login_timestamp');
+        localStorage.removeItem('karaoke_device_session_id');
         window.location.href = 'index.html';
     }
 }

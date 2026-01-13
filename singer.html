@@ -438,18 +438,6 @@
             return true;
         }
 
-        // Validate that the current session is still active (not logged in elsewhere)
-        function validateSingerSessionValidity() {
-            const stored = localStorage.getItem('karaoke_logged_in_user');
-            if (!stored) {
-                // User data was cleared (logged in from another device)
-                alert('Your session has been disconnected. You were logged in from another device.');
-                window.location.href = 'index.html';
-                return false;
-            }
-            return true;
-        }
-
         // Check if Firebase is properly configured
         function isSingerFirebaseConfigured() {
             try {
@@ -468,9 +456,6 @@
             if (!checkSingerLogin()) return;
 
             console.log('🎤 Singer page loaded');
-            
-            // Check session validity every 5 seconds
-            setInterval(validateSingerSessionValidity, 5000);
             
             // Initialize Firebase check
             useSingerFirebase = isSingerFirebaseConfigured();
@@ -671,6 +656,7 @@
                 localStorage.removeItem('karaoke_last_login_user');
                 localStorage.removeItem('karaoke_last_session_id');
                 localStorage.removeItem('karaoke_login_timestamp');
+                localStorage.removeItem('karaoke_device_session_id');
                 window.location.href = 'index.html';
             }
         }
