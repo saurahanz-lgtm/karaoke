@@ -17,10 +17,10 @@ let playerReady = false;
 let isLoadingSong = false;
 let currentVideoId = null;
 
-// Boot-up video configuration
-let bootUpVideoId = 'FG8cRintSl4'; // Fallback video when no current song
+// Boot-up video configuration (DISABLED)
+// Skip boot-up video and go directly to karaoke songs
 let isPlayingBootUpVideo = false;
-let bootUpVideoPlayed = false;
+let bootUpVideoPlayed = true; // Mark as already played to skip boot-up
 
 // Boot-up splash screen management
 let bootupStartTime = Date.now();
@@ -40,19 +40,16 @@ function hideBootupSplash() {
 function checkBootupCompletion() {
     const timeSinceStart = Date.now() - bootupStartTime;
     
-    // Log current status for debugging
-    const statusMsg = `[Bootup: ${timeSinceStart}ms] ytReady=${ytReady}, firebaseReady=${firebaseReady}, playerReady=${playerReady}`;
-    
-    // Condition 1: All systems ready (ytReady AND firebaseReady AND playerReady)
-    if (ytReady && firebaseReady && playerReady && timeSinceStart >= 3000) {
-        console.log('✅ All systems ready - hiding splash', statusMsg);
+    // Boot-up video disabled - hide splash when systems ready
+    if (firebaseReady && ytReady && timeSinceStart >= 1000) {
+        console.log('✅ Systems ready - hiding splash');
         hideBootupSplash();
         return true;
     }
     
-    // Condition 2: Fallback timeout - hide after 8 seconds regardless
-    if (timeSinceStart >= 8000) {
-        console.log('⏱️ Boot-up timeout - hiding splash', statusMsg);
+    // Fallback timeout - hide after 5 seconds
+    if (timeSinceStart >= 5000) {
+        console.log('⏱️ Timeout - hiding splash');
         hideBootupSplash();
         return true;
     }
@@ -392,64 +389,11 @@ function toggleFullscreen() {
 // D. LOAD SONG - Unified playback handler
 // E. PLAYER CREATION (ONCE LANG)
 function loadSong(song) {
-    // First time ever - create player with boot-up video
-    if (!window.tvPlayer && !bootUpVideoPlayed) {
-        console.log('🎬 [FIRST LOAD] Creating player with boot-up video');
-        isPlayingBootUpVideo = true;
-        currentVideoId = bootUpVideoId;
-
-        window.tvPlayer = new YT.Player('videoPlayer', {
-            videoId: bootUpVideoId,
-            playerVars: {
-                autoplay: 1,
-                controls: 0,
-                enablejsapi: 1,
-                modestbranding: 1,
-                fs: 0
-            },
-            events: {
-                onReady: (e) => {
-                    console.log('🎬 Boot-up Video Player Ready');
-                    console.log('📊 Player instance:', e.target);
-                    playerReady = true;
-                    checkBootupCompletion();
-                    // Try to play with autoplay - if blocked by browser, will be caught in onError
-                    try {
-                        const playPromise = e.target.playVideo();
-                        if (playPromise !== undefined) {
-                            playPromise.catch(error => {
-                                console.warn('⚠️ Autoplay prevented:', error);
-                                // Mute and try again
-                                e.target.mute();
-                                e.target.playVideo();
-                            });
-                        }
-                    } catch (err) {
-                        console.warn('⚠️ Play error caught:', err);
-                    }
-                },
-                onStateChange: onPlayerStateChange,
-                onError: (e) => {
-                    console.error('❌ Boot-up video error:', e.data);
-                    // If boot-up video fails, skip it and play karaoke
-                    isPlayingBootUpVideo = false;
-                    bootUpVideoPlayed = true;
-                    if (song && song.videoId) {
-                        console.log('⏭️ Boot-up video failed, skipping to karaoke');
-                        window.tvPlayer.loadVideoById(song.videoId);
-                        currentVideoId = song.videoId;
-                    }
-                }
-            }
-        });
-        return;
-    }
-
-    // After boot-up video, or normal playback
+    // Boot-up video disabled - create player directly with karaoke song
     currentVideoId = song.videoId;
 
     if (!window.tvPlayer) {
-        console.log('📋 [NORMAL] Creating new YT.Player');
+        console.log('🎬 [FIRST LOAD] Creating player with karaoke song');
 
         window.tvPlayer = new YT.Player('videoPlayer', {
             videoId: song.videoId,
