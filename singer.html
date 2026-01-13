@@ -628,20 +628,28 @@
             // Only add if not already added by the calling function
             if (!queue.some(s => s.id === song.id)) {
                 queue.push(song);
-            }
-            localStorage.setItem('karaoke_queue', JSON.stringify(queue));
-            console.log('✅ Song added to local queue. Queue length:', queue.length);
+                localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+                console.log('✅ Song added to local queue. Queue length:', queue.length);
 
-            // Also add to reserved songs display - always add it
-            const reservedSong = { 
-                title: song.title, 
-                artist: song.artist, 
-                videoId: song.videoId,
-                requestedBy: song.requestedBy
-            };
-            reservedSongs.push(reservedSong);
-            localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
-            displayReservedSongs();
+                // Also add to reserved songs display - only if not duplicate
+                const reservedSong = { 
+                    title: song.title, 
+                    artist: song.artist, 
+                    videoId: song.videoId,
+                    requestedBy: song.requestedBy
+                };
+                
+                // Check if already in reserved songs
+                if (!reservedSongs.some(s => s.videoId === song.videoId && s.requestedBy === song.requestedBy)) {
+                    reservedSongs.push(reservedSong);
+                    localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
+                    displayReservedSongs();
+                } else {
+                    console.warn('⚠️ Song already in reserved list - duplicate prevented');
+                }
+            } else {
+                console.warn('⚠️ Song already exists in queue - duplicate prevented');
+            }
 
             // Notify TV display of queue update
             window.dispatchEvent(new CustomEvent('karaoke-queue-updated', { 
