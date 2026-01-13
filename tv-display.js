@@ -544,31 +544,6 @@ function checkPhoneConnection() {
     console.log('📱 Checking phone activity...');
 }
 
-// Show temporary notification
-function showNotification(message) {
-    const notif = document.createElement('div');
-    notif.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-    `;
-    notif.textContent = message;
-    document.body.appendChild(notif);
-    
-    setTimeout(() => {
-        notif.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notif.remove(), 300);
-    }, 3000);
-}
-
 // Generate QR code for singer page
 function generateQRCode() {
     const qrContainer = document.getElementById('qrcode');
