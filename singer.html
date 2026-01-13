@@ -270,6 +270,84 @@
             margin-top: 1rem;
             border: 2px solid;
         }
+
+        /* Footer Styles */
+        .footer-section {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 50px 20px;
+            margin-top: 60px;
+            border-top: 2px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .footer-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .footer-title {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            font-family: 'Brush Script MT', cursive;
+        }
+
+        .footer-description {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            opacity: 0.85;
+            margin-bottom: 30px;
+            color: #ddd;
+        }
+
+        .footer-social {
+            margin: 30px 0;
+        }
+
+        .footer-social-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+        }
+
+        .social-icons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(102, 126, 234, 0.2);
+            border: 2px solid rgba(102, 126, 234, 0.4);
+            border-radius: 50%;
+            color: #667eea;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        .social-icon:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .footer-copyright {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid rgba(102, 126, 234, 0.2);
+            margin-top: 30px;
+        }
     </style>
 </head>
 <body class="singer-page">
@@ -316,7 +394,28 @@
         </div>
     </div>
 
-    <audio id="audioPlayer"></audio>
+    <!-- FOOTER -->
+    <footer class="footer-section">
+        <div class="footer-content">
+            <h2 class="footer-title">🎤 SDkaraoke</h2>
+            <p class="footer-description">
+                Sing your heart out with SDkaraoke – the easiest way to enjoy karaoke from your favorite YouTube videos. No downloads, no fuss – just pick a song and start singing!
+            </p>
+
+            <div class="footer-social">
+                <div class="footer-social-title">Connect With Me</div>
+                <div class="social-icons">
+                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="social-icon" title="Facebook">f</a>
+                    <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter">𝕏</a>
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub">⚙</a>
+                </div>
+            </div>
+
+            <div class="footer-copyright">
+                © 2025 SDkaraoke. All rights reserved. | Built with ❤️ by Shan Denver
+            </div>
+        </div>
+    </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
