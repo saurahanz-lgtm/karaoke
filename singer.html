@@ -868,100 +868,82 @@
             }
         }
 
-        // Reload player
+        // Reload player - restart current song on TV display
         function reloadPlayer() {
-            if (!audioPlayer) {
-                console.error('❌ Audio player not initialized');
-                showAlert('Audio player not initialized', 'danger');
-                return;
-            }
-            try {
-                audioPlayer.currentTime = 0;
-                audioPlayer.play().then(() => {
-                    console.log('▶️ Player reloaded and playing');
-                }).catch(e => {
-                    console.log('⚠️ Play failed:', e?.message || 'Unknown error');
-                    showAlert('Audio preview not available. Watch on TV display for playback.', 'info');
-                });
-            } catch (err) {
-                console.error('❌ Reload error:', err?.message || 'Unknown error');
+            console.log('🔄 Reload requested');
+            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('control').set({ command: 'restart', timestamp: Date.now() });
+                    showAlert('Restarting current song on TV display', 'info');
+                } catch (err) {
+                    console.warn('Firebase control error:', err.message);
+                    showAlert('Could not send restart command', 'warning');
+                }
+            } else {
+                showAlert('Firebase not available - controls disabled', 'warning');
             }
         }
 
-        // Toggle play/pause
+        // Toggle play/pause on TV display
         function togglePlayPause() {
             const btn = document.getElementById('playPauseBtn');
-            if (!audioPlayer) {
-                console.error('❌ Audio player not initialized');
-                showAlert('Audio player not initialized', 'danger');
-                return;
+            console.log('⏯️ Play/Pause toggled');
+            
+            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('control').set({ command: 'togglePlay', timestamp: Date.now() });
+                    if (btn) {
+                        btn.textContent = btn.textContent === '▶' ? '⏸' : '▶';
+                    }
+                    showAlert('Sent play/pause command to TV display', 'info');
+                } catch (err) {
+                    console.warn('Firebase control error:', err.message);
+                    showAlert('Could not send play/pause command', 'warning');
+                }
+            } else {
+                showAlert('Firebase not available - controls disabled', 'warning');
             }
+        }
 
-            try {
-                if (audioPlayer.paused) {
-                    audioPlayer.play().then(() => {
-                        console.log('▶️ Now playing');
-                        if (btn) {
-                            btn.textContent = '⏸';
-                            btn.classList.remove('pause');
-                            btn.classList.add('play');
-                        }
-                    }).catch(e => {
-                        console.log('⚠️ Play failed:', e?.message || 'Unknown error');
-                        if (btn) {
-                            btn.textContent = '▶';
-                        }
-                    });
-                } else {
-                    audioPlayer.pause();
-                    console.log('⏸️ Paused');
+        // Stop player - skip to next song on TV display
+        function stopPlayer() {
+            console.log('⏭️ Stop (skip) requested');
+            
+            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('control').set({ command: 'skip', timestamp: Date.now() });
+                    const btn = document.getElementById('playPauseBtn');
                     if (btn) {
                         btn.textContent = '▶';
-                        btn.classList.remove('play');
-                        btn.classList.add('pause');
                     }
+                    showAlert('Skipping to next song on TV display', 'info');
+                } catch (err) {
+                    console.warn('Firebase control error:', err.message);
+                    showAlert('Could not send skip command', 'warning');
                 }
-            } catch (error) {
-                console.error('Error in togglePlayPause:', error);
+            } else {
+                showAlert('Firebase not available - controls disabled', 'warning');
             }
         }
 
-        // Stop player
-        function stopPlayer() {
-            if (!audioPlayer) {
-                console.error('❌ Audio player not initialized');
-                return;
-            }
-            try {
-                audioPlayer.pause();
-                audioPlayer.currentTime = 0;
-                console.log('■ Stopped');
-                const btn = document.getElementById('playPauseBtn');
-                if (btn) {
-                    btn.textContent = '▶';
-                    btn.classList.remove('play');
-                    btn.classList.add('pause');
-                }
-            } catch (error) {
-                console.error('Error in stopPlayer:', error);
-            }
-        }
-
-        // Toggle mute
+        // Toggle mute on TV display
         function toggleMute() {
             const btn = document.getElementById('muteBtn');
-            if (!audioPlayer) {
-                console.error('❌ Audio player not initialized');
-                return;
-            }
-            try {
-                audioPlayer.muted = !audioPlayer.muted;
-                console.log(audioPlayer.muted ? '🔇 Muted' : '🔊 Unmuted');
-                if (btn) {
-                    btn.textContent = audioPlayer.muted ? '🔇' : '🔊';
+            console.log('🔇 Mute toggled');
+            
+            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('control').set({ command: 'toggleMute', timestamp: Date.now() });
+                    if (btn) {
+                        btn.textContent = btn.textContent === '🔊' ? '🔇' : '🔊';
+                    }
+                    showAlert('Sent mute/unmute command to TV display', 'info');
+                } catch (err) {
+                    console.warn('Firebase control error:', err.message);
+                    showAlert('Could not send mute command', 'warning');
                 }
-            } catch (error) {
-                console.error('Error in toggleMute:', error);
+            } else {
+                showAlert('Firebase not available - controls disabled', 'warning');
             }
         }
 

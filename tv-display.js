@@ -254,6 +254,53 @@ function initializeFirebaseListeners() {
         console.error('❌ Firebase currentSong listener error:', error);
     });
 
+    // 🔥 Listen for control commands from singer page
+    db.ref('control').on('value', snapshot => {
+        const control = snapshot.val();
+        if (!control || !control.command) return;
+        
+        console.log('📱 Control command received:', control.command);
+        
+        switch(control.command) {
+            case 'togglePlay':
+                if (window.tvPlayer && window.tvPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                    window.tvPlayer.pauseVideo();
+                    console.log('⏸ Paused via remote');
+                } else if (window.tvPlayer) {
+                    window.tvPlayer.playVideo();
+                    console.log('▶️ Playing via remote');
+                }
+                break;
+                
+            case 'skip':
+                console.log('⏭️ Skipping to next song via remote');
+                playNextSong();
+                break;
+                
+            case 'restart':
+                if (window.tvPlayer && currentSong) {
+                    window.tvPlayer.seekTo(0);
+                    window.tvPlayer.playVideo();
+                    console.log('🔄 Restarted via remote');
+                }
+                break;
+                
+            case 'toggleMute':
+                if (window.tvPlayer) {
+                    if (window.tvPlayer.isMuted()) {
+                        window.tvPlayer.unMute();
+                        console.log('🔊 Unmuted via remote');
+                    } else {
+                        window.tvPlayer.mute();
+                        console.log('🔇 Muted via remote');
+                    }
+                }
+                break;
+        }
+    }, (error) => {
+        console.warn('⚠️ Firebase control listener error:', error);
+    });
+
     // 🔥 Listen for activity updates
     db.ref('activity').on('value', snapshot => {
         const activityData = snapshot.val();
