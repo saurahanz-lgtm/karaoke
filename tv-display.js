@@ -944,11 +944,16 @@ function displayQueue() {
         // Display queue from tvQueue (loaded from Firebase)
         if (tvQueue && tvQueue.length > 0) {
             const nextSong = tvQueue[0];
-            nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${nextSong.title}`;
+            // Extract just the song name (remove artist if included)
+            let songName = nextSong.title;
+            if (songName.includes(' - ')) {
+                songName = songName.split(' - ')[0].trim();
+            }
+            nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${songName}`;
             nextSongArtist.textContent = `Reserved by: ${nextSong.requestedBy}`;
             console.log('📺 TV Display Queue Updated:', {
                 count: tvQueue.length,
-                currentSong: nextSong.title,
+                currentSong: songName,
                 reservedBy: nextSong.requestedBy,
                 songs: tvQueue.map(s => ({ title: s.title, reservedBy: s.requestedBy }))
             });
@@ -984,13 +989,22 @@ function updateNextSongDisplay() {
     }
     
     if (nextSong) {
-        nextSongTitle.textContent = nextSong.title;
+        // Extract just the song name (remove artist if included)
+        let songName = nextSong.title;
+        if (songName.includes(' - ')) {
+            songName = songName.split(' - ')[0].trim();
+        }
+        nextSongTitle.textContent = songName;
         nextSongArtist.textContent = `Reserved by: ${nextSong.requestedBy}`;
         nextSongDisplay.style.display = 'flex';
     } else {
         // Show current song if queue is empty but currentSong exists
         if (currentSong && currentSong.title) {
-            nextSongTitle.textContent = `▶️ Now Playing: ${currentSong.title}`;
+            let songName = currentSong.title;
+            if (songName.includes(' - ')) {
+                songName = songName.split(' - ')[0].trim();
+            }
+            nextSongTitle.textContent = `▶️ Now Playing: ${songName}`;
             nextSongArtist.textContent = `by ${currentSong.singer || currentSong.requestedBy}`;
         } else {
             nextSongTitle.textContent = '🎤 Select a Song to Start';
