@@ -55,13 +55,9 @@ function updateAdminActivity() {
     
     const now = Date.now();
     
-    // Update in localStorage first
-    const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
-    if (loggedInUser) {
-        const user = JSON.parse(loggedInUser);
-        user.lastActivity = now;
-        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(user));
-    }
+    // Update in localStorage
+    loggedInUser.lastActivity = now;
+    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(loggedInUser));
     
     // Update in Firebase
     if (typeof firebase !== 'undefined' && firebase.database) {
