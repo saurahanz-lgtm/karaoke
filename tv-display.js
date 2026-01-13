@@ -149,7 +149,8 @@ function initializeFirebaseListeners() {
         const data = snapshot.val();
         if (!data) return;
 
-        tvQueue = Object.values(data);
+        // Convert Firebase object to array (Firebase stores objects, not arrays)
+        tvQueue = Array.isArray(data) ? data : Object.values(data);
         console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
 
         // Mark Firebase as ready once we get queue data
@@ -204,7 +205,7 @@ function initializeFirebaseListeners() {
     db.ref('queue').once('value', snapshot => {
         const queueData = snapshot.val();
         if (queueData) {
-            tvQueue = Object.values(queueData);
+            tvQueue = Array.isArray(queueData) ? queueData : Object.values(queueData);
             console.log('📡 Initial queue loaded:', tvQueue.length, 'songs');
             displayQueue();
         }

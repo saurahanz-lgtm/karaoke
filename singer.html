@@ -397,8 +397,21 @@
                     firebase.database().ref('queue').on('value', (snapshot) => {
                         const data = snapshot.val();
                         if (data) {
-                            let queueArray = Object.values(data);
+                            // Convert Firebase object to array if needed
+                            let queueArray = Array.isArray(data) ? data : Object.values(data);
                             localStorage.setItem('karaoke_queue', JSON.stringify(queueArray));
+                            
+                            // Update reserved songs display from Firebase data
+                            const reservedArray = queueArray.map(song => ({ 
+                                title: song.title, 
+                                artist: song.artist, 
+                                videoId: song.videoId,
+                                requestedBy: song.requestedBy
+                            }));
+                            reservedSongs = reservedArray;
+                            localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedArray));
+                            displayReservedSongs();
+                            
                             console.log('📡 Queue synced from Firebase:', queueArray.length, 'songs');
                         }
                     });
@@ -592,7 +605,20 @@
             let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
             queue.push(song);
             localStorage.setItem('karaoke_queue', JSON.stringify(queue));
-            console.log('✅ Song added to queue. Queue length:', queue.length);
+            console.log('✅ Song added to local queue. Queue length:', queue.length);
+
+            // Sync to Firebase as well so it persists across browsers
+            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    // Update the queue in Firebase
+                    firebase.database().ref('queue').set(queue).catch(err => {
+                        console.warn('⚠️ Failed to sync queue to Firebase:', err.message);
+                    });
+                    console.log('🔥 Queue synced to Firebase:', queue.length, 'songs');
+                } catch (err) {
+                    console.warn('⚠️ Firebase sync error:', err.message);
+                }
+            }
 
             // Also add to reserved songs display - always add it
             const reservedSong = { 
