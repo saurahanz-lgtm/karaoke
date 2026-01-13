@@ -250,14 +250,16 @@
         let reservedSongs = [];
         let useSingerFirebase = false;
         let suppressAudioErrors = false; // Flag to suppress expected audio errors
+        let loggedInUser = null; // Store logged-in user globally
 
         // Check if user is logged in
         function checkSingerLogin() {
-            const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
-            if (!loggedInUser) {
+            const stored = localStorage.getItem('karaoke_logged_in_user');
+            if (!stored) {
                 window.location.href = 'index.html';
                 return false;
             }
+            loggedInUser = JSON.parse(stored);
             return true;
         }
 
@@ -304,18 +306,16 @@
                 }
                 
                 // Also update the user's lastActivity in the database
-                const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
                 if (loggedInUser) {
                     try {
-                        const user = JSON.parse(loggedInUser);
                         // Update lastActivity in localStorage
-                        user.lastActivity = now;
-                        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(user));
+                        loggedInUser.lastActivity = now;
+                        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(loggedInUser));
                         
                         // Update in Firebase if available
                         if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
                             try {
-                                firebase.database().ref('users/' + user.id).update({
+                                firebase.database().ref('users/' + loggedInUser.id).update({
                                     lastActivity: now
                                 }).catch(err => console.warn('Firebase user update failed:', err.message));
                             } catch (fbErr) {
@@ -333,14 +333,10 @@
             console.log('🎤 Singer page loaded - setting initial activity timestamp');
             
             // Ensure user has an ID if not already set
-            const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
-            if (loggedInUser) {
-                const user = JSON.parse(loggedInUser);
-                if (!user.id) {
-                    user.id = 'singer_' + Date.now();
-                    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(user));
-                    console.log('🆔 Assigned ID to user:', user.id);
-                }
+            if (loggedInUser && !loggedInUser.id) {
+                loggedInUser.id = 'singer_' + Date.now();
+                localStorage.setItem('karaoke_logged_in_user', JSON.stringify(loggedInUser));
+                console.log('🆔 Assigned ID to user:', loggedInUser.id);
             }
             
             updateActivityTimestamp();
@@ -394,14 +390,13 @@
                 });
             }
             
-            const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
+            // Populate singer name in input field
             if (loggedInUser) {
-                const user = JSON.parse(loggedInUser);
                 const userNameInput = document.getElementById('userName');
                 if (userNameInput) {
-                    userNameInput.value = user.username;
+                    userNameInput.value = loggedInUser.username;
                 }
-                localStorage.setItem('karaoke_user_name', user.username);
+                localStorage.setItem('karaoke_user_name', loggedInUser.username);
             }
             
             const searchForm = document.getElementById('searchForm');
