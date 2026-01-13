@@ -279,7 +279,7 @@ function continueAddUser(username, password, role) {
         password,
         role,
         joined: new Date().toISOString().split('T')[0],
-        lastActivity: new Date().getTime()
+        lastActivity: 0  // User starts as Offline until they log in
     };
     
     users.push(newUser);
