@@ -428,6 +428,9 @@ function displayUsers() {
                 </td>
                 <td style="padding: 1.2rem;">${user.joined}</td>
                 <td style="padding: 1.2rem;">
+                    <button class="btn btn-sm btn-warning" onclick="openChangePasswordModal(${user.id}, '${user.username}')" style="margin-right: 5px;">
+                        🔐 Pass
+                    </button>
                     <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
                         🗑️ Delete
                     </button>
@@ -575,6 +578,52 @@ function deleteUser(userId) {
         updateStats();
         showNotification(`User "${user.username}" deleted!`, 'info');
     }
+}
+
+// Open change password modal for a specific user
+function openChangePasswordModal(userId, username) {
+    currentEditingUserId = userId;
+    document.getElementById('editUserPasswordUsername').textContent = username;
+    document.getElementById('editUserPasswordInput').value = '';
+    document.getElementById('editUserPasswordConfirm').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('changeUserPasswordModal'));
+    modal.show();
+}
+
+// Change password for a specific user
+function handleChangeUserPassword() {
+    if (!currentEditingUserId) return;
+    
+    const newPassword = document.getElementById('editUserPasswordInput').value;
+    const confirmPassword = document.getElementById('editUserPasswordConfirm').value;
+    
+    // Validate password
+    if (!newPassword || newPassword.length < 6) {
+        alert('❌ Password must be at least 6 characters long!');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        alert('❌ Passwords do not match!');
+        return;
+    }
+    
+    // Find and update user
+    const user = users.find(u => u.id === currentEditingUserId);
+    if (!user) return;
+    
+    user.password = newPassword;
+    saveUsers();
+    
+    // Close modal and clear form
+    const modal = bootstrap.Modal.getInstance(document.getElementById('changeUserPasswordModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    showNotification(`✅ Password changed for "${user.username}"!`, 'success');
+    console.log('🔐 Password changed for user:', user.username);
 }
 
 // Show notification

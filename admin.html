@@ -299,6 +299,32 @@
         </div>
     </div>
 
+    <!-- Change User Password Modal -->
+    <div class="modal fade" id="changeUserPasswordModal" tabindex="-1">
+        <div class="modal-dialog" style="background: transparent;">
+            <div class="modal-content" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(240, 147, 251, 0.1)); border: 2px solid rgba(102, 126, 234, 0.3); color: white;">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">🔐 Change Password for <span id="editUserPasswordUsername" style="color: #667eea; font-weight: bold;"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editUserPasswordInput" class="form-label fw-600">New Password</label>
+                        <input type="password" class="form-control" id="editUserPasswordInput" placeholder="Enter new password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editUserPasswordConfirm" class="form-label fw-600">Confirm Password</label>
+                        <input type="password" class="form-control" id="editUserPasswordConfirm" placeholder="Confirm new password" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn search-btn text-white" onclick="handleChangeUserPassword()">✓ Change Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="admin.js"></script>
 </body>
