@@ -73,6 +73,63 @@ function updateAdminActivity() {
     console.log('👨‍💼 Admin activity updated:', new Date().toLocaleTimeString());
 }
 
+// Handle password change
+function handleChangePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // Validate current password
+    if (currentPassword !== loggedInUser.password) {
+        alert('❌ Current password is incorrect!');
+        return;
+    }
+    
+    // Validate new password
+    if (newPassword.length < 6) {
+        alert('❌ New password must be at least 6 characters long!');
+        return;
+    }
+    
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+        alert('❌ New passwords do not match!');
+        return;
+    }
+    
+    // Update password in user object
+    loggedInUser.password = newPassword;
+    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(loggedInUser));
+    
+    // Update password in users array
+    const userIndex = users.findIndex(u => u.id === loggedInUser.id);
+    if (userIndex !== -1) {
+        users[userIndex].password = newPassword;
+        saveUsers();
+    }
+    
+    // Update in Firebase
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            firebase.database().ref('users/' + loggedInUser.id).update({
+                password: newPassword
+            }).catch(err => console.warn('Firebase password update failed:', err.message));
+        } catch (error) {
+            console.warn('Error updating password in Firebase:', error.message);
+        }
+    }
+    
+    // Clear form and close modal
+    document.getElementById('changePasswordForm').reset();
+    const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    alert('✅ Password changed successfully!');
+    console.log('🔐 Password changed for user:', loggedInUser.username);
+}
+
 // Logout function
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
