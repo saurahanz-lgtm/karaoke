@@ -1,5 +1,19 @@
 /* ===== TV DISPLAY LOGIC ===== */
 
+// Add CSS for animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(400px); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
 // Queue data storage
 let tvQueue = [];
 let currentSong = null;
@@ -524,6 +538,8 @@ function loadSong(song) {
 }
 
 // Check if phone/singer page is connected
+let lastConnectionStatus = null;
+
 function checkPhoneConnection() {
     try {
         const connectionStatus = document.getElementById('connectionStatus');
@@ -538,29 +554,42 @@ function checkPhoneConnection() {
         firebase.database().ref('activity').once('value', snapshot => {
             const activityData = snapshot.val();
             
-            if (!activityData) {
-                connectionStatus.classList.remove('connected');
-                connectionStatus.classList.add('disconnected');
-                connectionText.textContent = '🔴 No Phone Connected';
-                return;
-            }
-
-            const currentTime = Date.now();
-            const activityTime = activityData.timestamp || 0;
-            const timeDifference = currentTime - activityTime;
-            const timeoutDuration = 15000; // 15 seconds timeout
+            let isConnected = false;
             
-            if (timeDifference < timeoutDuration) {
-                // Phone is connected
-                connectionStatus.classList.remove('disconnected');
-                connectionStatus.classList.add('connected');
-                connectionText.textContent = '🟢 Phone Connected';
-            } else {
-                // Phone disconnected (no activity for 15 seconds)
+            if (!activityData || !activityData.timestamp) {
                 connectionStatus.classList.remove('connected');
                 connectionStatus.classList.add('disconnected');
                 connectionText.textContent = '🔴 No Phone Connected';
+                isConnected = false;
+            } else {
+                const currentTime = Date.now();
+                const activityTime = activityData.timestamp || 0;
+                const timeDifference = currentTime - activityTime;
+                const timeoutDuration = 30000; // 30 seconds timeout (more lenient)
+                
+                if (timeDifference < timeoutDuration) {
+                    // Phone is connected
+                    connectionStatus.classList.remove('disconnected');
+                    connectionStatus.classList.add('connected');
+                    connectionText.textContent = '🟢 Phone Connected';
+                    isConnected = true;
+                } else {
+                    // Phone disconnected (no activity for 30 seconds)
+                    connectionStatus.classList.remove('connected');
+                    connectionStatus.classList.add('disconnected');
+                    connectionText.textContent = '🔴 No Phone Connected';
+                    isConnected = false;
+                }
             }
+            
+            // Show pop-up message on status change
+            if (lastConnectionStatus !== isConnected) {
+                lastConnectionStatus = isConnected;
+                const message = isConnected ? '✅ Phone Connected!' : '❌ Phone Disconnected';
+                showNotification(message);
+            }
+            
+            console.log('📱 Phone connection status:', isConnected ? 'Connected' : 'Disconnected');
         }).catch(err => {
             console.warn('Firebase activity read failed:', err.message);
             connectionStatus.classList.remove('connected');
@@ -570,6 +599,31 @@ function checkPhoneConnection() {
     } catch (error) {
         console.error('❌ Error in checkPhoneConnection:', error.message);
     }
+}
+
+// Show temporary notification
+function showNotification(message) {
+    const notif = document.createElement('div');
+    notif.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    notif.textContent = message;
+    document.body.appendChild(notif);
+    
+    setTimeout(() => {
+        notif.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notif.remove(), 300);
+    }, 3000);
 }
 
 // Generate QR code for singer page
