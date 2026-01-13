@@ -661,17 +661,27 @@
 
         // Set current song and trigger auto-play
         function setCurrentSongAndAutoPlay(song) {
-            const currentSong = {
-                title: song.title,
-                artist: song.artist,
-                videoId: song.videoId,
-                requestedBy: song.requestedBy,
-                singer: song.requestedBy
-            };
+            // Only set as current song if queue is empty (first song)
+            // Otherwise, just add to queue - TV display will auto-play when ready
+            let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+            
+            if (queue.length <= 1) {
+                // Queue is empty or has only current song - set this as current
+                const currentSong = {
+                    title: song.title,
+                    artist: song.artist,
+                    videoId: song.videoId,
+                    requestedBy: song.requestedBy,
+                    singer: song.requestedBy
+                };
 
-            // Save to localStorage - this is the primary way to communicate with TV display
-            localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
-            console.log('✅ Current song set in localStorage:', song.title);
+                // Save to localStorage - this is the primary way to communicate with TV display
+                localStorage.setItem('karaoke_current_song', JSON.stringify(currentSong));
+                console.log('✅ Current song set in localStorage (queue empty):', song.title);
+            } else {
+                // Queue has songs - don't interrupt, just added to queue
+                console.log('✅ Song added to queue (not interrupting current song):', song.title);
+            }
 
             // Set audio source for singer to hear preview/karaoke track
             // Note: Direct YouTube audio streaming requires special handling
