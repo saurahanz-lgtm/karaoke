@@ -763,8 +763,8 @@ function updateNextSongDisplay() {
             nextSongTitle.textContent = `▶️ Now Playing: ${currentSong.title}`;
             nextSongArtist.textContent = `by ${currentSong.artist}`;
         } else {
-            nextSongTitle.textContent = 'Waiting for next song...';
-            nextSongArtist.textContent = '-';
+            nextSongTitle.textContent = '🎤 Select a Song to Start';
+            nextSongArtist.textContent = 'Scan the QR code to request a song';
         }
         nextSongDisplay.style.display = 'flex';
     }
