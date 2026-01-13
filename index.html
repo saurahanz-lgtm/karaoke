@@ -707,29 +707,47 @@
 
         // Check if user is already logged in from another device (using Firebase)
         function checkIfLoggedInElsewhere(username, callback) {
+            console.log('🔍 Checking if', username, 'is logged in elsewhere...');
+            
+            const timeoutId = setTimeout(() => {
+                console.warn('⏱️ Firebase check timeout - allowing login');
+                callback(false); // Timeout: allow login
+            }, 3000); // 3 second timeout
+            
             // Try to check from Firebase first
             if (typeof firebase !== 'undefined' && firebase.database) {
                 try {
                     const loginRef = firebase.database().ref('activeLogin/' + username);
+                    
                     loginRef.once('value', (snapshot) => {
+                        clearTimeout(timeoutId);
                         const data = snapshot.val();
                         const currentSessionId = getDeviceSessionId();
                         
+                        console.log('📊 Firebase data for', username, ':', data);
+                        console.log('🎫 Current session ID:', currentSessionId);
+                        
                         // If there's an active login and it's from a different session
                         if (data && data.sessionId && data.sessionId !== currentSessionId) {
+                            console.log('❌ User already logged in with different session');
                             callback(true); // User logged in elsewhere
                         } else {
+                            console.log('✅ Safe to login - no other session found');
                             callback(false); // Safe to login
                         }
                     }).catch(err => {
-                        console.warn('Firebase check failed, allowing login:', err.message);
+                        clearTimeout(timeoutId);
+                        console.warn('⚠️ Firebase read error:', err.message);
                         callback(false); // Fallback: allow login if Firebase fails
                     });
                 } catch (e) {
-                    console.warn('Firebase error:', e.message);
+                    clearTimeout(timeoutId);
+                    console.warn('⚠️ Firebase exception:', e.message);
                     callback(false); // Fallback: allow login
                 }
             } else {
+                clearTimeout(timeoutId);
+                console.warn('⚠️ Firebase not available');
                 callback(false); // Firebase not available, allow login
             }
         }
@@ -737,6 +755,9 @@
         // Register login session in Firebase
         function registerLoginSession(username) {
             const sessionId = getDeviceSessionId();
+            console.log('📝 Registering login session for', username);
+            console.log('🎫 Session ID:', sessionId);
+            
             localStorage.setItem('karaoke_last_login_user', username);
             localStorage.setItem('karaoke_last_session_id', sessionId);
             localStorage.setItem('karaoke_login_timestamp', Date.now().toString());
@@ -748,10 +769,17 @@
                         sessionId: sessionId,
                         timestamp: Date.now(),
                         loginTime: new Date().toISOString()
-                    }).catch(err => console.warn('Firebase login registration failed:', err.message));
+                    }).then(() => {
+                        console.log('✅ Session registered in Firebase');
+                    }).catch(err => {
+                        console.warn('⚠️ Firebase registration failed:', err.message);
+                        // Continue anyway - localStorage will be fallback
+                    });
                 } catch (e) {
-                    console.warn('Firebase error:', e.message);
+                    console.warn('⚠️ Firebase error:', e.message);
                 }
+            } else {
+                console.warn('⚠️ Firebase not available for session registration');
             }
         }
 
@@ -779,24 +807,31 @@
             const adminName = document.getElementById('adminName').value.trim();
             const adminPassword = document.getElementById('adminPassword').value;
 
+            console.log('👤 Admin login attempt:', adminName);
+
             // Try to get users from Firebase first with a fresh load
             forceReloadUsersForLogin(function(users) {
                 const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
 
                 if (adminUser) {
+                    console.log('✅ Admin user found:', adminUser.username);
+                    
                     // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
                     checkIfLoggedInElsewhere(adminName, function(isLoggedInElsewhere) {
                         if (isLoggedInElsewhere) {
+                            console.log('❌ Login blocked - user already logged in elsewhere');
                             alert('❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.');
                             return; // BLOCK the login
                         }
 
+                        console.log('✅ Proceeding with login...');
                         // Store logged-in user
                         localStorage.setItem('karaoke_logged_in_user', JSON.stringify(adminUser));
                         registerLoginSession(adminName);
                         window.location.href = 'admin.html';
                     });
                 } else {
+                    console.log('❌ Admin user not found or password incorrect');
                     alert('❌ Invalid admin credentials. Please check your username and password.');
                     document.getElementById('adminName').focus();
                 }
@@ -809,18 +844,24 @@
             const singerUsername = document.getElementById('singerUsername').value.trim();
             const singerPassword = document.getElementById('singerPassword').value;
 
+            console.log('👤 Singer login attempt:', singerUsername);
+
             // Try to get users from Firebase first with a fresh load
             forceReloadUsersForLogin(function(users) {
                 const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
 
                 if (singerUser) {
+                    console.log('✅ Singer user found:', singerUser.username);
+                    
                     // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
                     checkIfLoggedInElsewhere(singerUsername, function(isLoggedInElsewhere) {
                         if (isLoggedInElsewhere) {
+                            console.log('❌ Login blocked - user already logged in elsewhere');
                             alert('❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.');
                             return; // BLOCK the login
                         }
 
+                        console.log('✅ Proceeding with login...');
                         // Store logged-in user
                         localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
                         registerLoginSession(singerUsername);
@@ -831,6 +872,7 @@
                         }, 300);
                     });
                 } else {
+                    console.log('❌ Singer user not found or password incorrect');
                     alert('❌ Invalid credentials. Please check your username and password.');
                     document.getElementById('singerUsername').focus();
                 }
