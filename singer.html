@@ -396,9 +396,11 @@
                 try {
                     firebase.database().ref('queue').on('value', (snapshot) => {
                         const data = snapshot.val();
+                        console.log('🔥 Firebase queue snapshot:', data);
                         if (data) {
                             // Convert Firebase object to array if needed
                             let queueArray = Array.isArray(data) ? data : Object.values(data);
+                            console.log('📊 Converted queue array length:', queueArray.length, queueArray);
                             localStorage.setItem('karaoke_queue', JSON.stringify(queueArray));
                             
                             // Update reserved songs display from Firebase data
@@ -408,11 +410,14 @@
                                 videoId: song.videoId,
                                 requestedBy: song.requestedBy
                             }));
+                            console.log('📋 Reserved array length:', reservedArray.length, reservedArray);
                             reservedSongs = reservedArray;
                             localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedArray));
                             displayReservedSongs();
                             
                             console.log('📡 Queue synced from Firebase:', queueArray.length, 'songs');
+                        } else {
+                            console.log('⚪ Firebase queue is empty');
                         }
                     });
                 } catch (fbError) {
