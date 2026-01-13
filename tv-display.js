@@ -719,9 +719,9 @@ function updateNextSongDisplay() {
     // Get the next song (skip the current playing song)
     let nextSong = null;
     
-    if (tvQueue.length > 0) {
+    if (tvQueue && tvQueue.length > 0) {
         // If there's a current song and it matches the first in queue, show second song
-        if (currentSong && currentSong.title === tvQueue[0].title) {
+        if (currentSong && currentSong.videoId === tvQueue[0].videoId) {
             nextSong = tvQueue.length > 1 ? tvQueue[1] : null;
         } else {
             // Otherwise show the first song in queue
@@ -734,8 +734,14 @@ function updateNextSongDisplay() {
         nextSongArtist.textContent = `by ${nextSong.artist}`;
         nextSongDisplay.style.display = 'flex';
     } else {
-        nextSongTitle.textContent = 'Waiting for next song...';
-        nextSongArtist.textContent = '-';
+        // Show current song if queue is empty but currentSong exists
+        if (currentSong && currentSong.title) {
+            nextSongTitle.textContent = `▶️ Now Playing: ${currentSong.title}`;
+            nextSongArtist.textContent = `by ${currentSong.artist}`;
+        } else {
+            nextSongTitle.textContent = 'Waiting for next song...';
+            nextSongArtist.textContent = '-';
+        }
         nextSongDisplay.style.display = 'flex';
     }
 }
