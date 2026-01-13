@@ -40,6 +40,18 @@ let bootUpVideoPlayed = true; // Mark as already played to skip boot-up
 let bootupStartTime = Date.now();
 let bootupHidden = false;
 
+// SCORING SYSTEM
+let songStartTime = null;
+let hasSinging = false;
+let currentSingerName = '';
+let songDurationMs = 0;
+
+// Mark that someone is singing (can be called from singer.js or other pages)
+function markSinging() {
+    hasSinging = true;
+    console.log(`🎤 Singing marked for ${currentSingerName}`);
+}
+
 function hideBootupSplash() {
     if (bootupHidden) return; // Only hide once
     bootupHidden = true;
@@ -676,6 +688,12 @@ function playVideo(videoId, title, artist, singer) {
     // Clear previous player
     container.innerHTML = '';
     
+    // Initialize scoring for new song
+    songStartTime = Date.now();
+    hasSinging = false;
+    currentSingerName = singer || 'Unknown Singer';
+    songDurationMs = 0;
+    
     player = new YT.Player(container, {
         height: '100%',
         width: '100%',
@@ -694,6 +712,13 @@ function playVideo(videoId, title, artist, singer) {
         events: {
             'onReady': function(event) {
                 try {
+                    // Get video duration when ready
+                    const duration = event.target.getDuration();
+                    if (duration > 0) {
+                        songDurationMs = duration * 1000;
+                        console.log(`⏱️ Song duration: ${duration}s (${songDurationMs}ms)`);
+                    }
+                    
                     const playPromise = event.target.playVideo();
                     if (playPromise && typeof playPromise.catch === 'function') {
                         playPromise.catch(error => {
@@ -760,8 +785,123 @@ function onPlayerStateChange(e) {
 
 // Show score/results when video ends
 function showScore() {
-    console.log('✅ [7/7] Video ended - playing next song');
-    playNextSong();
+    console.log('✅ Video ended - calculating score');
+    
+    // Calculate score based on singing activity
+    let score = 0;
+    
+    if (hasSinging) {
+        // If someone sang, calculate score based on song duration
+        // Score = (Duration in seconds) * 10 + bonus
+        const songSeconds = Math.round(songDurationMs / 1000);
+        const baseScore = songSeconds * 10;
+        
+        // Add bonus for completing the song (if they sang the whole thing)
+        let bonus = 100;
+        
+        score = baseScore + bonus;
+        
+        // Cap score at 1000
+        if (score > 1000) score = 1000;
+        
+        console.log(`🎤 ${currentSingerName} sang! Score: ${score} (Duration: ${songSeconds}s, Base: ${baseScore}, Bonus: ${bonus})`);
+        
+        // Display score modal
+        displayScoreModal(currentSingerName, score, true);
+    } else {
+        // No singing detected - score is 0
+        score = 0;
+        console.log(`❌ No singing detected. Score: 0`);
+        
+        // Display zero score
+        displayScoreModal(currentSingerName, score, false);
+    }
+    
+    // Wait for score display before playing next song
+    setTimeout(() => {
+        playNextSong();
+    }, 3000);
+}
+
+// Display score modal
+function displayScoreModal(singerName, score, hasSung) {
+    // Remove existing score modal if any
+    const existingModal = document.getElementById('scoreModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Create score modal
+    const modal = document.createElement('div');
+    modal.id = 'scoreModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    const scoreDisplay = document.createElement('div');
+    scoreDisplay.style.cssText = `
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 30px;
+        padding: 60px 80px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        animation: slideUp 0.5s ease;
+    `;
+    
+    if (hasSung) {
+        scoreDisplay.innerHTML = `
+            <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px;">🎤</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px;">Maganda!</div>
+            <div style="font-size: 1.8rem; margin-bottom: 30px; opacity: 0.95;">${singerName}</div>
+            <div style="font-size: 4rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);">
+                ${score}
+            </div>
+            <div style="font-size: 1.2rem; margin-top: 30px; opacity: 0.9;">POINTS</div>
+        `;
+    } else {
+        scoreDisplay.innerHTML = `
+            <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px;">🎙️</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px;">Song Completed</div>
+            <div style="font-size: 1.8rem; margin-bottom: 30px; opacity: 0.95;">${singerName}</div>
+            <div style="font-size: 4rem; font-weight: 900; color: #ff6b6b;">
+                ${score}
+            </div>
+            <div style="font-size: 1.2rem; margin-top: 30px; opacity: 0.9;">POINTS<br><span style="font-size: 0.9rem;">(No singing detected)</span></div>
+        `;
+    }
+    
+    modal.appendChild(scoreDisplay);
+    document.body.appendChild(modal);
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        modal.remove();
+    }, 3000);
 }
 
 function playNextSong() {

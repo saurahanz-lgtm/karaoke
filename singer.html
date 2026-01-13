@@ -602,6 +602,15 @@
                     timestamp: new Date().toLocaleString()
                 };
 
+                // Mark that this song is being sung (for scoring system)
+                if (typeof markSinging !== 'undefined') {
+                    try {
+                        markSinging();
+                    } catch (e) {
+                        console.warn('⚠️ Could not mark singing activity:', e.message);
+                    }
+                }
+
                 // Write to Firebase first (primary method)
                 if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
                     try {
