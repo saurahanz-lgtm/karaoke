@@ -120,10 +120,28 @@
             margin-bottom: 18px;
             cursor: pointer;
             transition: all 0.3s ease;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
         }
 
         .refresh:hover {
             transform: scale(1.05);
+        }
+
+        .refresh.rotating {
+            animation: spinRotate 0.8s linear infinite;
+        }
+
+        @keyframes spinRotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .searchbox {
@@ -955,6 +973,17 @@
 
         // Reload player - restart current song on TV display
         function reloadPlayer() {
+            const refreshBtn = document.querySelector('.refresh');
+            
+            // Add rotating animation
+            if (refreshBtn) {
+                refreshBtn.classList.add('rotating');
+                // Remove animation after 2 seconds
+                setTimeout(() => {
+                    refreshBtn.classList.remove('rotating');
+                }, 2000);
+            }
+            
             console.log('🔄 Reload requested');
             if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
                 try {
