@@ -412,7 +412,7 @@ function loadSong(song) {
                     // Try to play with autoplay - if blocked by browser, will be caught in onError
                     try {
                         const playPromise = e.target.playVideo();
-                        if (playPromise !== undefined) {
+                        if (playPromise && typeof playPromise.catch === 'function') {
                             playPromise.catch(error => {
                                 console.warn('⚠️ Autoplay prevented:', error);
                                 // Mute and try again
@@ -596,7 +596,7 @@ function playVideo(videoId, title, artist, singer) {
             'onReady': function(event) {
                 try {
                     const playPromise = event.target.playVideo();
-                    if (playPromise !== undefined) {
+                    if (playPromise && typeof playPromise.catch === 'function') {
                         playPromise.catch(error => {
                             console.warn('⚠️ Autoplay prevented:', error);
                             event.target.mute();
