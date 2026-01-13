@@ -91,11 +91,24 @@ function updateAdminActivity() {
 // Logout function
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
+        const username = localStorage.getItem('karaoke_last_login_user');
+        
         localStorage.removeItem('karaoke_logged_in_user');
         localStorage.removeItem('karaoke_last_login_user');
         localStorage.removeItem('karaoke_last_session_id');
         localStorage.removeItem('karaoke_login_timestamp');
         localStorage.removeItem('karaoke_device_session_id');
+        
+        // Clear from Firebase
+        if (username && typeof firebase !== 'undefined' && firebase.database) {
+            try {
+                firebase.database().ref('activeLogin/' + username).remove()
+                    .catch(err => console.warn('Firebase logout failed:', err.message));
+            } catch (e) {
+                console.warn('Firebase error:', e.message);
+            }
+        }
+        
         window.location.href = 'index.html';
     }
 }

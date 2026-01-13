@@ -705,33 +705,73 @@
             return sessionId;
         }
 
-        // Check if user is already logged in from another session/device
-        function checkIfLoggedInElsewhere(username) {
-            const lastLoginUser = localStorage.getItem('karaoke_last_login_user');
-            const lastSessionId = localStorage.getItem('karaoke_last_session_id');
-            const currentSessionId = getDeviceSessionId();
-
-            // If same user logged in but from different device/session
-            if (lastLoginUser === username && lastSessionId && lastSessionId !== currentSessionId) {
-                return true; // User already logged in elsewhere
+        // Check if user is already logged in from another device (using Firebase)
+        function checkIfLoggedInElsewhere(username, callback) {
+            // Try to check from Firebase first
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    const loginRef = firebase.database().ref('activeLogin/' + username);
+                    loginRef.once('value', (snapshot) => {
+                        const data = snapshot.val();
+                        const currentSessionId = getDeviceSessionId();
+                        
+                        // If there's an active login and it's from a different session
+                        if (data && data.sessionId && data.sessionId !== currentSessionId) {
+                            callback(true); // User logged in elsewhere
+                        } else {
+                            callback(false); // Safe to login
+                        }
+                    }).catch(err => {
+                        console.warn('Firebase check failed, allowing login:', err.message);
+                        callback(false); // Fallback: allow login if Firebase fails
+                    });
+                } catch (e) {
+                    console.warn('Firebase error:', e.message);
+                    callback(false); // Fallback: allow login
+                }
+            } else {
+                callback(false); // Firebase not available, allow login
             }
-            return false;
         }
 
-        // Register login session for user
+        // Register login session in Firebase
         function registerLoginSession(username) {
             const sessionId = getDeviceSessionId();
             localStorage.setItem('karaoke_last_login_user', username);
             localStorage.setItem('karaoke_last_session_id', sessionId);
             localStorage.setItem('karaoke_login_timestamp', Date.now().toString());
+            
+            // Also register in Firebase
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('activeLogin/' + username).set({
+                        sessionId: sessionId,
+                        timestamp: Date.now(),
+                        loginTime: new Date().toISOString()
+                    }).catch(err => console.warn('Firebase login registration failed:', err.message));
+                } catch (e) {
+                    console.warn('Firebase error:', e.message);
+                }
+            }
         }
 
         // Clear login session
         function clearLoginSession() {
+            const username = localStorage.getItem('karaoke_last_login_user');
             localStorage.removeItem('karaoke_last_login_user');
             localStorage.removeItem('karaoke_last_session_id');
             localStorage.removeItem('karaoke_login_timestamp');
             localStorage.removeItem('karaoke_device_session_id');
+            
+            // Also clear from Firebase
+            if (username && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('activeLogin/' + username).remove()
+                        .catch(err => console.warn('Firebase logout failed:', err.message));
+                } catch (e) {
+                    console.warn('Firebase error:', e.message);
+                }
+            }
         }
 
         function validateAdminLogin(event) {
@@ -744,16 +784,18 @@
                 const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
 
                 if (adminUser) {
-                    // CHECK: Is this user already logged in from another device?
-                    if (checkIfLoggedInElsewhere(adminName)) {
-                        alert('❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.');
-                        return; // BLOCK the login
-                    }
+                    // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
+                    checkIfLoggedInElsewhere(adminName, function(isLoggedInElsewhere) {
+                        if (isLoggedInElsewhere) {
+                            alert('❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.');
+                            return; // BLOCK the login
+                        }
 
-                    // Store logged-in user
-                    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(adminUser));
-                    registerLoginSession(adminName);
-                    window.location.href = 'admin.html';
+                        // Store logged-in user
+                        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(adminUser));
+                        registerLoginSession(adminName);
+                        window.location.href = 'admin.html';
+                    });
                 } else {
                     alert('❌ Invalid admin credentials. Please check your username and password.');
                     document.getElementById('adminName').focus();
@@ -772,20 +814,22 @@
                 const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
 
                 if (singerUser) {
-                    // CHECK: Is this user already logged in from another device?
-                    if (checkIfLoggedInElsewhere(singerUsername)) {
-                        alert('❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.');
-                        return; // BLOCK the login
-                    }
+                    // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
+                    checkIfLoggedInElsewhere(singerUsername, function(isLoggedInElsewhere) {
+                        if (isLoggedInElsewhere) {
+                            alert('❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.');
+                            return; // BLOCK the login
+                        }
 
-                    // Store logged-in user
-                    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
-                    registerLoginSession(singerUsername);
-                    closeLoginModal();
-                    // Redirect to singer.html instead of showing page
-                    setTimeout(() => {
-                        window.location.href = 'singer.html';
-                    }, 300);
+                        // Store logged-in user
+                        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
+                        registerLoginSession(singerUsername);
+                        closeLoginModal();
+                        // Redirect to singer.html instead of showing page
+                        setTimeout(() => {
+                            window.location.href = 'singer.html';
+                        }, 300);
+                    });
                 } else {
                     alert('❌ Invalid credentials. Please check your username and password.');
                     document.getElementById('singerUsername').focus();
