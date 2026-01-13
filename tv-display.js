@@ -101,6 +101,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('🔥 Firebase configured, waiting for data...');
     
+    // Fallback: If YouTube API doesn't load within 5 seconds, force ytReady
+    setTimeout(() => {
+        if (!ytReady) {
+            console.warn('⚠️ YouTube API not responding, forcing ytReady=true after 5s');
+            ytReady = true;
+            createYouTubePlayer();
+            checkBootupCompletion();
+        }
+    }, 5000);
+    
     // Check boot-up completion every 500ms
     const bootupCheckInterval = setInterval(() => {
         if (checkBootupCompletion()) {
@@ -167,11 +177,18 @@ function initializeFirebaseListeners() {
 
     db.ref('currentSong').on('value', snap => {
         const data = snap.val();
-        if (!data || !data.videoId) return;
+        if (!data || !data.videoId) {
+            console.log('📻 No current song in Firebase');
+            return;
+        }
 
-        console.log(
-            `🎬 Current song detected: ${data.title} ID: ${data.videoId} Timestamp: ${data.timestamp}`
-        );
+        console.log('🎬 Current song updated:', {
+            title: data.title,
+            artist: data.artist,
+            videoId: data.videoId,
+            requestedBy: data.requestedBy,
+            timestamp: data.timestamp
+        });
 
         currentSong = data;
         firebaseReady = true;
@@ -694,9 +711,15 @@ function displayQueue() {
             const nextSong = tvQueue[0];
             nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${nextSong.title}`;
             nextSongArtist.textContent = `by ${nextSong.artist} - ${nextSong.requestedBy}`;
+            console.log('📺 TV Display Queue Updated:', {
+                count: tvQueue.length,
+                currentSong: nextSong.title,
+                songs: tvQueue.map(s => ({ title: s.title, artist: s.artist }))
+            });
         } else {
             nextSongTitle.textContent = 'No songs in queue';
             nextSongArtist.textContent = '-';
+            console.log('📺 TV Display Queue: Empty');
         }
     } catch (e) {
         console.warn('Error displaying queue:', e.message);
