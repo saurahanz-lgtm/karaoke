@@ -417,7 +417,19 @@
                             
                             console.log('📡 Queue synced from Firebase:', queueArray.length, 'songs');
                         } else {
-                            console.log('⚪ Firebase queue is empty');
+                            // Queue is empty - clear all reserved songs
+                            console.log('⚪ Firebase queue is empty - clearing reserved songs');
+                            reservedSongs = [];
+                            localStorage.setItem('karaoke_queue', JSON.stringify([]));
+                            localStorage.setItem('karaoke_reserved_songs', JSON.stringify([]));
+                            displayReservedSongs();
+                            
+                            // Clear search results too
+                            const searchResultsDiv = document.getElementById('searchResults');
+                            if (searchResultsDiv) {
+                                searchResultsDiv.innerHTML = '';
+                            }
+                            console.log('🗑️ All reserved songs and search results cleared');
                         }
                     });
                 } catch (fbError) {
