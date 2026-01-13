@@ -4,7 +4,7 @@
 const YOUTUBE_CONFIG = {
     // Replace with your own YouTube API key from Google Cloud Console
     // Get one at: https://console.cloud.google.com/
-    API_KEY: 'AIzaSyBKezr71np9IxLpqo2fBxHbFkwlnQ0xFVE',
+    API_KEY: 'AIzaSyBnbhArpeTkkqn9jat6UORtE4LlWuvwMd8',
     
     // YouTube Data API endpoint
     SEARCH_ENDPOINT: 'https://www.googleapis.com/youtube/v3/search',
