@@ -27,7 +27,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Also track clicks and key presses to update activity
     document.addEventListener('click', updateAdminActivity);
     document.addEventListener('keypress', updateAdminActivity);
+    
+    // Check session validity every 5 seconds
+    setInterval(validateSessionValidity, 5000);
 });
+
+// Validate that the current session is still active (not logged in elsewhere)
+function validateSessionValidity() {
+    const stored = localStorage.getItem('karaoke_logged_in_user');
+    if (!stored) {
+        // User data was cleared (logged in from another device)
+        alert('Your session has been disconnected. You were logged in from another device.');
+        window.location.href = 'index.html';
+        return false;
+    }
+    return true;
+}
 
 // Check authentication
 function checkAuthentication() {

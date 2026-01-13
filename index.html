@@ -705,15 +705,20 @@
             return sessionId;
         }
 
-        // Check if user is logged in on another device
-        function checkMultiDeviceLogin(username) {
+        // Check if user is logged in on another device and disconnect them
+        function enforceeSingleDevice(username) {
             const lastLoginUser = localStorage.getItem('karaoke_last_login_user');
             const lastSessionId = localStorage.getItem('karaoke_last_session_id');
             const currentSessionId = getDeviceSessionId();
 
-            // If same user logged in but from different device/session
+            // If same user logged in but from different device/session, DISCONNECT the previous session
             if (lastLoginUser === username && lastSessionId && lastSessionId !== currentSessionId) {
-                return true; // Multi-device login detected
+                // Clear the previous session immediately
+                localStorage.removeItem('karaoke_last_login_user');
+                localStorage.removeItem('karaoke_last_session_id');
+                localStorage.removeItem('karaoke_login_timestamp');
+                localStorage.removeItem('karaoke_logged_in_user');
+                return true; // Previous session was disconnected
             }
             return false;
         }
@@ -743,16 +748,11 @@
                 const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
 
                 if (adminUser) {
-                    // Check if this user is already logged in on another device
-                    if (checkMultiDeviceLogin(adminName)) {
-                        const confirmed = confirm(
-                            '⚠️ You are already logged in on another device.\n\n' +
-                            'Login here will disconnect your other session.\n\n' +
-                            'Continue?'
-                        );
-                        if (!confirmed) {
-                            return;
-                        }
+                    // ENFORCE: Disconnect any previous session of this user on other devices
+                    const wasPreviousSession = enforceeSingleDevice(adminName);
+                    
+                    if (wasPreviousSession) {
+                        alert('ℹ️ Your previous session on another device has been disconnected.\nYou are now logged in on this device.');
                     }
 
                     // Store logged-in user
@@ -777,16 +777,11 @@
                 const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
 
                 if (singerUser) {
-                    // Check if this user is already logged in on another device
-                    if (checkMultiDeviceLogin(singerUsername)) {
-                        const confirmed = confirm(
-                            '⚠️ You are already logged in on another device.\n\n' +
-                            'Login here will disconnect your other session.\n\n' +
-                            'Continue?'
-                        );
-                        if (!confirmed) {
-                            return;
-                        }
+                    // ENFORCE: Disconnect any previous session of this user on other devices
+                    const wasPreviousSession = enforceeSingleDevice(singerUsername);
+                    
+                    if (wasPreviousSession) {
+                        alert('ℹ️ Your previous session on another device has been disconnected.\nYou are now logged in on this device.');
                     }
 
                     // Store logged-in user
