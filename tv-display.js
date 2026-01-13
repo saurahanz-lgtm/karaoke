@@ -427,6 +427,16 @@ function loadSong(song) {
                 onStateChange: onPlayerStateChange,
                 onError: (e) => {
                     console.error('❌ Karaoke video error:', e.data);
+                    // Error 150 = Video is restricted/blocked from embedding
+                    if (e.data === 150) {
+                        console.warn('⚠️ Video blocked (error 150) - skipping to next song');
+                        playNextSong();
+                    }
+                    // Error 101 = Owner does not allow embedding
+                    else if (e.data === 101) {
+                        console.warn('⚠️ Video blocked by owner (error 101) - skipping to next song');
+                        playNextSong();
+                    }
                 }
             }
         });
@@ -611,7 +621,8 @@ function playVideo(videoId, title, artist, singer) {
             'onError': function(event) {
                 console.error('❌ YouTube player error:', event.data);
                 if (event.data === 150 || event.data === 101) {
-                    console.warn('⚠️ Video is restricted from embedding on this site');
+                    console.warn('⚠️ Video is blocked from embedding - skipping to next song');
+                    playNextSong();
                 }
             }
         }
