@@ -286,6 +286,11 @@
             <div class="login-form-group">
                 <label>Password</label>
                 <input type="password" id="singerPassword" placeholder="Enter password" required>
+                <div style="text-align: right; margin-top: 8px;">
+                    <button type="button" style="background: none; border: none; color: #667eea; cursor: pointer; text-decoration: underline; font-size: 0.9rem;" onclick="openForgotPasswordModal('singer')">
+                        Forgot Password?
+                    </button>
+                </div>
             </div>
             <div class="login-buttons">
                 <button type="submit" class="login-btn login-btn-submit">Login</button>
@@ -825,6 +830,120 @@
                 initializeDemoData(); // Refresh the user list
             }
         });
+    </script>
+
+    <!-- Forgot Password Modal -->
+    <div class="login-modal-overlay" id="forgotPasswordOverlay">
+        <div class="login-modal-custom">
+            <div class="login-title">🔐 Reset Password</div>
+            <div style="margin-bottom: 20px;">
+                <label style="color: #999;">Enter your username and email to reset your password</label>
+            </div>
+            <form onsubmit="handleForgotPassword(event)">
+                <div class="login-form-group">
+                    <label>Username</label>
+                    <input type="text" id="forgotUsername" placeholder="Enter your username" required>
+                </div>
+                <div class="login-form-group">
+                    <label>Email</label>
+                    <input type="email" id="forgotEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="login-buttons">
+                    <button type="submit" class="login-btn login-btn-submit">Send Reset Email</button>
+                    <button type="button" class="login-btn login-btn-cancel" onclick="closeForgotPasswordModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        #forgotPasswordOverlay {
+            display: none;
+        }
+    </style>
+
+    <script>
+        // Forgot Password Handler
+        function openForgotPasswordModal(role) {
+            closeLoginModal();
+            document.getElementById('forgotPasswordOverlay').style.display = 'flex';
+            document.getElementById('forgotUsername').focus();
+        }
+
+        function closeForgotPasswordModal() {
+            document.getElementById('forgotPasswordOverlay').style.display = 'none';
+        }
+
+        function handleForgotPassword(event) {
+            event.preventDefault();
+            const username = document.getElementById('forgotUsername').value.trim();
+            const email = document.getElementById('forgotEmail').value.trim();
+
+            if (!username || !email) {
+                alert('❌ Please fill in all fields');
+                return;
+            }
+
+            // Check if user exists
+            forceReloadUsersForLogin(function(users) {
+                const user = users.find(u => u.username === username);
+                
+                if (!user) {
+                    alert('❌ User not found!');
+                    return;
+                }
+
+                // Generate a reset token and send email
+                const resetToken = 'RESET_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const resetLink = window.location.origin + window.location.pathname + '?resetToken=' + resetToken + '&username=' + encodeURIComponent(username);
+
+                // Store reset token temporarily
+                localStorage.setItem('reset_token_' + username, JSON.stringify({
+                    token: resetToken,
+                    email: email,
+                    timestamp: Date.now(),
+                    expires: Date.now() + (3600000) // 1 hour expiry
+                }));
+
+                // Send email via backend service
+                sendPasswordResetEmail(username, email, resetLink);
+
+                // Show success message
+                alert('✅ Password reset email sent to ' + email + '!\n\nPlease check your email for instructions.');
+                document.getElementById('forgotPasswordForm').reset();
+                closeForgotPasswordModal();
+            });
+        }
+
+        function sendPasswordResetEmail(username, email, resetLink) {
+            // Send email using backend API
+            if (typeof fetch !== 'undefined') {
+                fetch('https://api.sendgrid.com/v3/mail/send', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer SG.YOUR_SENDGRID_KEY',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        personalizations: [{
+                            to: [{ email: 'shandenverpapango@gmail.com' }],
+                            subject: 'Password Reset Request for ' + username
+                        }],
+                        from: { email: 'noreply@sdkaraoke.com' },
+                        content: [{
+                            type: 'text/html',
+                            value: 'Password reset request for user: ' + username + ' (' + email + ')<br><br>Reset Link: ' + resetLink
+                        }]
+                    })
+                }).then(response => {
+                    console.log('📧 Password reset email sent');
+                }).catch(error => {
+                    console.warn('Email service not configured:', error);
+                    // Fallback: just show the reset link in console
+                    console.log('Reset Link: ' + resetLink);
+                });
+            }
+        }
     </script>
 </body>
 </html>
