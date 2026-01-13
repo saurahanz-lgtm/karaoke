@@ -537,68 +537,11 @@ function loadSong(song) {
     console.log(`📺 Now playing: ${song.title}`);
 }
 
-// Check if phone/singer page is connected
-let lastConnectionStatus = null;
-
+// Check if phone/singer page is connected (simplified - just for logging)
 function checkPhoneConnection() {
-    try {
-        const connectionStatus = document.getElementById('connectionStatus');
-        const connectionText = document.getElementById('connectionText');
-        
-        if (!connectionStatus || !connectionText) {
-            console.warn('⚠️ Connection status elements not found');
-            return;
-        }
-
-        // Read activity from Firebase
-        firebase.database().ref('activity').once('value', snapshot => {
-            const activityData = snapshot.val();
-            
-            let isConnected = false;
-            
-            if (!activityData || !activityData.timestamp) {
-                connectionStatus.classList.remove('connected');
-                connectionStatus.classList.add('disconnected');
-                connectionText.textContent = '🔴 No Phone Connected';
-                isConnected = false;
-            } else {
-                const currentTime = Date.now();
-                const activityTime = activityData.timestamp || 0;
-                const timeDifference = currentTime - activityTime;
-                const timeoutDuration = 30000; // 30 seconds timeout (more lenient)
-                
-                if (timeDifference < timeoutDuration) {
-                    // Phone is connected
-                    connectionStatus.classList.remove('disconnected');
-                    connectionStatus.classList.add('connected');
-                    connectionText.textContent = '🟢 Phone Connected';
-                    isConnected = true;
-                } else {
-                    // Phone disconnected (no activity for 30 seconds)
-                    connectionStatus.classList.remove('connected');
-                    connectionStatus.classList.add('disconnected');
-                    connectionText.textContent = '🔴 No Phone Connected';
-                    isConnected = false;
-                }
-            }
-            
-            // Show pop-up message on status change
-            if (lastConnectionStatus !== isConnected) {
-                lastConnectionStatus = isConnected;
-                const message = isConnected ? '✅ Phone Connected!' : '❌ Phone Disconnected';
-                showNotification(message);
-            }
-            
-            console.log('📱 Phone connection status:', isConnected ? 'Connected' : 'Disconnected');
-        }).catch(err => {
-            console.warn('Firebase activity read failed:', err.message);
-            connectionStatus.classList.remove('connected');
-            connectionStatus.classList.add('disconnected');
-            connectionText.textContent = '🔴 No Phone Connected';
-        });
-    } catch (error) {
-        console.error('❌ Error in checkPhoneConnection:', error.message);
-    }
+    // Connection status now just shows footer text
+    // Keep function for backward compatibility
+    console.log('📱 Checking phone activity...');
 }
 
 // Show temporary notification
