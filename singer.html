@@ -348,8 +348,8 @@
                 });
                 audioPlayer.addEventListener('error', function(e) {
                     // Only log error if there's an actual source set
-                    // Empty src is intentional (YouTube videos can't be directly streamed as audio)
-                    if (audioPlayer.src) {
+                    // Empty/missing src is intentional for YouTube videos
+                    if (e.target.src && e.target.src.length > 0) {
                         const errorCodes = {
                             1: 'MEDIA_ERR_ABORTED',
                             2: 'MEDIA_ERR_NETWORK',
@@ -358,6 +358,9 @@
                         };
                         const errorType = errorCodes[e.target.error?.code] || 'UNKNOWN_ERROR';
                         console.warn('⚠️ Audio error:', errorType, '(Code:', e.target.error?.code, ')');
+                    } else {
+                        // Prevent error if no source (expected for YouTube previews)
+                        console.log('ℹ️ Audio preview not available - YouTube videos require direct viewing on TV display');
                     }
                 });
             }
@@ -627,7 +630,9 @@
             if (audioPlayer && song.videoId) {
                 // YouTube watch URLs are not valid audio sources
                 // Audio preview would require server-side processing
-                audioPlayer.src = '';
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                audioPlayer.removeAttribute('src');
                 console.log('📻 Audio preview disabled (YouTube videos require special handling)');
                 // Singer can watch the video on TV display for playback timing
             }
