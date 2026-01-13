@@ -80,6 +80,9 @@ function updateAdminActivity() {
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
         localStorage.removeItem('karaoke_logged_in_user');
+        localStorage.removeItem('karaoke_last_login_user');
+        localStorage.removeItem('karaoke_last_session_id');
+        localStorage.removeItem('karaoke_login_timestamp');
         window.location.href = 'index.html';
     }
 }

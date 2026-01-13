@@ -689,6 +689,50 @@
         }
 
         // Validate Admin Login
+        // ===== SESSION MANAGEMENT (Single Device per User) =====
+        // Generate unique session ID for this device
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Get or create session ID for this device
+        function getDeviceSessionId() {
+            let sessionId = localStorage.getItem('karaoke_device_session_id');
+            if (!sessionId) {
+                sessionId = generateSessionId();
+                localStorage.setItem('karaoke_device_session_id', sessionId);
+            }
+            return sessionId;
+        }
+
+        // Check if user is logged in on another device
+        function checkMultiDeviceLogin(username) {
+            const lastLoginUser = localStorage.getItem('karaoke_last_login_user');
+            const lastSessionId = localStorage.getItem('karaoke_last_session_id');
+            const currentSessionId = getDeviceSessionId();
+
+            // If same user logged in but from different device/session
+            if (lastLoginUser === username && lastSessionId && lastSessionId !== currentSessionId) {
+                return true; // Multi-device login detected
+            }
+            return false;
+        }
+
+        // Register login session for user
+        function registerLoginSession(username) {
+            const sessionId = getDeviceSessionId();
+            localStorage.setItem('karaoke_last_login_user', username);
+            localStorage.setItem('karaoke_last_session_id', sessionId);
+            localStorage.setItem('karaoke_login_timestamp', Date.now().toString());
+        }
+
+        // Clear login session
+        function clearLoginSession() {
+            localStorage.removeItem('karaoke_last_login_user');
+            localStorage.removeItem('karaoke_last_session_id');
+            localStorage.removeItem('karaoke_login_timestamp');
+        }
+
         function validateAdminLogin(event) {
             event.preventDefault();
             const adminName = document.getElementById('adminName').value.trim();
@@ -699,8 +743,21 @@
                 const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
 
                 if (adminUser) {
+                    // Check if this user is already logged in on another device
+                    if (checkMultiDeviceLogin(adminName)) {
+                        const confirmed = confirm(
+                            '⚠️ You are already logged in on another device.\n\n' +
+                            'Login here will disconnect your other session.\n\n' +
+                            'Continue?'
+                        );
+                        if (!confirmed) {
+                            return;
+                        }
+                    }
+
                     // Store logged-in user
                     localStorage.setItem('karaoke_logged_in_user', JSON.stringify(adminUser));
+                    registerLoginSession(adminName);
                     window.location.href = 'admin.html';
                 } else {
                     alert('❌ Invalid admin credentials. Please check your username and password.');
@@ -720,8 +777,21 @@
                 const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
 
                 if (singerUser) {
+                    // Check if this user is already logged in on another device
+                    if (checkMultiDeviceLogin(singerUsername)) {
+                        const confirmed = confirm(
+                            '⚠️ You are already logged in on another device.\n\n' +
+                            'Login here will disconnect your other session.\n\n' +
+                            'Continue?'
+                        );
+                        if (!confirmed) {
+                            return;
+                        }
+                    }
+
                     // Store logged-in user
                     localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
+                    registerLoginSession(singerUsername);
                     closeLoginModal();
                     // Redirect to singer.html instead of showing page
                     setTimeout(() => {
