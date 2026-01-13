@@ -77,12 +77,26 @@ function isFirebaseConfigured() {
 // Initialize TV display
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📺 [1/7] TV Display DOMContentLoaded');
+    console.log('🔍 DEBUG: window.YT =', typeof window.YT);
+    console.log('🔍 DEBUG: window.firebase =', typeof window.firebase);
     
     // Verify YouTube API is available
     if (typeof YT === 'undefined') {
         console.error('❌ YouTube API not loaded! Check that https://www.youtube.com/iframe_api is accessible');
     } else {
         console.log('✅ YouTube API library loaded');
+    }
+    
+    // Debug Firebase config
+    try {
+        const config = firebase.app().options;
+        console.log('🔍 DEBUG: Firebase config:', {
+            databaseURL: config.databaseURL,
+            projectId: config.projectId,
+            apiKey: config.apiKey ? '***' : 'MISSING'
+        });
+    } catch (err) {
+        console.error('❌ Firebase not initialized:', err.message);
     }
     
     // Generate QR code on load
@@ -93,6 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // [1] Check if Firebase is available FIRST
     useFirebase = isFirebaseConfigured();
+    console.log('🔍 DEBUG: useFirebase =', useFirebase);
     
     if (!useFirebase) {
         console.error('❌ Firebase not configured - TV Display requires Firebase');
@@ -103,6 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Fallback: If YouTube API doesn't load within 5 seconds, force ytReady
     setTimeout(() => {
+        console.log('⏱️ [5s timeout check] ytReady =', ytReady);
         if (!ytReady) {
             console.warn('⚠️ YouTube API not responding, forcing ytReady=true after 5s');
             ytReady = true;
@@ -152,11 +168,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeFirebaseListeners() {
     console.log('🔥 [3/7] Attaching Firebase listeners');
+    console.log('🔍 DEBUG: firebaseListenersSet =', firebaseListenersSet);
+    
+    if (firebaseListenersSet) {
+        console.log('⚠️ Firebase listeners already initialized, skipping...');
+        return;
+    }
+    
     firebaseListenersSet = true; // Mark as initialized
     const db = firebase.database();
+    
+    console.log('🔍 DEBUG: Firebase database object:', typeof db);
 
     db.ref('queue').on('value', snapshot => {
         const data = snapshot.val();
+        console.log('🔍 DEBUG: Queue snapshot received:', {
+            data: data,
+            isEmpty: !data,
+            isArray: Array.isArray(data),
+            type: typeof data
+        });
         
         // Mark Firebase as ready even if queue is empty
         firebaseReady = true;
@@ -173,10 +204,14 @@ function initializeFirebaseListeners() {
         // Check if bootup can be hidden
         checkBootupCompletion();
         displayQueue();
+    }, (error) => {
+        console.error('❌ Firebase queue listener error:', error);
     });
 
     db.ref('currentSong').on('value', snap => {
         const data = snap.val();
+        console.log('🔍 DEBUG: CurrentSong snapshot received:', data);
+        
         if (!data || !data.videoId) {
             console.log('📻 No current song in Firebase');
             return;
@@ -202,6 +237,8 @@ function initializeFirebaseListeners() {
 
         // Try to initialize and play
         tryInitPlayback();
+    }, (error) => {
+        console.error('❌ Firebase currentSong listener error:', error);
     });
 
     // 🔥 Listen for activity updates
@@ -210,15 +247,17 @@ function initializeFirebaseListeners() {
         if (!activityData) return;
 
         console.log('📱 Activity updated from Firebase:', activityData.timestamp);
+    }, (error) => {
+        console.warn('⚠️ Firebase activity listener error:', error);
     });
     
-    firebaseListenersSet = true;
     console.log('✅ [3/7] Firebase listeners attached');
     
     // 🔥 Load initial data after listeners are attached
     console.log('📡 [3/7] Loading initial songs from Firebase...');
     db.ref('queue').once('value', snapshot => {
         const queueData = snapshot.val();
+        console.log('🔍 DEBUG: Initial queue load:', queueData);
         if (queueData) {
             tvQueue = Array.isArray(queueData) ? queueData : Object.values(queueData);
             console.log('📡 Initial queue loaded:', tvQueue.length, 'songs');
@@ -229,10 +268,13 @@ function initializeFirebaseListeners() {
         firebaseReady = true;
         checkBootupCompletion();
         displayQueue();
+    }).catch(err => {
+        console.error('❌ Initial queue load failed:', err);
     });
     
     db.ref('currentSong').once('value', snapshot => {
         const songData = snapshot.val();
+        console.log('🔍 DEBUG: Initial currentSong load:', songData);
         if (songData) {
             currentSong = songData;
             console.log('🎵 Initial song loaded:', currentSong.title);
@@ -245,6 +287,8 @@ function initializeFirebaseListeners() {
                 tryInitPlayback();
             }
         }
+    }).catch(err => {
+        console.error('❌ Initial currentSong load failed:', err);
     });
 }
 
@@ -269,7 +313,7 @@ function setCurrentFromQueue(song) {
 
 function onYouTubeIframeAPIReady() {
     console.log('✅ YouTube IFrame API Ready');
-    console.log('🔍 Checking for #videoPlayer container:', !!document.getElementById('videoPlayer'));
+    console.log('🔍 DEBUG: videoPlayer element:', document.getElementById('videoPlayer'));
     ytReady = true;
     createYouTubePlayer();
 }
@@ -277,10 +321,17 @@ function onYouTubeIframeAPIReady() {
 // B. YouTube API - Initialize player when ready
 function createYouTubePlayer() {
     console.log('✅ YouTube API Ready, initializing Firebase listeners');
+    console.log('🔍 DEBUG: useFirebase =', useFirebase, 'firebaseListenersSet =', firebaseListenersSet);
     
     // Initialize Firebase listeners immediately after YouTube API is ready
     if (useFirebase && !firebaseListenersSet) {
-        initializeFirebaseListeners();
+        try {
+            initializeFirebaseListeners();
+        } catch (err) {
+            console.error('❌ Error initializing Firebase listeners:', err);
+        }
+    } else {
+        console.log('⚠️ Firebase listeners not initialized: useFirebase =', useFirebase, 'firebaseListenersSet =', firebaseListenersSet);
     }
     
     // Check if bootup splash should be hidden
