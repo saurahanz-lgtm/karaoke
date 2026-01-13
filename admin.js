@@ -20,6 +20,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Display initial users
     displayUsers();
     updateStats();
+    
+    // Update admin activity every 30 seconds to keep them as Online
+    setInterval(updateAdminActivity, 30000);
+    
+    // Also track clicks and key presses to update activity
+    document.addEventListener('click', updateAdminActivity);
+    document.addEventListener('keypress', updateAdminActivity);
 });
 
 // Check authentication
@@ -32,11 +39,42 @@ function checkAuthentication() {
         if (userInfoEl) {
             userInfoEl.textContent = `Logged in as: ${loggedInUser.username} (${loggedInUser.role})`;
         }
+        
+        // Update admin user's lastActivity to show as Online
+        updateAdminActivity();
     } else {
         // Not logged in, redirect to home
         alert('Please login first');
         window.location.href = 'index.html';
     }
+}
+
+// Update the logged-in admin user's activity
+function updateAdminActivity() {
+    if (!loggedInUser) return;
+    
+    const now = Date.now();
+    
+    // Update in localStorage first
+    const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
+    if (loggedInUser) {
+        const user = JSON.parse(loggedInUser);
+        user.lastActivity = now;
+        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(user));
+    }
+    
+    // Update in Firebase
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            firebase.database().ref('users/' + loggedInUser.id).update({
+                lastActivity: now
+            }).catch(err => console.warn('Firebase admin activity update failed:', err.message));
+        } catch (error) {
+            console.warn('Error updating admin activity:', error.message);
+        }
+    }
+    
+    console.log('👨‍💼 Admin activity updated:', new Date().toLocaleTimeString());
 }
 
 // Logout function
