@@ -572,7 +572,12 @@
                 // Write to Firebase first (primary method)
                 if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
                     try {
-                        firebase.database().ref('queue/' + newSong.id).set(newSong).then(() => {
+                        // Load current queue from localStorage
+                        let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+                        queue.push(newSong);
+                        
+                        // Save entire queue to Firebase (replaces old approach of individual songs)
+                        firebase.database().ref('queue').set(queue).then(() => {
                             console.log('✅ Song added to Firebase queue:', newSong.title);
                             addToLocalQueue(newSong);
                             setCurrentSongAndAutoPlay(newSong);
@@ -608,22 +613,12 @@
         // Helper function to add song to local queue
         function addToLocalQueue(song) {
             let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
-            queue.push(song);
+            // Only add if not already added by the calling function
+            if (!queue.some(s => s.id === song.id)) {
+                queue.push(song);
+            }
             localStorage.setItem('karaoke_queue', JSON.stringify(queue));
             console.log('✅ Song added to local queue. Queue length:', queue.length);
-
-            // Sync to Firebase as well so it persists across browsers
-            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
-                try {
-                    // Update the queue in Firebase
-                    firebase.database().ref('queue').set(queue).catch(err => {
-                        console.warn('⚠️ Failed to sync queue to Firebase:', err.message);
-                    });
-                    console.log('🔥 Queue synced to Firebase:', queue.length, 'songs');
-                } catch (err) {
-                    console.warn('⚠️ Firebase sync error:', err.message);
-                }
-            }
 
             // Also add to reserved songs display - always add it
             const reservedSong = { 
