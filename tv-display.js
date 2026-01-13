@@ -519,12 +519,18 @@ function loadSong(song) {
                     // Error 150 = Video is restricted/blocked from embedding
                     if (e.data === 150) {
                         console.warn('⚠️ Video blocked (error 150) - skipping to next song');
-                        playNextSong();
+                        showVideoUnavailableMessage();
+                        setTimeout(() => {
+                            playNextSong();
+                        }, 3000);
                     }
                     // Error 101 = Owner does not allow embedding
                     else if (e.data === 101) {
                         console.warn('⚠️ Video blocked by owner (error 101) - skipping to next song');
-                        playNextSong();
+                        showVideoUnavailableMessage();
+                        setTimeout(() => {
+                            playNextSong();
+                        }, 3000);
                     }
                 }
             }
@@ -736,7 +742,10 @@ function playVideo(videoId, title, artist, singer) {
                 console.error('❌ YouTube player error:', event.data);
                 if (event.data === 150 || event.data === 101) {
                     console.warn('⚠️ Video is blocked from embedding - skipping to next song');
-                    playNextSong();
+                    showVideoUnavailableMessage();
+                    setTimeout(() => {
+                        playNextSong();
+                    }, 3000);
                 }
             }
         }
@@ -954,6 +963,61 @@ function displayScoreModal(singerName, score, hasSung) {
         }
     `;
     document.head.appendChild(style);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        modal.style.animation = 'fadeIn 0.4s ease reverse';
+        setTimeout(() => {
+            modal.remove();
+        }, 400);
+    }, 3000);
+}
+
+// Show video unavailable message
+function showVideoUnavailableMessage() {
+    // Remove existing message if any
+    const existingMsg = document.getElementById('videoUnavailableMsg');
+    if (existingMsg) {
+        existingMsg.remove();
+    }
+    
+    // Create message modal
+    const modal = document.createElement('div');
+    modal.id = 'videoUnavailableMsg';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        animation: fadeIn 0.4s ease;
+        backdrop-filter: blur(2px);
+    `;
+    
+    const msgDisplay = document.createElement('div');
+    msgDisplay.style.cssText = `
+        background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
+        border-radius: 30px;
+        padding: 60px 80px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 20px 60px rgba(255, 107, 107, 0.5);
+        animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    `;
+    
+    msgDisplay.innerHTML = `
+        <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px; animation: popIn 0.5s ease 0.1s both;">⚠️</div>
+        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 15px; animation: slideInDown 0.5s ease 0.2s both;">Video Unavailable</div>
+        <div style="font-size: 1.3rem; margin-bottom: 20px; opacity: 0.95; animation: slideInDown 0.5s ease 0.3s both;">Please select another song</div>
+    `;
+    
+    modal.appendChild(msgDisplay);
+    document.body.appendChild(modal);
     
     // Auto remove after 3 seconds
     setTimeout(() => {
