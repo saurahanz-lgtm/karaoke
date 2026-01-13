@@ -196,6 +196,22 @@ function initializeFirebaseListeners() {
             // Convert Firebase object to array (Firebase stores objects, not arrays)
             tvQueue = Array.isArray(data) ? data : Object.values(data);
             console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
+            
+            // Auto-play first song if no current song and queue has songs
+            if (tvQueue.length > 0 && (!currentSong || !currentSong.videoId)) {
+                console.log('▶️ Auto-playing first song in queue...');
+                const firstSong = tvQueue[0];
+                currentSong = {
+                    title: firstSong.title,
+                    artist: firstSong.artist,
+                    videoId: firstSong.videoId,
+                    requestedBy: firstSong.requestedBy,
+                    singer: firstSong.requestedBy
+                };
+                // Update Firebase with current song
+                firebase.database().ref('currentSong').set(currentSong);
+                tryInitPlayback();
+            }
         }
         
         // Check if bootup can be hidden
