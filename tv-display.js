@@ -18,7 +18,7 @@ let isLoadingSong = false;
 let currentVideoId = null;
 
 // Boot-up video configuration
-let bootUpVideoId = 'dYulp4K87rQ'; // Change this to your desired boot-up video ID
+let bootUpVideoId = 'jNQXAC9IVRw'; // YouTube's first-ever video - stable and always available
 let isPlayingBootUpVideo = false;
 let bootUpVideoPlayed = false;
 
