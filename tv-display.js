@@ -537,11 +537,65 @@ function loadSong(song) {
     console.log(`📺 Now playing: ${song.title}`);
 }
 
-// Check if phone/singer page is connected (simplified - just for logging)
+// Check if phone/singer page is connected
+let lastConnectionStatus = null;
+
 function checkPhoneConnection() {
-    // Connection status now just shows footer text
-    // Keep function for backward compatibility
-    console.log('📱 Checking phone activity...');
+    try {
+        // Check if activity was updated in the last 30 seconds
+        firebase.database().ref('activity').once('value', snapshot => {
+            const activity = snapshot.val();
+            const lastActivity = activity?.timestamp || 0;
+            const now = Date.now();
+            const isConnected = (now - lastActivity) < 30000;
+            
+            if (isConnected) {
+                // Phone connected
+                console.log('✅ Phone connected');
+            } else {
+                // Phone disconnected (no activity for 30 seconds)
+                console.log('❌ Phone disconnected');
+            }
+            
+            // Show pop-up message on status change
+            if (lastConnectionStatus !== isConnected) {
+                lastConnectionStatus = isConnected;
+                const message = isConnected ? '✅ Phone Connected!' : '❌ Phone Disconnected';
+                showNotification(message);
+            }
+            
+            console.log('📱 Phone connection status:', isConnected ? 'Connected' : 'Disconnected');
+        }).catch(err => {
+            console.warn('Firebase activity read failed:', err.message);
+        });
+    } catch (error) {
+        console.error('❌ Error in checkPhoneConnection:', error.message);
+    }
+}
+
+// Show temporary notification
+function showNotification(message) {
+    const notif = document.createElement('div');
+    notif.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    notif.textContent = message;
+    document.body.appendChild(notif);
+    
+    setTimeout(() => {
+        notif.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notif.remove(), 300);
+    }, 3000);
 }
 
 // Generate QR code for singer page
