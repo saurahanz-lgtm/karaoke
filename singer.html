@@ -289,8 +289,19 @@
             
             // Update activity timestamp for TV display connection status AND user database
             function updateActivityTimestamp() {
-                const now = Date.now().toString();
-                localStorage.setItem('karaoke_singer_activity', now);
+                const now = Date.now();
+                localStorage.setItem('karaoke_singer_activity', now.toString());
+                
+                // Update the activity timestamp in Firebase for TV display connection detection
+                if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                    try {
+                        firebase.database().ref('activity').update({
+                            timestamp: now
+                        }).catch(err => console.warn('Firebase activity update failed:', err.message));
+                    } catch (fbErr) {
+                        // Firebase error, continue without it
+                    }
+                }
                 
                 // Also update the user's lastActivity in the database
                 const loggedInUser = localStorage.getItem('karaoke_logged_in_user');
@@ -298,15 +309,15 @@
                     try {
                         const user = JSON.parse(loggedInUser);
                         // Update lastActivity in localStorage
-                        user.lastActivity = Date.now();
+                        user.lastActivity = now;
                         localStorage.setItem('karaoke_logged_in_user', JSON.stringify(user));
                         
                         // Update in Firebase if available
                         if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
                             try {
                                 firebase.database().ref('users/' + user.id).update({
-                                    lastActivity: Date.now()
-                                }).catch(err => console.warn('Firebase update failed:', err.message));
+                                    lastActivity: now
+                                }).catch(err => console.warn('Firebase user update failed:', err.message));
                             } catch (fbErr) {
                                 // Firebase error, continue without it
                             }
