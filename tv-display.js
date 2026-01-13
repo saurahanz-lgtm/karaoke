@@ -147,23 +147,21 @@ function initializeFirebaseListeners() {
 
     db.ref('queue').on('value', snapshot => {
         const data = snapshot.val();
-        if (!data) return;
-
-        // Convert Firebase object to array (Firebase stores objects, not arrays)
-        tvQueue = Array.isArray(data) ? data : Object.values(data);
-        console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
-
-        // Mark Firebase as ready once we get queue data
+        
+        // Mark Firebase as ready even if queue is empty
         firebaseReady = true;
+        
+        if (!data) {
+            tvQueue = [];
+            console.log('📡 Queue is empty (no songs yet)');
+        } else {
+            // Convert Firebase object to array (Firebase stores objects, not arrays)
+            tvQueue = Array.isArray(data) ? data : Object.values(data);
+            console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
+        }
         
         // Check if bootup can be hidden
         checkBootupCompletion();
-
-        // 🔥 AUTO-SET FIRST SONG
-        if (!currentSong && tvQueue.length > 0) {
-            firebase.database().ref('currentSong').set(tvQueue[0]);
-        }
-        
         displayQueue();
     });
 
@@ -207,8 +205,13 @@ function initializeFirebaseListeners() {
         if (queueData) {
             tvQueue = Array.isArray(queueData) ? queueData : Object.values(queueData);
             console.log('📡 Initial queue loaded:', tvQueue.length, 'songs');
-            displayQueue();
+        } else {
+            tvQueue = [];
+            console.log('📡 Initial queue: empty (no songs yet)');
         }
+        firebaseReady = true;
+        checkBootupCompletion();
+        displayQueue();
     });
     
     db.ref('currentSong').once('value', snapshot => {
