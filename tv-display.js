@@ -945,11 +945,12 @@ function displayQueue() {
         if (tvQueue && tvQueue.length > 0) {
             const nextSong = tvQueue[0];
             nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${nextSong.title}`;
-            nextSongArtist.textContent = `by ${nextSong.artist} - ${nextSong.requestedBy}`;
+            nextSongArtist.textContent = `Reserved by: ${nextSong.requestedBy}`;
             console.log('📺 TV Display Queue Updated:', {
                 count: tvQueue.length,
                 currentSong: nextSong.title,
-                songs: tvQueue.map(s => ({ title: s.title, artist: s.artist }))
+                reservedBy: nextSong.requestedBy,
+                songs: tvQueue.map(s => ({ title: s.title, reservedBy: s.requestedBy }))
             });
         } else {
             nextSongTitle.textContent = 'No songs in queue';
@@ -984,13 +985,13 @@ function updateNextSongDisplay() {
     
     if (nextSong) {
         nextSongTitle.textContent = nextSong.title;
-        nextSongArtist.textContent = `by ${nextSong.artist}`;
+        nextSongArtist.textContent = `Reserved by: ${nextSong.requestedBy}`;
         nextSongDisplay.style.display = 'flex';
     } else {
         // Show current song if queue is empty but currentSong exists
         if (currentSong && currentSong.title) {
             nextSongTitle.textContent = `▶️ Now Playing: ${currentSong.title}`;
-            nextSongArtist.textContent = `by ${currentSong.artist}`;
+            nextSongArtist.textContent = `by ${currentSong.singer || currentSong.requestedBy}`;
         } else {
             nextSongTitle.textContent = '🎤 Select a Song to Start';
             nextSongArtist.textContent = 'Scan the QR code to request a song';
