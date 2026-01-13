@@ -654,12 +654,8 @@
                 }
             }
 
-            // Trigger custom event for TV display to auto-play (same window only)
-            window.dispatchEvent(new CustomEvent('karaoke-auto-play', { 
-                detail: { song: currentSong } 
-            }));
-
-            console.log('🎵 Auto-play triggered for:', song.title);
+            // Auto-play removed - users must manually start the TV display
+            console.log('🎵 Song requested for:', song.title);
         }
 
         // Helper function for successful request
