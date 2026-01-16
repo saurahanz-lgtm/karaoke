@@ -1,5 +1,26 @@
 // ===== ADMIN USER MANAGEMENT LOGIC =====
 
+// Initialize device session ID from sessionStorage on page load
+function initializeDeviceSessionId() {
+    let sessionId = sessionStorage.getItem('deviceSessionId');
+    if (sessionId) {
+        window.deviceSessionId = sessionId;
+        console.log('🔄 Device session ID initialized from sessionStorage');
+    } else {
+        console.warn('⚠️ No device session ID found in sessionStorage');
+        // If not found, redirect to login
+        setTimeout(() => {
+            if (!window.deviceSessionId) {
+                console.log('❌ Redirecting to login - no session ID');
+                window.location.href = 'index.html';
+            }
+        }, 1000);
+    }
+}
+
+// Call immediately on page load, before DOMContentLoaded
+initializeDeviceSessionId();
+
 // Users data storage
 let users = [];
 let currentEditingUserId = null;
