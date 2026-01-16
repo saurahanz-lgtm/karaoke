@@ -894,6 +894,18 @@
             if (confirm('Are you sure you want to disconnect?')) {
                 const username = loggedInUser?.username;
                 
+                // Broadcast logout event to all tabs
+                try {
+                    const userUpdateChannel = new BroadcastChannel('karaoke_user_updates');
+                    userUpdateChannel.postMessage({
+                        type: 'user_logout',
+                        username: username,
+                        timestamp: Date.now()
+                    });
+                } catch (error) {
+                    console.warn('BroadcastChannel not supported:', error.message);
+                }
+                
                 // Clear from Firebase first
                 if (username && typeof firebase !== 'undefined' && firebase.database) {
                     try {

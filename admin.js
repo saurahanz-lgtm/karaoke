@@ -58,6 +58,20 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', updateAdminActivity);
     document.addEventListener('keypress', updateAdminActivity);
     
+    // Set up broadcast channel to get immediate updates when users log in/out
+    try {
+        const userUpdateChannel = new BroadcastChannel('karaoke_user_updates');
+        userUpdateChannel.addEventListener('message', (event) => {
+            if (event.data.type === 'user_login' || event.data.type === 'user_logout') {
+                console.log('📢 User update received:', event.data.type);
+                // Reload users from Firebase immediately
+                loadUsers();
+            }
+        });
+    } catch (error) {
+        console.warn('BroadcastChannel not supported:', error.message);
+    }
+    
     // Load TV display status on page load
     loadTVDisplayStatus();
 });
@@ -192,6 +206,18 @@ function updateAdminActivity() {
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
         const username = loggedInUser?.username;
+        
+        // Broadcast logout event to all tabs
+        try {
+            const userUpdateChannel = new BroadcastChannel('karaoke_user_updates');
+            userUpdateChannel.postMessage({
+                type: 'user_logout',
+                username: username,
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            console.warn('BroadcastChannel not supported:', error.message);
+        }
         
         // Clear from Firebase first
         if (username && typeof firebase !== 'undefined' && firebase.database) {

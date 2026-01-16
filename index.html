@@ -835,6 +835,18 @@
             console.log('📝 Registering login session for', username);
             console.log('🎫 Session ID:', sessionId);
             
+            // Broadcast login event to all tabs
+            try {
+                const userUpdateChannel = new BroadcastChannel('karaoke_user_updates');
+                userUpdateChannel.postMessage({
+                    type: 'user_login',
+                    username: username,
+                    timestamp: Date.now()
+                });
+            } catch (error) {
+                console.warn('BroadcastChannel not supported:', error.message);
+            }
+            
             // Store ONLY in Firebase (no localStorage for sessions)
             if (typeof firebase !== 'undefined' && firebase.database) {
                 try {
@@ -876,6 +888,18 @@
         // Clear login session (Firebase only)
         function clearLoginSession() {
             const username = window.loggedInUsername; // Get from memory
+            
+            // Broadcast logout event to all tabs
+            try {
+                const userUpdateChannel = new BroadcastChannel('karaoke_user_updates');
+                userUpdateChannel.postMessage({
+                    type: 'user_logout',
+                    username: username,
+                    timestamp: Date.now()
+                });
+            } catch (error) {
+                console.warn('BroadcastChannel not supported:', error.message);
+            }
             
             // Mark user as Offline in users array
             if (username && typeof firebase !== 'undefined' && firebase.database) {
