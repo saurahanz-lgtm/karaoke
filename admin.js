@@ -54,6 +54,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sync users to Firebase every 60 seconds to keep data fresh
     setInterval(syncUsersToFirebase, 60000);
     
+    // Full Firebase sync every 30 seconds to ensure data consistency
+    setInterval(fullFirebaseSync, 30000);
+    
     // Also track clicks and key presses to update activity
     document.addEventListener('click', updateAdminActivity);
     document.addEventListener('keypress', updateAdminActivity);
@@ -340,6 +343,7 @@ function loadUsers() {
     }
     
     // Set up activity tracking - refresh every 2 seconds to show real-time status
+    let lastDisplayHash = '';
     setInterval(() => {
         // Reload users from database to get latest activity
         if (typeof firebase !== 'undefined' && firebase.database) {
@@ -355,13 +359,20 @@ function loadUsers() {
                             ...u,
                             lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
                         }));
-                        users = fetchedUsers;
-                        displayUsers();
-                        updateStats();
+                        
+                        // Check if data changed to avoid unnecessary re-renders
+                        const currentHash = JSON.stringify(fetchedUsers);
+                        if (currentHash !== lastDisplayHash) {
+                            users = fetchedUsers;
+                            lastDisplayHash = currentHash;
+                            displayUsers();
+                            updateStats();
+                            console.log('📊 Activity display updated - ' + users.length + ' users');
+                        }
                     }
                 });
             } catch (error) {
-                // Silent fail
+                console.warn('Activity tracking error:', error.message);
             }
         } else {
             loadFromLocalStorage();
@@ -448,16 +459,71 @@ function syncUsersToFirebase() {
         try {
             const usersRef = firebase.database().ref('users');
             usersRef.set(users).then(() => {
-                console.log('🔄 Users synced to Firebase (' + users.length + ' users)');
+                console.log('✅ Users synced to Firebase (' + users.length + ' users)');
+                
+                // Verify write was successful by reading back
+                usersRef.once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        const writtenUsers = Array.isArray(data) ? data : Object.values(data);
+                        if (writtenUsers.length === users.length) {
+                            console.log('✅ Firebase write verification passed');
+                        } else {
+                            console.warn('⚠️ Write verification failed - user count mismatch');
+                        }
+                    }
+                });
             }).catch((error) => {
                 console.warn('⚠️ Firebase sync error:', error.message);
-                // Continue with app even if sync fails
+                // Retry once on error
+                setTimeout(() => {
+                    usersRef.set(users).catch(err => console.warn('Firebase sync retry failed:', err.message));
+                }, 1000);
             });
         } catch (error) {
             console.warn('⚠️ Firebase sync exception:', error.message);
         }
     } else {
         console.log('⏭️ Firebase not available for sync');
+    }
+}
+
+// Full Firebase sync - reads from Firebase and ensures data consistency
+function fullFirebaseSync() {
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            const usersRef = firebase.database().ref('users');
+            usersRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                let firebaseUsers = [];
+                
+                if (data) {
+                    firebaseUsers = Array.isArray(data) ? data : Object.values(data);
+                    firebaseUsers = firebaseUsers.filter(u => u && u.username);
+                    firebaseUsers = firebaseUsers.map(u => ({
+                        ...u,
+                        lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
+                    }));
+                }
+                
+                // Check if data differs from local state
+                if (JSON.stringify(firebaseUsers) !== JSON.stringify(users)) {
+                    console.log('🔄 Data mismatch detected - syncing from Firebase:', firebaseUsers.length, 'users');
+                    users = firebaseUsers;
+                    displayUsers();
+                    updateStats();
+                } else {
+                    console.log('✅ Firebase data is in sync');
+                }
+                
+                // Always write back to ensure Firebase is updated
+                if (users.length > 0) {
+                    usersRef.set(users).catch(err => console.warn('Firebase write failed:', err.message));
+                }
+            }).catch(err => console.warn('Full sync read error:', err.message));
+        } catch (error) {
+            console.warn('Full sync exception:', error.message);
+        }
     }
 }
 
