@@ -105,6 +105,98 @@
             transform: translateY(0);
         }
 
+        /* TV Display Control Styles */
+        .tv-control-card {
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            padding: clamp(15px, 3vw, 25px);
+            margin-bottom: clamp(20px, 4vw, 35px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: clamp(15px, 3vw, 25px);
+        }
+
+        .tv-control-info h3 {
+            color: #667eea;
+            font-weight: 700;
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            margin: 0 0 8px 0;
+        }
+
+        .tv-control-info p {
+            color: #b0b0b0;
+            font-size: clamp(0.85rem, 1.8vw, 0.95rem);
+            margin: 0;
+        }
+
+        .tv-control-buttons {
+            display: flex;
+            gap: clamp(8px, 1.5vw, 12px);
+            flex-wrap: wrap;
+        }
+
+        .tv-btn {
+            padding: clamp(10px, 1.5vw, 14px) clamp(20px, 3vw, 30px);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: clamp(0.85rem, 1.5vw, 0.95rem);
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tv-btn-enable {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+
+        .tv-btn-enable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+        }
+
+        .tv-btn-enable:active {
+            transform: translateY(0);
+        }
+
+        .tv-btn-disable {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .tv-btn-disable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .tv-btn-disable:active {
+            transform: translateY(0);
+        }
+
+        .tv-status {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: clamp(0.8rem, 1.4vw, 0.9rem);
+        }
+
+        .tv-status-enabled {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+
+        .tv-status-disabled {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
         @media (max-width: 768px) {
             .admin-header {
                 flex-direction: column;
@@ -122,6 +214,19 @@
             .stats-grid {
                 grid-template-columns: 1fr;
             }
+
+            .tv-control-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .tv-control-buttons {
+                width: 100%;
+            }
+
+            .tv-btn {
+                flex: 1;
+            }
         }
     </style>
 </head>
@@ -135,6 +240,21 @@
             <div class="admin-header-right">
                 <button class="logout-btn" data-bs-toggle="modal" data-bs-target="#addUserModal">➕ Add New User</button>
                 <button onclick="logout()" class="logout-btn">← Logout</button>
+            </div>
+        </div>
+
+        <!-- TV Display Control Section -->
+        <div class="tv-control-card">
+            <div class="tv-control-info">
+                <h3>📺 TV DISPLAY CONTROL</h3>
+                <p>Manage TV display status and availability</p>
+                <div style="margin-top: 12px;">
+                    <span class="tv-status" id="tvStatus" style="">🟢 ENABLED</span>
+                </div>
+            </div>
+            <div class="tv-control-buttons">
+                <button class="tv-btn tv-btn-enable" onclick="enableTVDisplay()" id="enableTVBtn">🟢 Enable TV</button>
+                <button class="tv-btn tv-btn-disable" onclick="disableTVDisplay()" id="disableTVBtn">🔴 Disable TV</button>
             </div>
         </div>
 

@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Also track clicks and key presses to update activity
     document.addEventListener('click', updateAdminActivity);
     document.addEventListener('keypress', updateAdminActivity);
+    
+    // Load TV display status on page load
+    loadTVDisplayStatus();
 });
 
 // Validate that the current session is still active (not logged in elsewhere)
@@ -668,4 +671,101 @@ function showNotification(message, type = 'info') {
         alert.style.transition = 'opacity 0.3s ease';
         setTimeout(() => alert.remove(), 300);
     }, 3000);
+}
+// ===== TV DISPLAY CONTROL FUNCTIONS =====
+
+// Load TV display status from Firebase
+function loadTVDisplayStatus() {
+    if (typeof firebase === 'undefined' || !firebase.database) {
+        console.warn('Firebase not available');
+        updateTVStatusUI(true); // Default to enabled
+        return;
+    }
+    
+    try {
+        firebase.database().ref('tvControl/enabled').once('value', (snapshot) => {
+            const isEnabled = snapshot.val() !== false; // Default to true if not set
+            console.log('📺 TV Display Status Loaded:', isEnabled);
+            updateTVStatusUI(isEnabled);
+        }).catch(err => {
+            console.warn('Error loading TV status:', err.message);
+            updateTVStatusUI(true); // Default to enabled on error
+        });
+    } catch (e) {
+        console.warn('Firebase error:', e.message);
+        updateTVStatusUI(true);
+    }
+}
+
+// Update UI to reflect TV status
+function updateTVStatusUI(isEnabled) {
+    const statusElement = document.getElementById('tvStatus');
+    const enableBtn = document.getElementById('enableTVBtn');
+    const disableBtn = document.getElementById('disableTVBtn');
+    
+    if (statusElement) {
+        if (isEnabled) {
+            statusElement.textContent = '🟢 ENABLED';
+            statusElement.className = 'tv-status tv-status-enabled';
+            if (enableBtn) enableBtn.disabled = true;
+            if (disableBtn) disableBtn.disabled = false;
+        } else {
+            statusElement.textContent = '🔴 DISABLED';
+            statusElement.className = 'tv-status tv-status-disabled';
+            if (enableBtn) enableBtn.disabled = false;
+            if (disableBtn) disableBtn.disabled = true;
+        }
+    }
+}
+
+// Enable TV Display
+function enableTVDisplay() {
+    console.log('🟢 Enabling TV Display...');
+    
+    if (typeof firebase === 'undefined' || !firebase.database) {
+        alert('Firebase not available. Please check your connection.');
+        return;
+    }
+    
+    try {
+        firebase.database().ref('tvControl/enabled').set(true)
+            .then(() => {
+                console.log('✅ TV Display Enabled');
+                updateTVStatusUI(true);
+                showNotification('✅ TV Display has been ENABLED', 'success');
+            })
+            .catch(err => {
+                console.error('Error enabling TV:', err.message);
+                showNotification('❌ Failed to enable TV Display', 'danger');
+            });
+    } catch (e) {
+        console.error('Firebase error:', e.message);
+        showNotification('❌ Error communicating with Firebase', 'danger');
+    }
+}
+
+// Disable TV Display
+function disableTVDisplay() {
+    console.log('🔴 Disabling TV Display...');
+    
+    if (typeof firebase === 'undefined' || !firebase.database) {
+        alert('Firebase not available. Please check your connection.');
+        return;
+    }
+    
+    try {
+        firebase.database().ref('tvControl/enabled').set(false)
+            .then(() => {
+                console.log('✅ TV Display Disabled');
+                updateTVStatusUI(false);
+                showNotification('✅ TV Display has been DISABLED', 'warning');
+            })
+            .catch(err => {
+                console.error('Error disabling TV:', err.message);
+                showNotification('❌ Failed to disable TV Display', 'danger');
+            });
+    } catch (e) {
+        console.error('Firebase error:', e.message);
+        showNotification('❌ Error communicating with Firebase', 'danger');
+    }
 }

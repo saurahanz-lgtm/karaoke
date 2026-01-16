@@ -103,6 +103,21 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🔍 DEBUG: window.YT =', typeof window.YT);
     console.log('🔍 DEBUG: window.firebase =', typeof window.firebase);
     
+    // Check if TV is enabled before initializing
+    checkTVEnabled(function(isEnabled) {
+        if (!isEnabled) {
+            console.warn('⚠️ TV Display is DISABLED');
+            showTVDisabledMessage();
+            return;
+        }
+        
+        // TV is enabled, proceed with normal initialization
+        initializeTVDisplay();
+    });
+});
+
+// Initialize TV Display (after checking if enabled)
+function initializeTVDisplay() {
     // Verify YouTube API is available
     if (typeof YT === 'undefined') {
         console.error('❌ YouTube API not loaded! Check that https://www.youtube.com/iframe_api is accessible');
@@ -1217,5 +1232,69 @@ function deleteQueue() {
         displayQueue();
         checkAndPlayCurrentSong();
         alert('✅ Queue cleared successfully!');
+    }
+}
+// ===== TV ENABLED/DISABLED CONTROL =====
+
+// Check if TV display is enabled
+function checkTVEnabled(callback) {
+    if (typeof firebase === 'undefined' || !firebase.database) {
+        console.log('Firebase not available, defaulting to enabled');
+        callback(true);
+        return;
+    }
+    
+    try {
+        firebase.database().ref('tvControl/enabled').once('value', (snapshot) => {
+            const isEnabled = snapshot.val() !== false; // Default to true if not set
+            console.log('📺 TV Enabled Status:', isEnabled);
+            callback(isEnabled);
+        }).catch(err => {
+            console.warn('Error checking TV status:', err.message);
+            callback(true); // Default to enabled on error
+        });
+    } catch (e) {
+        console.warn('Firebase error:', e.message);
+        callback(true);
+    }
+}
+
+// Show TV disabled message
+function showTVDisabledMessage() {
+    const splashScreen = document.getElementById('splashScreen');
+    if (splashScreen) {
+        splashScreen.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; text-align: center; background: linear-gradient(135deg, #1a0a2e 0%, #0f0f1e 100%);">
+                <div style="font-size: 80px; margin-bottom: 30px;">🔴</div>
+                <h1 style="font-size: 3rem; font-weight: 700; margin: 0 0 20px 0;">TV DISPLAY</h1>
+                <h2 style="font-size: 2rem; font-weight: 500; margin: 0 0 10px 0; color: #ef4444;">DISABLED</h2>
+                <p style="font-size: 1.2rem; color: #999; margin: 20px 0 0 0; max-width: 600px;">
+                    The TV display has been disabled by the admin.<br>
+                    Please contact an administrator to enable it.
+                </p>
+                <div style="margin-top: 40px; font-size: 0.9rem; color: #666;">
+                    <p>Admin can enable it from the dashboard</p>
+                    <p style="margin-top: 30px; font-size: 0.8rem;">⏰ Please wait or refresh the page</p>
+                </div>
+            </div>
+        `;
+        splashScreen.style.display = 'flex';
+    }
+    
+    // Also listen for TV to be re-enabled
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            firebase.database().ref('tvControl/enabled').on('value', (snapshot) => {
+                const isEnabled = snapshot.val() !== false;
+                if (isEnabled) {
+                    console.log('📺 TV has been re-enabled, reloading...');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                }
+            });
+        } catch (e) {
+            console.warn('Error setting up listener:', e.message);
+        }
     }
 }
