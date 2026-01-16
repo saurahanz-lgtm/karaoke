@@ -160,13 +160,18 @@ function updateAdminActivity() {
     
     const now = Date.now();
     
-    // Update in Firebase only (no localStorage)
+    // Update the logged-in user in the local users array
+    const userIndex = users.findIndex(u => u.id === loggedInUser.id);
+    if (userIndex !== -1) {
+        users[userIndex].lastActivity = now;
+        loggedInUser.lastActivity = now;  // Update logged-in user reference
+    }
+    
+    // Update in Firebase (users stored as array)
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
-            // Update admin user's lastActivity
-            firebase.database().ref('users/' + loggedInUser.id).update({
-                lastActivity: now
-            }).catch(err => console.warn('Firebase admin activity update failed:', err.message));
+            // Save entire users array to Firebase with updated activity
+            firebase.database().ref('users').set(users).catch(err => console.warn('Firebase admin activity update failed:', err.message));
             
             // Also update the session timestamp to prevent it from being marked as stale
             firebase.database().ref('activeLogin/' + loggedInUser.username).update({
@@ -511,7 +516,9 @@ function displayUsers() {
         const isOnline = isUserOnline(user);
         const statusColor = isOnline ? '#28a745' : '#6c757d';
         const statusLabel = isOnline ? '🟢 Online' : '⚫ Offline';
-        const lastActivityText = user.lastActivity ? new Date(user.lastActivity).toLocaleTimeString() : 'Never';
+        // Handle both number and string formats for lastActivity
+        const lastActivityNum = typeof user.lastActivity === 'string' ? parseInt(user.lastActivity) : user.lastActivity;
+        const lastActivityText = lastActivityNum && lastActivityNum > 0 ? new Date(lastActivityNum).toLocaleTimeString() : 'Never';
         const isDisabled = user.disabled || false;
         const disabledBadge = isDisabled ? '<span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 8px;">🔒 DISABLED</span>' : '';
         
@@ -560,9 +567,12 @@ function updateStats() {
 
 // Check if user is online (active in last 5 minutes)
 function isUserOnline(user) {
-    if (!user.lastActivity || user.lastActivity === 0) return false;
+    if (!user.lastActivity || user.lastActivity === 0 || user.lastActivity === '0') return false;
+    // Handle both number and string formats
+    const lastActivityNum = typeof user.lastActivity === 'string' ? parseInt(user.lastActivity) : user.lastActivity;
+    if (!lastActivityNum || lastActivityNum <= 0) return false;
     const fiveMinutesAgo = new Date().getTime() - (5 * 60 * 1000);
-    return user.lastActivity > fiveMinutesAgo;
+    return lastActivityNum > fiveMinutesAgo;
 }
 
 // Filter singers by status
