@@ -73,7 +73,16 @@ function checkAuthentication() {
 // Validate Firebase session match for admin
 function validateAdminSession() {
     const username = loggedInUser?.username;
-    const deviceSessionId = window.deviceSessionId; // Get from memory only
+    let deviceSessionId = window.deviceSessionId;
+    
+    // If not in memory, try to get from sessionStorage
+    if (!deviceSessionId) {
+        deviceSessionId = sessionStorage.getItem('deviceSessionId');
+        if (deviceSessionId) {
+            window.deviceSessionId = deviceSessionId;
+            console.log('🔄 Retrieved device session ID from sessionStorage');
+        }
+    }
     
     if (!username) {
         console.warn('❌ No username in loggedInUser');
@@ -81,7 +90,7 @@ function validateAdminSession() {
     }
     
     if (!deviceSessionId) {
-        console.warn('❌ No device session ID in memory');
+        console.warn('❌ No device session ID in memory or sessionStorage');
         return;
     }
     

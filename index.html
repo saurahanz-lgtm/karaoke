@@ -706,13 +706,17 @@
             return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
 
-        // Get or create session ID for this device (keep in memory only)
+        // Get or create session ID for this device (store in sessionStorage to persist across pages)
         function getDeviceSessionId() {
-            if (!window.deviceSessionId) {
-                window.deviceSessionId = generateSessionId();
-                console.log('🆔 Generated device session ID:', window.deviceSessionId);
+            let sessionId = sessionStorage.getItem('deviceSessionId');
+            if (!sessionId) {
+                sessionId = generateSessionId();
+                sessionStorage.setItem('deviceSessionId', sessionId);
+                console.log('🆔 Generated device session ID:', sessionId);
             }
-            return window.deviceSessionId;
+            // Also keep in memory for quick access
+            window.deviceSessionId = sessionId;
+            return sessionId;
         }
 
         // Check if user is already logged in from another device (using Firebase)

@@ -575,7 +575,16 @@
         // Validate Firebase session match
         function validateSingerSession() {
             const username = loggedInUser?.username;
-            const deviceSessionId = window.deviceSessionId; // Get from memory only
+            let deviceSessionId = window.deviceSessionId;
+            
+            // If not in memory, try to get from sessionStorage
+            if (!deviceSessionId) {
+                deviceSessionId = sessionStorage.getItem('deviceSessionId');
+                if (deviceSessionId) {
+                    window.deviceSessionId = deviceSessionId;
+                    console.log('🔄 Retrieved device session ID from sessionStorage');
+                }
+            }
             
             if (!username || !deviceSessionId) {
                 console.warn('❌ Missing session data');
