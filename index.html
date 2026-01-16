@@ -724,18 +724,24 @@
             console.log('🔍 Checking if', username, 'is logged in elsewhere...');
             
             let callbackCalled = false;
+            let isFirebaseAvailable = false;
             
             const timeoutId = setTimeout(() => {
                 if (!callbackCalled) {
                     callbackCalled = true;
-                    console.warn('⏱️ Firebase check timeout - BLOCKING login');
-                    callback(true); // Timeout: BLOCK login to be safe
+                    console.warn('⏱️ Firebase check timeout');
+                    // If Firebase is not available within timeout, allow login (fail-open)
+                    if (!isFirebaseAvailable) {
+                        console.log('✅ Allowing login - Firebase not responding');
+                        callback(false);
+                    }
                 }
-            }, 5000); // 5 second timeout - block if no response
+            }, 3000); // 3 second timeout - reduced from 5 seconds
             
             // Try to check from Firebase first
             if (typeof firebase !== 'undefined' && firebase.database) {
                 try {
+                    isFirebaseAvailable = true;
                     const loginRef = firebase.database().ref('activeLogin/' + username);
                     
                     loginRef.once('value', (snapshot) => {
@@ -762,14 +768,15 @@
                             if (data.sessionId !== currentSessionId) {
                                 // Check if the old session is stale (older than 30 minutes)
                                 if (sessionAge > SESSION_TIMEOUT) {
-                                    console.log('⏱️ Old session is stale, clearing and allowing login');
-                                    // Clear the stale session and allow login
-                                    firebase.database().ref('activeLogin/' + username).remove()
-                                        .then(() => callback(false))
-                                        .catch(err => {
-                                            console.warn('Error clearing stale session:', err.message);
-                                            callback(false); // Allow login anyway
-                                        });
+                                    console.log('⏱️ Old session is stale (' + Math.round(sessionAge / 60000) + ' min), clearing and allowing login');
+                                    // Clear the stale session but allow login immediately
+                                    try {
+                                        firebase.database().ref('activeLogin/' + username).remove()
+                                            .catch(err => console.warn('Error clearing stale session:', err.message));
+                                    } catch (e) {
+                                        console.warn('Error clearing stale session:', e.message);
+                                    }
+                                    callback(false);
                                 } else {
                                     console.log('❌ User already logged in with different session:', data.sessionId);
                                     callback(true); // User logged in elsewhere - BLOCK
@@ -787,18 +794,21 @@
                         callbackCalled = true;
                         clearTimeout(timeoutId);
                         console.warn('⚠️ Firebase read error:', err.message);
-                        callback(true); // On error: BLOCK to be safe
+                        console.log('✅ Allowing login - Firebase error');
+                        callback(false); // Allow login on error (fail-open)
                     });
                 } catch (e) {
                     if (callbackCalled) return;
                     callbackCalled = true;
                     clearTimeout(timeoutId);
                     console.warn('⚠️ Firebase exception:', e.message);
-                    callback(true); // On exception: BLOCK to be safe
+                    console.log('✅ Allowing login - Firebase exception');
+                    callback(false); // Allow login on exception (fail-open)
                 }
             } else {
                 clearTimeout(timeoutId);
                 console.warn('⚠️ Firebase not available');
+                console.log('✅ Allowing login - Firebase not configured');
                 callback(false); // Firebase not available, allow login (can't verify)
             }
         }
