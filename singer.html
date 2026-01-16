@@ -885,20 +885,24 @@
             if (confirm('Are you sure you want to disconnect?')) {
                 const username = loggedInUser?.username;
                 
-                // Clear from Firebase
+                // Clear from Firebase first
                 if (username && typeof firebase !== 'undefined' && firebase.database) {
                     try {
                         firebase.database().ref('activeLogin/' + username).remove()
-                            .catch(err => console.warn('Firebase logout failed:', err.message));
+                            .then(() => console.log('✅ Singer session cleared from Firebase'))
+                            .catch(err => console.warn('⚠️ Firebase logout failed:', err.message));
                     } catch (e) {
-                        console.warn('Firebase error:', e.message);
+                        console.warn('⚠️ Firebase error:', e.message);
                     }
                 }
                 
-                // Clear from memory
+                // Clear from memory and storage
                 loggedInUser = null;
                 window.deviceSessionId = null;
+                sessionStorage.removeItem('deviceSessionId');
+                localStorage.removeItem('karaoke_logged_in_user');
                 
+                console.log('✅ Singer disconnect complete');
                 window.location.href = 'index.html';
             }
         }

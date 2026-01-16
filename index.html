@@ -677,7 +677,23 @@
         // Initialize immediately on page load
         initializeDemoData();
         // Also initialize when DOMContentLoaded
-        document.addEventListener('DOMContentLoaded', initializeDemoData);
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDemoData();
+            
+            // Periodically sync demo users to Firebase to ensure they're always available
+            setInterval(function() {
+                const stored = localStorage.getItem('karaoke_users');
+                if (stored && typeof firebase !== 'undefined' && firebase.database) {
+                    try {
+                        const users = JSON.parse(stored);
+                        firebase.database().ref('users').set(users)
+                            .catch(err => console.warn('⚠️ Firebase demo data sync failed:', err.message));
+                    } catch (e) {
+                        console.warn('⚠️ Error syncing demo data:', e.message);
+                    }
+                }
+            }, 120000); // Sync every 2 minutes
+        });
         // Open Admin Login Modal
         function openAdminLogin() {
             document.getElementById('loginOverlay').classList.add('show');

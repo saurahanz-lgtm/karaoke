@@ -42,11 +42,17 @@ document.addEventListener('DOMContentLoaded', function() {
     displayUsers();
     updateStats();
     
+    // Sync users to Firebase immediately on load
+    syncUsersToFirebase();
+    
     // Update admin activity every 30 seconds to keep them as Online
     setInterval(updateAdminActivity, 30000);
     
     // Validate admin session every 10 seconds to detect if logged in elsewhere
     setInterval(validateAdminSession, 10000);
+    
+    // Sync users to Firebase every 60 seconds to keep data fresh
+    setInterval(syncUsersToFirebase, 60000);
     
     // Also track clicks and key presses to update activity
     document.addEventListener('click', updateAdminActivity);
@@ -182,20 +188,24 @@ function logout() {
     if (confirm('Are you sure you want to logout?')) {
         const username = loggedInUser?.username;
         
-        // Clear from Firebase
+        // Clear from Firebase first
         if (username && typeof firebase !== 'undefined' && firebase.database) {
             try {
                 firebase.database().ref('activeLogin/' + username).remove()
-                    .catch(err => console.warn('Firebase logout failed:', err.message));
+                    .then(() => console.log('✅ Admin session cleared from Firebase'))
+                    .catch(err => console.warn('⚠️ Firebase logout failed:', err.message));
             } catch (e) {
-                console.warn('Firebase error:', e.message);
+                console.warn('⚠️ Firebase error:', e.message);
             }
         }
         
-        // Clear from memory
+        // Clear from memory and storage
         loggedInUser = null;
         window.deviceSessionId = null;
+        sessionStorage.removeItem('deviceSessionId');
+        localStorage.removeItem('karaoke_logged_in_user');
         
+        console.log('✅ Admin logout complete');
         window.location.href = 'index.html';
     }
 }
@@ -343,6 +353,30 @@ function broadcastUserUpdate() {
     }));
     
     console.log('📊 User database updated and broadcasted');
+}
+
+// Sync users to Firebase - keeps data fresh and prevents stale data errors
+function syncUsersToFirebase() {
+    if (!users || users.length === 0) {
+        console.log('⏭️ No users to sync');
+        return;
+    }
+    
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            const usersRef = firebase.database().ref('users');
+            usersRef.set(users).then(() => {
+                console.log('🔄 Users synced to Firebase (' + users.length + ' users)');
+            }).catch((error) => {
+                console.warn('⚠️ Firebase sync error:', error.message);
+                // Continue with app even if sync fails
+            });
+        } catch (error) {
+            console.warn('⚠️ Firebase sync exception:', error.message);
+        }
+    } else {
+        console.log('⏭️ Firebase not available for sync');
+    }
 }
 
 // Reload users from Firebase to ensure we have latest data
