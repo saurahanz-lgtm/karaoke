@@ -115,7 +115,17 @@
             background: rgba(255, 255, 255, 0.2);
             outline: none;
             -webkit-appearance: none;
+            appearance: none;
             cursor: pointer;
+            padding: 0;
+        }
+
+        .volume-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            border: none;
         }
 
         .volume-slider::-webkit-slider-thumb {
@@ -128,11 +138,25 @@
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            margin-top: -6px;
         }
 
         .volume-slider::-webkit-slider-thumb:hover {
             transform: scale(1.2);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+        }
+
+        .volume-slider::-moz-range-track {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 3px;
+            height: 6px;
+        }
+
+        .volume-slider::-moz-range-progress {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 3px;
+            height: 6px;
         }
 
         .volume-slider::-moz-range-thumb {
@@ -149,11 +173,6 @@
         .volume-slider::-moz-range-thumb:hover {
             transform: scale(1.2);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
-        }
-
-        .volume-slider::-moz-range-track {
-            background: transparent;
-            border: none;
         }
 
         .volume-value {
@@ -701,9 +720,18 @@
             
             // Initialize volume control
             const volumeSlider = document.getElementById('volumeSlider');
-            if (volumeSlider && audioPlayer) {
-                audioPlayer.volume = volumeSlider.value / 100;
-                console.log('🔊 Initial volume set to:', volumeSlider.value + '%');
+            if (volumeSlider) {
+                if (!audioPlayer) {
+                    audioPlayer = document.getElementById('audioPlayer');
+                    console.log('🎵 Audio player reassigned');
+                }
+                
+                if (audioPlayer) {
+                    audioPlayer.volume = volumeSlider.value / 100;
+                    console.log('🔊 Initial volume set to:', volumeSlider.value + '%');
+                } else {
+                    console.warn('⚠️ Audio player still not found');
+                }
             }
             
             // Listen for Firebase queue updates if available
@@ -1292,15 +1320,33 @@
 
         // Update volume control
         function updateVolume(value) {
+            console.log('📢 updateVolume called with value:', value);
+            
             const volumeValue = document.getElementById('volumeValue');
             if (volumeValue) {
                 volumeValue.textContent = value;
             }
 
-            if (audioPlayer) {
-                // Convert percentage (0-100) to decimal (0-1)
-                audioPlayer.volume = value / 100;
-                console.log('🔊 Volume set to:', value + '%');
+            // Get the audio player element
+            let player = audioPlayer || document.getElementById('audioPlayer');
+            
+            if (!player) {
+                console.warn('⚠️ Audio player element not found');
+                return;
+            }
+            
+            // Convert percentage (0-100) to decimal (0-1)
+            const volumeDecimal = value / 100;
+            player.volume = volumeDecimal;
+            
+            console.log('🔊 Volume set to:', value + '% (decimal: ' + volumeDecimal.toFixed(2) + ')');
+            
+            // Also update the mute button state
+            const muteBtn = document.getElementById('muteBtn');
+            if (muteBtn && value == 0) {
+                muteBtn.textContent = '🔇';
+            } else if (muteBtn && value > 0) {
+                muteBtn.textContent = '🔊';
             }
         }
 
