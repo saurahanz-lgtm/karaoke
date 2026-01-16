@@ -29,7 +29,6 @@ if (typeof firebase !== 'undefined') {
         const queueRef = database.ref('queue');
         const reservationsRef = database.ref('reservations');
         
-        console.log('✅ Firebase initialized for project: karaoke-890dd');
     } catch (error) {
         console.warn('Firebase initialization skipped or failed:', error.message);
     }
