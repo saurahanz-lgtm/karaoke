@@ -674,27 +674,42 @@ function showNotification(message, type = 'info') {
 }
 // ===== TV DISPLAY CONTROL FUNCTIONS =====
 
-// Load TV display status from Firebase
+// Load TV display status from Firebase or localStorage
 function loadTVDisplayStatus() {
-    if (typeof firebase === 'undefined' || !firebase.database) {
-        console.warn('Firebase not available');
-        updateTVStatusUI(true); // Default to enabled
-        return;
-    }
+    const firebaseAvailable = typeof firebase !== 'undefined' && firebase.database;
     
-    try {
-        firebase.database().ref('tvControl/enabled').once('value', (snapshot) => {
-            const isEnabled = snapshot.val() !== false; // Default to true if not set
-            console.log('📺 TV Display Status Loaded:', isEnabled);
-            updateTVStatusUI(isEnabled);
-        }).catch(err => {
-            console.warn('Error loading TV status:', err.message);
-            updateTVStatusUI(true); // Default to enabled on error
-        });
-    } catch (e) {
-        console.warn('Firebase error:', e.message);
-        updateTVStatusUI(true);
+    if (firebaseAvailable) {
+        try {
+            firebase.database().ref('tvControl/enabled').once('value', (snapshot) => {
+                const isEnabled = snapshot.val() !== false; // Default to true if not set
+                console.log('📺 TV Display Status Loaded from Firebase:', isEnabled);
+                localStorage.setItem('karaoke_tv_enabled', isEnabled ? 'true' : 'false');
+                updateTVStatusUI(isEnabled);
+            }).catch(err => {
+                if (err.code === 'PERMISSION_DENIED') {
+                    console.warn('⚠️ Firebase permission denied for tvControl. Using localStorage fallback.');
+                    loadTVStatusFromLocalStorage();
+                } else {
+                    console.warn('Error loading TV status:', err.message);
+                    loadTVStatusFromLocalStorage();
+                }
+            });
+        } catch (e) {
+            console.warn('Firebase error:', e.message);
+            loadTVStatusFromLocalStorage();
+        }
+    } else {
+        console.warn('Firebase not available, using localStorage');
+        loadTVStatusFromLocalStorage();
     }
+}
+
+// Load TV status from localStorage
+function loadTVStatusFromLocalStorage() {
+    const stored = localStorage.getItem('karaoke_tv_enabled');
+    const isEnabled = stored !== 'false'; // Default to true if not set
+    console.log('📺 TV Display Status Loaded from localStorage:', isEnabled);
+    updateTVStatusUI(isEnabled);
 }
 
 // Update UI to reflect TV status
@@ -722,25 +737,39 @@ function updateTVStatusUI(isEnabled) {
 function enableTVDisplay() {
     console.log('🟢 Enabling TV Display...');
     
-    if (typeof firebase === 'undefined' || !firebase.database) {
-        alert('Firebase not available. Please check your connection.');
-        return;
-    }
+    const firebaseAvailable = typeof firebase !== 'undefined' && firebase.database;
     
     try {
-        firebase.database().ref('tvControl/enabled').set(true)
-            .then(() => {
-                console.log('✅ TV Display Enabled');
-                updateTVStatusUI(true);
-                showNotification('✅ TV Display has been ENABLED', 'success');
-            })
-            .catch(err => {
-                console.error('Error enabling TV:', err.message);
-                showNotification('❌ Failed to enable TV Display', 'danger');
-            });
+        if (firebaseAvailable) {
+            firebase.database().ref('tvControl/enabled').set(true)
+                .then(() => {
+                    console.log('✅ TV Display Enabled via Firebase');
+                    localStorage.setItem('karaoke_tv_enabled', 'true');
+                    updateTVStatusUI(true);
+                    showNotification('✅ TV Display has been ENABLED', 'success');
+                })
+                .catch(err => {
+                    if (err.code === 'PERMISSION_DENIED') {
+                        console.warn('⚠️ Firebase permission denied. Saving to localStorage only.');
+                        localStorage.setItem('karaoke_tv_enabled', 'true');
+                        updateTVStatusUI(true);
+                        showNotification('✅ TV Display ENABLED (Local storage)', 'warning');
+                    } else {
+                        console.error('Error enabling TV:', err.message);
+                        showNotification('❌ Failed to enable TV Display: ' + err.message, 'danger');
+                    }
+                });
+        } else {
+            // Fallback to localStorage only
+            localStorage.setItem('karaoke_tv_enabled', 'true');
+            updateTVStatusUI(true);
+            showNotification('✅ TV Display ENABLED (Local storage)', 'info');
+        }
     } catch (e) {
-        console.error('Firebase error:', e.message);
-        showNotification('❌ Error communicating with Firebase', 'danger');
+        console.error('Error enabling TV:', e.message);
+        localStorage.setItem('karaoke_tv_enabled', 'true');
+        updateTVStatusUI(true);
+        showNotification('✅ TV Display ENABLED (Local storage)', 'info');
     }
 }
 
@@ -748,24 +777,38 @@ function enableTVDisplay() {
 function disableTVDisplay() {
     console.log('🔴 Disabling TV Display...');
     
-    if (typeof firebase === 'undefined' || !firebase.database) {
-        alert('Firebase not available. Please check your connection.');
-        return;
-    }
+    const firebaseAvailable = typeof firebase !== 'undefined' && firebase.database;
     
     try {
-        firebase.database().ref('tvControl/enabled').set(false)
-            .then(() => {
-                console.log('✅ TV Display Disabled');
-                updateTVStatusUI(false);
-                showNotification('✅ TV Display has been DISABLED', 'warning');
-            })
-            .catch(err => {
-                console.error('Error disabling TV:', err.message);
-                showNotification('❌ Failed to disable TV Display', 'danger');
-            });
+        if (firebaseAvailable) {
+            firebase.database().ref('tvControl/enabled').set(false)
+                .then(() => {
+                    console.log('✅ TV Display Disabled via Firebase');
+                    localStorage.setItem('karaoke_tv_enabled', 'false');
+                    updateTVStatusUI(false);
+                    showNotification('✅ TV Display has been DISABLED', 'warning');
+                })
+                .catch(err => {
+                    if (err.code === 'PERMISSION_DENIED') {
+                        console.warn('⚠️ Firebase permission denied. Saving to localStorage only.');
+                        localStorage.setItem('karaoke_tv_enabled', 'false');
+                        updateTVStatusUI(false);
+                        showNotification('✅ TV Display DISABLED (Local storage)', 'warning');
+                    } else {
+                        console.error('Error disabling TV:', err.message);
+                        showNotification('❌ Failed to disable TV Display: ' + err.message, 'danger');
+                    }
+                });
+        } else {
+            // Fallback to localStorage only
+            localStorage.setItem('karaoke_tv_enabled', 'false');
+            updateTVStatusUI(false);
+            showNotification('✅ TV Display DISABLED (Local storage)', 'warning');
+        }
     } catch (e) {
-        console.error('Firebase error:', e.message);
-        showNotification('❌ Error communicating with Firebase', 'danger');
+        console.error('Error disabling TV:', e.message);
+        localStorage.setItem('karaoke_tv_enabled', 'false');
+        updateTVStatusUI(false);
+        showNotification('✅ TV Display DISABLED (Local storage)', 'warning');
     }
 }

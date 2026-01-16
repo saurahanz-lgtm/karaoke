@@ -1238,25 +1238,40 @@ function deleteQueue() {
 
 // Check if TV display is enabled
 function checkTVEnabled(callback) {
-    if (typeof firebase === 'undefined' || !firebase.database) {
-        console.log('Firebase not available, defaulting to enabled');
-        callback(true);
-        return;
-    }
+    const firebaseAvailable = typeof firebase !== 'undefined' && firebase.database;
     
-    try {
-        firebase.database().ref('tvControl/enabled').once('value', (snapshot) => {
-            const isEnabled = snapshot.val() !== false; // Default to true if not set
-            console.log('📺 TV Enabled Status:', isEnabled);
-            callback(isEnabled);
-        }).catch(err => {
-            console.warn('Error checking TV status:', err.message);
-            callback(true); // Default to enabled on error
-        });
-    } catch (e) {
-        console.warn('Firebase error:', e.message);
-        callback(true);
+    if (firebaseAvailable) {
+        try {
+            firebase.database().ref('tvControl/enabled').once('value', (snapshot) => {
+                const isEnabled = snapshot.val() !== false; // Default to true if not set
+                console.log('📺 TV Enabled Status from Firebase:', isEnabled);
+                localStorage.setItem('karaoke_tv_enabled', isEnabled ? 'true' : 'false');
+                callback(isEnabled);
+            }).catch(err => {
+                if (err.code === 'PERMISSION_DENIED') {
+                    console.warn('⚠️ Firebase permission denied, checking localStorage...');
+                    checkTVEnabledFromLocalStorage(callback);
+                } else {
+                    console.warn('Error checking TV status:', err.message);
+                    checkTVEnabledFromLocalStorage(callback);
+                }
+            });
+        } catch (e) {
+            console.warn('Firebase error:', e.message);
+            checkTVEnabledFromLocalStorage(callback);
+        }
+    } else {
+        console.log('Firebase not available, checking localStorage...');
+        checkTVEnabledFromLocalStorage(callback);
     }
+}
+
+// Check TV status from localStorage
+function checkTVEnabledFromLocalStorage(callback) {
+    const stored = localStorage.getItem('karaoke_tv_enabled');
+    const isEnabled = stored !== 'false'; // Default to true if not set
+    console.log('📺 TV Enabled Status from localStorage:', isEnabled);
+    callback(isEnabled);
 }
 
 // Show TV disabled message
