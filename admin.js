@@ -174,25 +174,37 @@ function updateAdminActivity() {
     
     const now = Date.now();
     
-    // Update the logged-in user in the local users array
+    // Update ONLY the logged-in user in the local users array (don't overwrite others)
     const userIndex = users.findIndex(u => u.id === loggedInUser.id);
     if (userIndex !== -1) {
-        users[userIndex].lastActivity = now;
+        // Make a copy to avoid mutation issues
+        const updatedUsers = [...users];
+        updatedUsers[userIndex] = {
+            ...updatedUsers[userIndex],
+            lastActivity: now
+        };
+        users = updatedUsers;
         loggedInUser.lastActivity = now;  // Update logged-in user reference
+        
+        // Update in Firebase (users stored as array)
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            try {
+                // Save entire users array to Firebase with updated activity
+                firebase.database().ref('users').set(users).catch(err => console.warn('Firebase admin activity update failed:', err.message));
+            } catch (error) {
+                console.warn('Error updating admin activity:', error.message);
+            }
+        }
     }
     
-    // Update in Firebase (users stored as array)
-    if (typeof firebase !== 'undefined' && firebase.database) {
+    // Also update the session timestamp to prevent it from being marked as stale
+    if (typeof firebase !== 'undefined' && firebase.database && loggedInUser) {
         try {
-            // Save entire users array to Firebase with updated activity
-            firebase.database().ref('users').set(users).catch(err => console.warn('Firebase admin activity update failed:', err.message));
-            
-            // Also update the session timestamp to prevent it from being marked as stale
             firebase.database().ref('activeLogin/' + loggedInUser.username).update({
                 timestamp: now
             }).catch(err => console.warn('Firebase session timestamp update failed:', err.message));
         } catch (error) {
-            console.warn('Error updating admin activity:', error.message);
+            console.warn('Error updating session timestamp:', error.message);
         }
     }
     
@@ -265,9 +277,14 @@ function loadUsers() {
                 const data = snapshot.val();
                 if (data) {
                     // Handle both array and object formats from Firebase
-                    users = Array.isArray(data) ? data : Object.values(data);
+                    let firebaseUsers = Array.isArray(data) ? data : Object.values(data);
                     // Filter out invalid entries (must have username)
-                    users = users.filter(u => u && u.username);
+                    firebaseUsers = firebaseUsers.filter(u => u && u.username);
+                    // Ensure all users have correct lastActivity format (default to 0 if missing)
+                    users = firebaseUsers.map(u => ({
+                        ...u,
+                        lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
+                    }));
                     console.log('✅ Users loaded from Firebase:', users.length, users);
                 } else {
                     // Firebase is empty, use default/localStorage
@@ -300,12 +317,17 @@ function loadUsers() {
             usersRef.on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    const firebaseUsers = Array.isArray(data) ? data : Object.values(data);
+                    let firebaseUsers = Array.isArray(data) ? data : Object.values(data);
                     // Filter out invalid entries (must have username)
-                    const validUsers = firebaseUsers.filter(u => u && u.username);
+                    firebaseUsers = firebaseUsers.filter(u => u && u.username);
+                    // Ensure all have correct lastActivity format
+                    firebaseUsers = firebaseUsers.map(u => ({
+                        ...u,
+                        lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
+                    }));
                     // Only update display if data actually changed
-                    if (JSON.stringify(validUsers) !== JSON.stringify(users)) {
-                        users = validUsers;
+                    if (JSON.stringify(firebaseUsers) !== JSON.stringify(users)) {
+                        users = firebaseUsers;
                         console.log('🔄 Users updated from Firebase listener');
                         displayUsers();
                         updateStats();
@@ -325,9 +347,15 @@ function loadUsers() {
                 firebase.database().ref('users').once('value', (snapshot) => {
                     const data = snapshot.val();
                     if (data) {
-                        users = Array.isArray(data) ? data : Object.values(data);
+                        let fetchedUsers = Array.isArray(data) ? data : Object.values(data);
                         // Filter out invalid entries (ensure all have username)
-                        users = users.filter(u => u && u.username);
+                        fetchedUsers = fetchedUsers.filter(u => u && u.username);
+                        // Ensure all have correct lastActivity format
+                        fetchedUsers = fetchedUsers.map(u => ({
+                            ...u,
+                            lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
+                        }));
+                        users = fetchedUsers;
                         displayUsers();
                         updateStats();
                     }
@@ -348,15 +376,18 @@ function loadFromLocalStorage() {
     const stored = localStorage.getItem('karaoke_users');
     if (stored) {
         users = JSON.parse(stored);
-        // Ensure all users have IDs and disabled flag
+        // Ensure all users have required properties with safe defaults
         users = users.map((u, idx) => ({
-            ...u,
             id: u.id || (idx + 1),
-            lastActivity: u.lastActivity || 0,
-            disabled: u.disabled !== undefined ? u.disabled : false
+            username: u.username || `user_${idx}`,
+            password: u.password || 'temp123',
+            role: u.role || 'user',
+            joined: u.joined || new Date().toISOString().split('T')[0],
+            lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity,
+            disabled: u.disabled === true ? true : false
         }));
     } else {
-        // Demo data - all admin accounts
+        // Demo data - all admin accounts, explicitly set lastActivity to 0
         users = [
             { id: 1, username: "john_doe", password: "pass123", role: "admin", joined: "2024-01-01", lastActivity: 0, disabled: false },
             { id: 2, username: "maria_santos", password: "pass123", role: "admin", joined: "2024-01-02", lastActivity: 0, disabled: false },
