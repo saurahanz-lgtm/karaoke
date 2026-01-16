@@ -745,14 +745,39 @@
                         
                         const data = snapshot.val();
                         const currentSessionId = getDeviceSessionId();
+                        const now = Date.now();
+                        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
                         
                         console.log('📊 Firebase data for', username, ':', data);
                         console.log('🎫 Current session ID:', currentSessionId);
                         
-                        // If there's an active login and it's from a different session
-                        if (data && data.sessionId && data.sessionId !== currentSessionId) {
-                            console.log('❌ User already logged in with different session:', data.sessionId);
-                            callback(true); // User logged in elsewhere - BLOCK
+                        // If there's an active login
+                        if (data && data.sessionId) {
+                            const lastActivity = data.timestamp || 0;
+                            const sessionAge = now - lastActivity;
+                            
+                            console.log('⏱️ Session age:', Math.round(sessionAge / 1000), 'seconds');
+                            
+                            // Check if the session is from a different device
+                            if (data.sessionId !== currentSessionId) {
+                                // Check if the old session is stale (older than 30 minutes)
+                                if (sessionAge > SESSION_TIMEOUT) {
+                                    console.log('⏱️ Old session is stale, clearing and allowing login');
+                                    // Clear the stale session and allow login
+                                    firebase.database().ref('activeLogin/' + username).remove()
+                                        .then(() => callback(false))
+                                        .catch(err => {
+                                            console.warn('Error clearing stale session:', err.message);
+                                            callback(false); // Allow login anyway
+                                        });
+                                } else {
+                                    console.log('❌ User already logged in with different session:', data.sessionId);
+                                    callback(true); // User logged in elsewhere - BLOCK
+                                }
+                            } else {
+                                console.log('✅ Safe to login - same session ID');
+                                callback(false); // Safe to login
+                            }
                         } else {
                             console.log('✅ Safe to login - no other session found');
                             callback(false); // Safe to login

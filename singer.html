@@ -699,6 +699,11 @@
                                 firebase.database().ref('users/' + loggedInUser.id).update({
                                     lastActivity: now
                                 }).catch(err => console.warn('Firebase user update failed:', err.message));
+                                
+                                // Also update the session timestamp to prevent it from being marked as stale
+                                firebase.database().ref('activeLogin/' + loggedInUser.username).update({
+                                    timestamp: now
+                                }).catch(err => console.warn('Firebase session timestamp update failed:', err.message));
                             } catch (fbErr) {
                                 // Firebase error, continue without it
                             }

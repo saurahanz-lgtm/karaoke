@@ -157,9 +157,15 @@ function updateAdminActivity() {
     // Update in Firebase only (no localStorage)
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
+            // Update admin user's lastActivity
             firebase.database().ref('users/' + loggedInUser.id).update({
                 lastActivity: now
             }).catch(err => console.warn('Firebase admin activity update failed:', err.message));
+            
+            // Also update the session timestamp to prevent it from being marked as stale
+            firebase.database().ref('activeLogin/' + loggedInUser.username).update({
+                timestamp: now
+            }).catch(err => console.warn('Firebase session timestamp update failed:', err.message));
         } catch (error) {
             console.warn('Error updating admin activity:', error.message);
         }
