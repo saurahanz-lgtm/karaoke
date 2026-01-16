@@ -660,6 +660,17 @@
                     { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01" }
                 ];
                 localStorage.setItem('karaoke_users', JSON.stringify(demoUsers));
+                
+                // Also save to Firebase
+                if (typeof firebase !== 'undefined' && firebase.database) {
+                    try {
+                        firebase.database().ref('users').set(demoUsers)
+                            .then(() => console.log('✅ Demo users saved to Firebase'))
+                            .catch(err => console.warn('⚠️ Could not save to Firebase:', err.message));
+                    } catch (e) {
+                        console.warn('Firebase not available for demo data');
+                    }
+                }
             }
         }
 
