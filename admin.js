@@ -196,6 +196,20 @@ function logout() {
         // Clear from Firebase first
         if (username && typeof firebase !== 'undefined' && firebase.database) {
             try {
+                // 1. Mark user as Offline in users array (set lastActivity to 0)
+                firebase.database().ref('users').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        users = Array.isArray(data) ? data : Object.values(data);
+                        const userIndex = users.findIndex(u => u.username === username);
+                        if (userIndex !== -1) {
+                            users[userIndex].lastActivity = 0;
+                            firebase.database().ref('users').set(users).catch(err => console.warn('Failed to mark offline:', err.message));
+                        }
+                    }
+                });
+                
+                // 2. Clear from Firebase activeLogin
                 firebase.database().ref('activeLogin/' + username).remove()
                     .then(() => console.log('✅ Admin session cleared from Firebase'))
                     .catch(err => console.warn('⚠️ Firebase logout failed:', err.message));
