@@ -179,6 +179,23 @@ function initializeTVDisplay() {
     // Check connection status every 1 second for faster updates
     setInterval(checkPhoneConnection, 1000);
     
+    // Listen for TV disable status changes in real-time
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            firebase.database().ref('tvControl/enabled').on('value', (snapshot) => {
+                const isEnabled = snapshot.val() !== false;
+                console.log('📺 TV Status Changed:', isEnabled ? 'ENABLED' : 'DISABLED');
+                
+                if (!isEnabled) {
+                    console.warn('⚠️ TV Display has been DISABLED by admin');
+                    showTVDisabledMessage();
+                }
+            });
+        } catch (e) {
+            console.warn('Error setting up TV status listener:', e.message);
+        }
+    }
+    
     // Refresh QR code when page becomes visible (user switches back to this tab)
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) {
