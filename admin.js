@@ -182,8 +182,9 @@ function loadUsers() {
             usersRef.once('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    users = Object.values(data);
-                    console.log('✅ Users loaded from Firebase:', users.length);
+                    // Handle both array and object formats from Firebase
+                    users = Array.isArray(data) ? data : Object.values(data);
+                    console.log('✅ Users loaded from Firebase:', users.length, users);
                 } else {
                     // Firebase is empty, use default/localStorage
                     loadFromLocalStorage();
@@ -215,7 +216,7 @@ function loadUsers() {
             usersRef.on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    const firebaseUsers = Object.values(data);
+                    const firebaseUsers = Array.isArray(data) ? data : Object.values(data);
                     // Only update display if data actually changed
                     if (JSON.stringify(firebaseUsers) !== JSON.stringify(users)) {
                         users = firebaseUsers;
@@ -280,20 +281,16 @@ function loadFromLocalStorage() {
 
 // Save users to Firebase/localStorage
 function saveUsers() {
-    // Always save to localStorage as backup
+    // Always save to localStorage as backup (keep as array)
     localStorage.setItem('karaoke_users', JSON.stringify(users));
     
     // Try to save to Firebase - IMMEDIATE WRITE
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
             const usersRef = firebase.database().ref('users');
-            // Convert array to object with IDs as keys for better Firebase structure
-            const usersObj = {};
-            users.forEach(user => {
-                usersObj[user.id] = user;
-            });
-            usersRef.set(usersObj).then(() => {
-                console.log('✅ Users IMMEDIATELY saved to Firebase');
+            // Save as array directly to Firebase for cleaner retrieval
+            usersRef.set(users).then(() => {
+                console.log('✅ Users IMMEDIATELY saved to Firebase as array');
                 // Broadcast change to all tabs/windows
                 broadcastUserUpdate();
             }).catch((error) => {
@@ -329,8 +326,8 @@ function reloadUsersFromFirebase(callback) {
             usersRef.once('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    users = Object.values(data);
-                    console.log('✅ Users reloaded from Firebase before operation');
+                    users = Array.isArray(data) ? data : Object.values(data);
+                    console.log('✅ Users reloaded from Firebase before operation:', users);
                 } else {
                     loadFromLocalStorage();
                 }

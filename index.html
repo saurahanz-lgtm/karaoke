@@ -927,8 +927,8 @@
                     usersRef.once('value', (snapshot) => {
                         const data = snapshot.val();
                         if (data) {
-                            const users = Object.values(data);
-                            console.log('✅ Users forcefully loaded from Firebase:', users.length);
+                            const users = Array.isArray(data) ? data : Object.values(data);
+                            console.log('✅ Users forcefully loaded from Firebase:', users.length, users);
                             callback(users);
                         } else {
                             // Firebase is empty, use localStorage
