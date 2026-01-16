@@ -250,19 +250,20 @@ function loadFromLocalStorage() {
     const stored = localStorage.getItem('karaoke_users');
     if (stored) {
         users = JSON.parse(stored);
-        // Ensure all users have IDs
+        // Ensure all users have IDs and disabled flag
         users = users.map((u, idx) => ({
             ...u,
             id: u.id || (idx + 1),
-            lastActivity: u.lastActivity || 0
+            lastActivity: u.lastActivity || 0,
+            disabled: u.disabled !== undefined ? u.disabled : false
         }));
     } else {
         // Demo data - all admin accounts
         users = [
-            { id: 1, username: "john_doe", password: "pass123", role: "admin", joined: "2024-01-01", lastActivity: 0 },
-            { id: 2, username: "maria_santos", password: "pass123", role: "admin", joined: "2024-01-02", lastActivity: 0 },
-            { id: 3, username: "sarah_johnson", password: "pass123", role: "admin", joined: "2024-01-03", lastActivity: 0 },
-            { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", lastActivity: 0 }
+            { id: 1, username: "john_doe", password: "pass123", role: "admin", joined: "2024-01-01", lastActivity: 0, disabled: false },
+            { id: 2, username: "maria_santos", password: "pass123", role: "admin", joined: "2024-01-02", lastActivity: 0, disabled: false },
+            { id: 3, username: "sarah_johnson", password: "pass123", role: "admin", joined: "2024-01-03", lastActivity: 0, disabled: false },
+            { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", lastActivity: 0, disabled: false }
         ];
         saveUsers();
     }
@@ -362,7 +363,8 @@ function continueAddUser(username, password, role) {
         password,
         role,
         joined: new Date().toISOString().split('T')[0],
-        lastActivity: 0  // User starts as Offline until they log in
+        lastActivity: 0,  // User starts as Offline until they log in
+        disabled: false   // New users are enabled by default
     };
     
     users.push(newUser);
@@ -437,12 +439,15 @@ function displayUsers() {
         const statusColor = isOnline ? '#28a745' : '#6c757d';
         const statusLabel = isOnline ? '🟢 Online' : '⚫ Offline';
         const lastActivityText = user.lastActivity ? new Date(user.lastActivity).toLocaleTimeString() : 'Never';
+        const isDisabled = user.disabled || false;
+        const disabledBadge = isDisabled ? '<span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 8px;">🔒 DISABLED</span>' : '';
         
         html += `
-            <tr style="border-bottom: 1px solid rgba(102, 126, 234, 0.2);">
+            <tr style="border-bottom: 1px solid rgba(102, 126, 234, 0.2); opacity: ${isDisabled ? '0.6' : '1'};">
                 <td style="padding: 1.2rem;">${index + 1}</td>
                 <td style="padding: 1.2rem;">
                     <strong>${user.username}</strong>
+                    ${disabledBadge}
                 </td>
                 <td style="padding: 1.2rem;">
                     <span style="background: ${statusColor}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
@@ -456,6 +461,9 @@ function displayUsers() {
                 <td style="padding: 1.2rem;">
                     <button class="btn btn-sm btn-warning" onclick="openChangePasswordModal(${user.id}, '${user.username}')" style="margin-right: 5px;">
                         🔐 Pass
+                    </button>
+                    <button class="btn btn-sm ${isDisabled ? 'btn-success' : 'btn-secondary'}" onclick="toggleUserDisabled(${user.id})" style="margin-right: 5px;">
+                        ${isDisabled ? '🔓 Enable' : '🔒 Disable'}
                     </button>
                     <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
                         🗑️ Delete
@@ -603,6 +611,31 @@ function deleteUser(userId) {
         displayUsers();
         updateStats();
         showNotification(`User "${user.username}" deleted!`, 'info');
+    }
+}
+
+// Toggle user disabled status (disable/enable user)
+function toggleUserDisabled(userId) {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const currentStatus = user.disabled || false;
+    const newStatus = !currentStatus;
+    const action = newStatus ? 'disable' : 'enable';
+    
+    if (confirm(`Are you sure you want to ${action} "${user.username}"?`)) {
+        user.disabled = newStatus;
+        saveUsers();
+        displayUsers();
+        updateStats();
+        
+        if (newStatus) {
+            showNotification(`User "${user.username}" has been disabled!`, 'warning');
+            console.log(`🔒 User ${user.username} disabled`);
+        } else {
+            showNotification(`User "${user.username}" has been enabled!`, 'success');
+            console.log(`🔓 User ${user.username} enabled`);
+        }
     }
 }
 

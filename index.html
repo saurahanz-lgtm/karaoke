@@ -654,10 +654,10 @@
             const stored = localStorage.getItem('karaoke_users');
             if (!stored) {
                 const demoUsers = [
-                    { id: 1, username: "john_doe", password: "pass123", role: "user", joined: "2024-01-01" },
-                    { id: 2, username: "maria_santos", password: "pass123", role: "user", joined: "2024-01-02" },
-                    { id: 3, username: "sarah_johnson", password: "pass123", role: "user", joined: "2024-01-03" },
-                    { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01" }
+                    { id: 1, username: "john_doe", password: "pass123", role: "user", joined: "2024-01-01", disabled: false },
+                    { id: 2, username: "maria_santos", password: "pass123", role: "user", joined: "2024-01-02", disabled: false },
+                    { id: 3, username: "sarah_johnson", password: "pass123", role: "user", joined: "2024-01-03", disabled: false },
+                    { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", disabled: false }
                 ];
                 localStorage.setItem('karaoke_users', JSON.stringify(demoUsers));
                 
@@ -833,6 +833,14 @@
                 const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
 
                 if (adminUser) {
+                    // Check if user is disabled
+                    if (adminUser.disabled) {
+                        console.log('❌ Admin user is disabled:', adminUser.username);
+                        alert('❌ This admin account has been disabled.\n\nPlease contact another administrator.');
+                        document.getElementById('adminName').focus();
+                        return;
+                    }
+                    
                     console.log('✅ Admin user found:', adminUser.username);
                     
                     // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
@@ -870,6 +878,14 @@
                 const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
 
                 if (singerUser) {
+                    // Check if user is disabled
+                    if (singerUser.disabled) {
+                        console.log('❌ Singer user is disabled:', singerUser.username);
+                        alert('❌ Your account has been disabled.\n\nPlease contact an administrator.');
+                        document.getElementById('singerUsername').focus();
+                        return;
+                    }
+                    
                     console.log('✅ Singer user found:', singerUser.username);
                     
                     // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
