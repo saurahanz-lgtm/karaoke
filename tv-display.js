@@ -200,7 +200,7 @@ function initializeTVDisplay() {
         displayQueue();
         checkAndPlayCurrentSong();
     });
-});
+}
 
 /* ===== FIREBASE LISTENERS ===== */
 
