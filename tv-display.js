@@ -1284,17 +1284,17 @@ function showTVDisabledMessage() {
     const splashScreen = document.getElementById('splashScreen');
     if (splashScreen) {
         splashScreen.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; text-align: center; background: linear-gradient(135deg, #1a0a2e 0%, #0f0f1e 100%);">
-                <div style="font-size: 80px; margin-bottom: 30px;">🔴</div>
-                <h1 style="font-size: 3rem; font-weight: 700; margin: 0 0 20px 0;">TV DISPLAY</h1>
-                <h2 style="font-size: 2rem; font-weight: 500; margin: 0 0 10px 0; color: #ef4444;">DISABLED</h2>
-                <p style="font-size: 1.2rem; color: #999; margin: 20px 0 0 0; max-width: 600px;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; color: white; text-align: center; background: linear-gradient(135deg, #1a0a2e 0%, #0f0f1e 100%); padding: 20px; box-sizing: border-box; font-family: Arial, sans-serif;">
+                <div style="font-size: clamp(40px, 12vw, 100px); margin-bottom: clamp(15px, 5vw, 40px);">🔴</div>
+                <h1 style="font-size: clamp(1.5rem, 8vw, 3.5rem); font-weight: 700; margin: 0 0 clamp(10px, 3vw, 25px) 0; letter-spacing: 2px;">TV DISPLAY</h1>
+                <h2 style="font-size: clamp(1.2rem, 6vw, 2.5rem); font-weight: 500; margin: 0 0 clamp(8px, 2vw, 15px) 0; color: #ef4444;">DISABLED</h2>
+                <p style="font-size: clamp(0.9rem, 3.5vw, 1.3rem); color: #999; margin: clamp(15px, 3vw, 30px) auto 0; max-width: 90%; line-height: 1.6;">
                     The TV display has been disabled by the admin.<br>
                     Please contact an administrator to enable it.
                 </p>
-                <div style="margin-top: 40px; font-size: 0.9rem; color: #666;">
-                    <p>Admin can enable it from the dashboard</p>
-                    <p style="margin-top: 30px; font-size: 0.8rem;">⏰ Please wait or refresh the page</p>
+                <div style="margin-top: clamp(25px, 5vw, 50px); font-size: clamp(0.75rem, 2.5vw, 1rem); color: #666; line-height: 1.8;">
+                    <p style="margin: 0;">Admin can enable it from the dashboard</p>
+                    <p style="margin: clamp(20px, 3vw, 40px) 0 0 0; font-size: clamp(0.7rem, 2vw, 0.9rem);">⏰ Please wait or refresh the page</p>
                 </div>
             </div>
         `;
