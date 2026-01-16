@@ -695,14 +695,13 @@
             return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
 
-        // Get or create session ID for this device
+        // Get or create session ID for this device (keep in memory only)
         function getDeviceSessionId() {
-            let sessionId = localStorage.getItem('karaoke_device_session_id');
-            if (!sessionId) {
-                sessionId = generateSessionId();
-                localStorage.setItem('karaoke_device_session_id', sessionId);
+            if (!window.deviceSessionId) {
+                window.deviceSessionId = generateSessionId();
+                console.log('🆔 Generated device session ID:', window.deviceSessionId);
             }
-            return sessionId;
+            return window.deviceSessionId;
         }
 
         // Check if user is already logged in from another device (using Firebase)
@@ -764,17 +763,13 @@
             }
         }
 
-        // Register login session in Firebase
+        // Register login session in Firebase ONLY
         function registerLoginSession(username) {
             const sessionId = getDeviceSessionId();
             console.log('📝 Registering login session for', username);
             console.log('🎫 Session ID:', sessionId);
             
-            localStorage.setItem('karaoke_last_login_user', username);
-            localStorage.setItem('karaoke_last_session_id', sessionId);
-            localStorage.setItem('karaoke_login_timestamp', Date.now().toString());
-            
-            // Also register in Firebase
+            // Store ONLY in Firebase (no localStorage for sessions)
             if (typeof firebase !== 'undefined' && firebase.database) {
                 try {
                     firebase.database().ref('activeLogin/' + username).set({
@@ -785,7 +780,6 @@
                         console.log('✅ Session registered in Firebase');
                     }).catch(err => {
                         console.warn('⚠️ Firebase registration failed:', err.message);
-                        // Continue anyway - localStorage will be fallback
                     });
                 } catch (e) {
                     console.warn('⚠️ Firebase error:', e.message);
@@ -795,15 +789,11 @@
             }
         }
 
-        // Clear login session
+        // Clear login session (Firebase only)
         function clearLoginSession() {
-            const username = localStorage.getItem('karaoke_last_login_user');
-            localStorage.removeItem('karaoke_last_login_user');
-            localStorage.removeItem('karaoke_last_session_id');
-            localStorage.removeItem('karaoke_login_timestamp');
-            localStorage.removeItem('karaoke_device_session_id');
+            const username = window.loggedInUsername; // Get from memory
             
-            // Also clear from Firebase
+            // Clear from Firebase
             if (username && typeof firebase !== 'undefined' && firebase.database) {
                 try {
                     firebase.database().ref('activeLogin/' + username).remove()
@@ -812,6 +802,12 @@
                     console.warn('Firebase error:', e.message);
                 }
             }
+            
+            // Clear from memory
+            window.deviceSessionId = null;
+            window.loggedInUsername = null;
+            
+            console.log('✅ Login session cleared');
         }
 
         function validateAdminLogin(event) {

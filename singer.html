@@ -575,7 +575,7 @@
         // Validate Firebase session match
         function validateSingerSession() {
             const username = loggedInUser?.username;
-            const deviceSessionId = localStorage.getItem('karaoke_device_session_id');
+            const deviceSessionId = window.deviceSessionId; // Get from memory only
             
             if (!username || !deviceSessionId) {
                 console.warn('❌ Missing session data');
@@ -599,8 +599,6 @@
                         
                         if (data.sessionId !== deviceSessionId) {
                             console.warn('❌ Session mismatch! You were logged in from another device.');
-                            localStorage.removeItem('karaoke_logged_in_user');
-                            localStorage.removeItem('karaoke_device_session_id');
                             alert('Your session has been disconnected. You were logged in from another device.');
                             window.location.href = 'index.html';
                             return;
@@ -850,13 +848,7 @@
         // Disconnect singer
         function disconnectSinger() {
             if (confirm('Are you sure you want to disconnect?')) {
-                const username = localStorage.getItem('karaoke_last_login_user');
-                
-                localStorage.removeItem('karaoke_logged_in_user');
-                localStorage.removeItem('karaoke_last_login_user');
-                localStorage.removeItem('karaoke_last_session_id');
-                localStorage.removeItem('karaoke_login_timestamp');
-                localStorage.removeItem('karaoke_device_session_id');
+                const username = loggedInUser?.username;
                 
                 // Clear from Firebase
                 if (username && typeof firebase !== 'undefined' && firebase.database) {
@@ -867,6 +859,10 @@
                         console.warn('Firebase error:', e.message);
                     }
                 }
+                
+                // Clear from memory
+                loggedInUser = null;
+                window.deviceSessionId = null;
                 
                 window.location.href = 'index.html';
             }

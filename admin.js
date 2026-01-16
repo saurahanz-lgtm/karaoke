@@ -73,11 +73,15 @@ function checkAuthentication() {
 // Validate Firebase session match for admin
 function validateAdminSession() {
     const username = loggedInUser?.username;
-    const deviceSessionId = localStorage.getItem('karaoke_device_session_id');
+    const deviceSessionId = window.deviceSessionId; // Get from memory only
     
-    if (!username || !deviceSessionId) {
-        console.warn('❌ Missing admin session data');
-        window.location.href = 'index.html';
+    if (!username) {
+        console.warn('❌ No username in loggedInUser');
+        return;
+    }
+    
+    if (!deviceSessionId) {
+        console.warn('❌ No device session ID in memory');
         return;
     }
     
@@ -92,8 +96,6 @@ function validateAdminSession() {
                 if (!data || !data.sessionId) {
                     console.warn('❌ No active admin session found in Firebase');
                     // Session was cleared, logout
-                    localStorage.removeItem('karaoke_logged_in_user');
-                    localStorage.removeItem('karaoke_device_session_id');
                     alert('Your session has been disconnected.');
                     window.location.href = 'index.html';
                     return;
@@ -101,8 +103,6 @@ function validateAdminSession() {
                 
                 if (data.sessionId !== deviceSessionId) {
                     console.warn('❌ Admin session mismatch! Logged in from another device.');
-                    localStorage.removeItem('karaoke_logged_in_user');
-                    localStorage.removeItem('karaoke_device_session_id');
                     alert('Your session has been disconnected. You were logged in from another device.');
                     window.location.href = 'index.html';
                     return;
@@ -124,11 +124,7 @@ function updateAdminActivity() {
     
     const now = Date.now();
     
-    // Update in localStorage
-    loggedInUser.lastActivity = now;
-    localStorage.setItem('karaoke_logged_in_user', JSON.stringify(loggedInUser));
-    
-    // Update in Firebase
+    // Update in Firebase only (no localStorage)
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
             firebase.database().ref('users/' + loggedInUser.id).update({
@@ -148,13 +144,7 @@ function updateAdminActivity() {
 // Logout function
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
-        const username = localStorage.getItem('karaoke_last_login_user');
-        
-        localStorage.removeItem('karaoke_logged_in_user');
-        localStorage.removeItem('karaoke_last_login_user');
-        localStorage.removeItem('karaoke_last_session_id');
-        localStorage.removeItem('karaoke_login_timestamp');
-        localStorage.removeItem('karaoke_device_session_id');
+        const username = loggedInUser?.username;
         
         // Clear from Firebase
         if (username && typeof firebase !== 'undefined' && firebase.database) {
@@ -165,6 +155,10 @@ function logout() {
                 console.warn('Firebase error:', e.message);
             }
         }
+        
+        // Clear from memory
+        loggedInUser = null;
+        window.deviceSessionId = null;
         
         window.location.href = 'index.html';
     }
