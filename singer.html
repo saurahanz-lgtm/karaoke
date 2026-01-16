@@ -60,7 +60,7 @@
         .controls {
             display: flex;
             gap: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 18px;
         }
 
         .controls button {
@@ -90,6 +90,79 @@
 
         .play:hover { background: #1da850; }
         .pause:hover { background: #5a5f6b; }
+
+        /* Volume Control Styles */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: rgba(102, 126, 234, 0.15);
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        .volume-icon {
+            font-size: 1.3rem;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .volume-slider::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+        }
+
+        .volume-slider::-moz-range-track {
+            background: transparent;
+            border: none;
+        }
+
+        .volume-value {
+            min-width: 35px;
+            text-align: right;
+            font-weight: 600;
+            color: #f093fb;
+            font-size: 0.9rem;
+        }
 
         .disconnect {
             background: linear-gradient(135deg, #f5576c, #f093fb);
@@ -401,6 +474,13 @@
                 <button class="play" id="playPauseBtn" onclick="togglePlayPause()">▶</button>
                 <button class="stop" onclick="stopPlayer()">■</button>
             </div>
+
+            <!-- Volume Control -->
+            <div class="volume-control">
+                <span class="volume-icon">🔉</span>
+                <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="70" oninput="updateVolume(this.value)">
+                <span class="volume-value"><span id="volumeValue">70</span>%</span>
+            </div>
             
             <!-- Hidden audio player for preview -->
             <audio id="audioPlayer" style="display: none;"></audio>
@@ -618,6 +698,13 @@
             displayReservedSongs();
             updateUserDisplay();
             updateSingerActivity();
+            
+            // Initialize volume control
+            const volumeSlider = document.getElementById('volumeSlider');
+            if (volumeSlider && audioPlayer) {
+                audioPlayer.volume = volumeSlider.value / 100;
+                console.log('🔊 Initial volume set to:', volumeSlider.value + '%');
+            }
             
             // Listen for Firebase queue updates if available
             if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
@@ -1200,6 +1287,20 @@
                 }
             } else {
                 showAlert('Firebase not available - controls disabled', 'warning');
+            }
+        }
+
+        // Update volume control
+        function updateVolume(value) {
+            const volumeValue = document.getElementById('volumeValue');
+            if (volumeValue) {
+                volumeValue.textContent = value;
+            }
+
+            if (audioPlayer) {
+                // Convert percentage (0-100) to decimal (0-1)
+                audioPlayer.volume = value / 100;
+                console.log('🔊 Volume set to:', value + '%');
             }
         }
 
