@@ -28,6 +28,12 @@ if (typeof firebase !== 'undefined') {
         const songsRef = database.ref('songs');
         const queueRef = database.ref('queue');
         const reservationsRef = database.ref('reservations');
+        
+        console.log('✅ Firebase initialized for project: karaoke-58233');
+        console.log('📝 NOTE: Configure Firebase Realtime Database Rules:');
+        console.log('Go to Firebase Console > Realtime Database > Rules');
+        console.log('Replace with: { "rules": { ".read": true, ".write": true } }');
+        console.log('Then click "Publish" button');
     } catch (error) {
         console.warn('Firebase initialization skipped or failed:', error.message);
     }
