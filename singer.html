@@ -1327,26 +1327,38 @@
                 volumeValue.textContent = value;
             }
 
-            // Get the audio player element
+            // Get the audio player element for local preview
             let player = audioPlayer || document.getElementById('audioPlayer');
             
-            if (!player) {
-                console.warn('⚠️ Audio player element not found');
-                return;
+            if (player) {
+                // Convert percentage (0-100) to decimal (0-1)
+                const volumeDecimal = value / 100;
+                player.volume = volumeDecimal;
+                console.log('🔊 Local volume set to:', value + '% (decimal: ' + volumeDecimal.toFixed(2) + ')');
             }
             
-            // Convert percentage (0-100) to decimal (0-1)
-            const volumeDecimal = value / 100;
-            player.volume = volumeDecimal;
+            // Send volume command to TV display via Firebase
+            if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('control').set({ 
+                        command: 'setVolume', 
+                        volume: parseInt(value),
+                        timestamp: Date.now() 
+                    });
+                    console.log('📡 Volume command sent to TV display:', value);
+                } catch (err) {
+                    console.warn('Firebase volume control error:', err.message);
+                }
+            }
             
-            console.log('🔊 Volume set to:', value + '% (decimal: ' + volumeDecimal.toFixed(2) + ')');
-            
-            // Also update the mute button state
+            // Update mute button state based on volume
             const muteBtn = document.getElementById('muteBtn');
-            if (muteBtn && value == 0) {
-                muteBtn.textContent = '🔇';
-            } else if (muteBtn && value > 0) {
-                muteBtn.textContent = '🔊';
+            if (muteBtn) {
+                if (value == 0) {
+                    muteBtn.textContent = '🔇';
+                } else {
+                    muteBtn.textContent = '🔊';
+                }
             }
         }
 

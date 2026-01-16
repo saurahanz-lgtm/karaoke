@@ -322,6 +322,15 @@ function initializeFirebaseListeners() {
                     }
                 }
                 break;
+                
+            case 'setVolume':
+                if (window.tvPlayer && typeof control.volume === 'number') {
+                    const volumePercent = Math.max(0, Math.min(100, control.volume));
+                    const volumeDecimal = volumePercent / 100;
+                    window.tvPlayer.setVolume(volumeDecimal * 100); // YouTube uses 0-100 scale
+                    console.log('🔊 Volume set to:', volumePercent + '%');
+                }
+                break;
         }
     }, (error) => {
         console.warn('⚠️ Firebase control listener error:', error);
