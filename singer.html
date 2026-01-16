@@ -565,7 +565,55 @@
                 return false;
             }
             loggedInUser = JSON.parse(stored);
+            
+            // Validate session on singer page load
+            validateSingerSession();
+            
             return true;
+        }
+
+        // Validate Firebase session match
+        function validateSingerSession() {
+            const username = loggedInUser?.username;
+            const deviceSessionId = localStorage.getItem('karaoke_device_session_id');
+            
+            if (!username || !deviceSessionId) {
+                console.warn('❌ Missing session data');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            console.log('🔍 Validating singer session...');
+            
+            // Check Firebase to see if logged in user matches current device
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('activeLogin/' + username).once('value', (snapshot) => {
+                        const data = snapshot.val();
+                        
+                        if (!data || !data.sessionId) {
+                            console.warn('❌ No active session found in Firebase');
+                            window.location.href = 'index.html';
+                            return;
+                        }
+                        
+                        if (data.sessionId !== deviceSessionId) {
+                            console.warn('❌ Session mismatch! You were logged in from another device.');
+                            localStorage.removeItem('karaoke_logged_in_user');
+                            localStorage.removeItem('karaoke_device_session_id');
+                            alert('Your session has been disconnected. You were logged in from another device.');
+                            window.location.href = 'index.html';
+                            return;
+                        }
+                        
+                        console.log('✅ Session validated successfully');
+                    }).catch(err => {
+                        console.warn('Firebase validation error (continuing anyway):', err.message);
+                    });
+                } catch (e) {
+                    console.warn('Firebase validation exception (continuing anyway):', e.message);
+                }
+            }
         }
 
         // Check if Firebase is properly configured
@@ -649,6 +697,10 @@
             // Update timestamp every 5 seconds while page is open (faster updates)
             const activityInterval = setInterval(updateActivityTimestamp, 5000);
             console.log('⏱️ Activity timer started');
+            
+            // Validate singer session every 8 seconds to detect if logged in elsewhere
+            const sessionValidationInterval = setInterval(validateSingerSession, 8000);
+            console.log('🔐 Session validation timer started');
             
             // Update timestamp on user interactions
             const updateOnClick = () => updateActivityTimestamp();

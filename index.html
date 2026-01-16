@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -709,10 +709,15 @@
         function checkIfLoggedInElsewhere(username, callback) {
             console.log('🔍 Checking if', username, 'is logged in elsewhere...');
             
+            let callbackCalled = false;
+            
             const timeoutId = setTimeout(() => {
-                console.warn('⏱️ Firebase check timeout - allowing login');
-                callback(false); // Timeout: allow login
-            }, 3000); // 3 second timeout
+                if (!callbackCalled) {
+                    callbackCalled = true;
+                    console.warn('⏱️ Firebase check timeout - BLOCKING login');
+                    callback(true); // Timeout: BLOCK login to be safe
+                }
+            }, 5000); // 5 second timeout - block if no response
             
             // Try to check from Firebase first
             if (typeof firebase !== 'undefined' && firebase.database) {
@@ -720,7 +725,10 @@
                     const loginRef = firebase.database().ref('activeLogin/' + username);
                     
                     loginRef.once('value', (snapshot) => {
+                        if (callbackCalled) return; // Already handled by timeout
+                        callbackCalled = true;
                         clearTimeout(timeoutId);
+                        
                         const data = snapshot.val();
                         const currentSessionId = getDeviceSessionId();
                         
@@ -729,26 +737,30 @@
                         
                         // If there's an active login and it's from a different session
                         if (data && data.sessionId && data.sessionId !== currentSessionId) {
-                            console.log('❌ User already logged in with different session');
-                            callback(true); // User logged in elsewhere
+                            console.log('❌ User already logged in with different session:', data.sessionId);
+                            callback(true); // User logged in elsewhere - BLOCK
                         } else {
                             console.log('✅ Safe to login - no other session found');
                             callback(false); // Safe to login
                         }
                     }).catch(err => {
+                        if (callbackCalled) return;
+                        callbackCalled = true;
                         clearTimeout(timeoutId);
                         console.warn('⚠️ Firebase read error:', err.message);
-                        callback(false); // Fallback: allow login if Firebase fails
+                        callback(true); // On error: BLOCK to be safe
                     });
                 } catch (e) {
+                    if (callbackCalled) return;
+                    callbackCalled = true;
                     clearTimeout(timeoutId);
                     console.warn('⚠️ Firebase exception:', e.message);
-                    callback(false); // Fallback: allow login
+                    callback(true); // On exception: BLOCK to be safe
                 }
             } else {
                 clearTimeout(timeoutId);
                 console.warn('⚠️ Firebase not available');
-                callback(false); // Firebase not available, allow login
+                callback(false); // Firebase not available, allow login (can't verify)
             }
         }
 

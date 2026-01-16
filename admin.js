@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update admin activity every 30 seconds to keep them as Online
     setInterval(updateAdminActivity, 30000);
     
+    // Validate admin session every 10 seconds to detect if logged in elsewhere
+    setInterval(validateAdminSession, 10000);
+    
     // Also track clicks and key presses to update activity
     document.addEventListener('click', updateAdminActivity);
     document.addEventListener('keypress', updateAdminActivity);
@@ -52,12 +55,63 @@ function checkAuthentication() {
             userInfoEl.textContent = `Logged in as: ${loggedInUser.username} (${loggedInUser.role})`;
         }
         
+        // Validate session immediately
+        validateAdminSession();
+        
         // Update admin user's lastActivity to show as Online
         updateAdminActivity();
     } else {
         // Not logged in, redirect to home
         alert('Please login first');
         window.location.href = 'index.html';
+    }
+}
+
+// Validate Firebase session match for admin
+function validateAdminSession() {
+    const username = loggedInUser?.username;
+    const deviceSessionId = localStorage.getItem('karaoke_device_session_id');
+    
+    if (!username || !deviceSessionId) {
+        console.warn('❌ Missing admin session data');
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    console.log('🔍 Validating admin session...');
+    
+    // Check Firebase to see if logged in admin matches current device
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        try {
+            firebase.database().ref('activeLogin/' + username).once('value', (snapshot) => {
+                const data = snapshot.val();
+                
+                if (!data || !data.sessionId) {
+                    console.warn('❌ No active admin session found in Firebase');
+                    // Session was cleared, logout
+                    localStorage.removeItem('karaoke_logged_in_user');
+                    localStorage.removeItem('karaoke_device_session_id');
+                    alert('Your session has been disconnected.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                if (data.sessionId !== deviceSessionId) {
+                    console.warn('❌ Admin session mismatch! Logged in from another device.');
+                    localStorage.removeItem('karaoke_logged_in_user');
+                    localStorage.removeItem('karaoke_device_session_id');
+                    alert('Your session has been disconnected. You were logged in from another device.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                console.log('✅ Admin session validated successfully');
+            }).catch(err => {
+                console.warn('Firebase admin validation error:', err.message);
+            });
+        } catch (e) {
+            console.warn('Firebase validation exception:', e.message);
+        }
     }
 }
 
