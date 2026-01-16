@@ -221,6 +221,8 @@ function loadUsers() {
                 if (data) {
                     // Handle both array and object formats from Firebase
                     users = Array.isArray(data) ? data : Object.values(data);
+                    // Filter out invalid entries (must have username)
+                    users = users.filter(u => u && u.username);
                     console.log('✅ Users loaded from Firebase:', users.length, users);
                 } else {
                     // Firebase is empty, use default/localStorage
@@ -254,9 +256,11 @@ function loadUsers() {
                 const data = snapshot.val();
                 if (data) {
                     const firebaseUsers = Array.isArray(data) ? data : Object.values(data);
+                    // Filter out invalid entries (must have username)
+                    const validUsers = firebaseUsers.filter(u => u && u.username);
                     // Only update display if data actually changed
-                    if (JSON.stringify(firebaseUsers) !== JSON.stringify(users)) {
-                        users = firebaseUsers;
+                    if (JSON.stringify(validUsers) !== JSON.stringify(users)) {
+                        users = validUsers;
                         console.log('🔄 Users updated from Firebase listener');
                         displayUsers();
                         updateStats();
@@ -276,7 +280,9 @@ function loadUsers() {
                 firebase.database().ref('users').once('value', (snapshot) => {
                     const data = snapshot.val();
                     if (data) {
-                        users = Object.values(data);
+                        users = Array.isArray(data) ? data : Object.values(data);
+                        // Filter out invalid entries (ensure all have username)
+                        users = users.filter(u => u && u.username);
                         displayUsers();
                         updateStats();
                     }
@@ -483,12 +489,12 @@ function displayUsers() {
     const tbody = document.getElementById('usersTableBody');
     const emptyMessage = document.getElementById('emptyMessage');
     
-    // Filter users based on current filter
-    let filteredUsers = users;
+    // Filter users based on current filter and validity
+    let filteredUsers = users.filter(u => u && u.username);  // Ensure valid users only
     if (currentFilter === 'online') {
-        filteredUsers = users.filter(u => isUserOnline(u));
+        filteredUsers = filteredUsers.filter(u => isUserOnline(u));
     } else if (currentFilter === 'offline') {
-        filteredUsers = users.filter(u => !isUserOnline(u));
+        filteredUsers = filteredUsers.filter(u => !isUserOnline(u));
     }
     
     if (filteredUsers.length === 0) {
