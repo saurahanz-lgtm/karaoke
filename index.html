@@ -775,9 +775,23 @@
                         
                         // If there's an active login
                         if (data && data.sessionId) {
-                            const lastActivity = data.timestamp || 0;
-                            const sessionAge = now - lastActivity;
+                            const lastActivity = data.timestamp;
                             
+                            // If timestamp is missing, invalid, or 0, treat as stale
+                            if (!lastActivity || typeof lastActivity !== 'number' || lastActivity === 0) {
+                                console.log('⚠️ Invalid or missing timestamp in Firebase session, treating as stale');
+                                // Clear the corrupted/invalid session
+                                try {
+                                    firebase.database().ref('activeLogin/' + username).remove()
+                                        .catch(err => console.warn('Error clearing invalid session:', err.message));
+                                } catch (e) {
+                                    console.warn('Error clearing invalid session:', e.message);
+                                }
+                                callback(false);
+                                return;
+                            }
+                            
+                            const sessionAge = now - lastActivity;
                             console.log('⏱️ Session age:', Math.round(sessionAge / 1000), 'seconds');
                             
                             // Check if the session is from a different device
