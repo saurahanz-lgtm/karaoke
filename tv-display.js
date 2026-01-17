@@ -268,6 +268,14 @@ function initializeFirebaseListeners() {
             console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'valid songs');
             console.log('📡 Queue details:', tvQueue.map(s => ({ title: s.title, requestedBy: s.requestedBy })));
             
+            // Sync queue back to localStorage
+            try {
+                localStorage.setItem('karaoke_queue', JSON.stringify(tvQueue));
+                console.log('✅ Queue synced to localStorage');
+            } catch (e) {
+                console.warn('⚠️ Could not sync queue to localStorage:', e.message);
+            }
+            
             // Auto-play first song if no current song and queue has songs
             if (tvQueue.length > 0 && (!currentSong || !currentSong.videoId)) {
                 console.log('▶️ Auto-playing first song in queue...');
@@ -294,6 +302,23 @@ function initializeFirebaseListeners() {
         checkBootupCompletion();
     }, (error) => {
         console.error('❌ Firebase queue listener error:', error);
+    });
+    
+    // Also listen to localStorage changes (cross-tab sync)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'karaoke_queue' && e.newValue) {
+            try {
+                const localQueue = JSON.parse(e.newValue);
+                if (Array.isArray(localQueue) && localQueue.length > tvQueue.length) {
+                    console.log('📱 Queue updated from other tab/window, syncing to Firebase');
+                    firebase.database().ref('queue').set(localQueue).catch(err => {
+                        console.warn('Could not sync localStorage queue to Firebase:', err.message);
+                    });
+                }
+            } catch (error) {
+                console.warn('Error processing storage event:', error.message);
+            }
+        }
     });
 
     db.ref('currentSong').on('value', snap => {
@@ -396,6 +421,37 @@ function initializeFirebaseListeners() {
     });
     
     console.log('✅ [3/7] Firebase listeners attached');
+    
+    // Sync queue from localStorage periodically (backup sync method)
+    let lastStorageQueueLength = 0;
+    setInterval(() => {
+        try {
+            const localQueue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+            // Only update if queue changed
+            if (localQueue.length !== lastStorageQueueLength) {
+                console.log('🔄 Syncing queue from localStorage (', localQueue.length, 'songs, was', lastStorageQueueLength, ')');
+                tvQueue = localQueue;
+                lastStorageQueueLength = localQueue.length;
+                displayQueue();
+                updateNextSongDisplay();
+                
+                // If localStorage has songs but currentSong is not set, auto-play first
+                if (localQueue.length > 0 && (!currentSong || !currentSong.videoId)) {
+                    const firstSong = localQueue[0];
+                    currentSong = {
+                        title: firstSong.title,
+                        artist: firstSong.artist,
+                        videoId: firstSong.videoId,
+                        requestedBy: firstSong.requestedBy,
+                        singer: firstSong.requestedBy
+                    };
+                    tryInitPlayback();
+                }
+            }
+        } catch (e) {
+            console.warn('Error syncing from localStorage:', e.message);
+        }
+    }, 1000); // Check every 1 second for faster updates
     
     // 🔥 Load initial data after listeners are attached
     console.log('📡 [3/7] Loading initial songs from Firebase...');
