@@ -252,8 +252,21 @@ function initializeFirebaseListeners() {
             console.log('📡 Queue is empty (no songs yet)');
         } else {
             // Convert Firebase object to array (Firebase stores objects, not arrays)
-            tvQueue = Array.isArray(data) ? data : Object.values(data);
-            console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'songs');
+            // Handle both array and object formats from Firebase
+            if (Array.isArray(data)) {
+                tvQueue = data;
+            } else if (typeof data === 'object') {
+                // Convert object with numeric keys to array
+                tvQueue = Object.values(data);
+            } else {
+                tvQueue = [];
+            }
+            
+            // Filter out any invalid entries
+            tvQueue = tvQueue.filter(song => song && song.title && song.videoId && song.requestedBy);
+            
+            console.log('📡 Queue loaded from Firebase:', tvQueue.length, 'valid songs');
+            console.log('📡 Queue details:', tvQueue.map(s => ({ title: s.title, requestedBy: s.requestedBy })));
             
             // Auto-play first song if no current song and queue has songs
             if (tvQueue.length > 0 && (!currentSong || !currentSong.videoId)) {
@@ -272,9 +285,13 @@ function initializeFirebaseListeners() {
             }
         }
         
+        // Always update display when queue changes
+        console.log('📺 Updating TV display - Queue has', tvQueue.length, 'songs');
+        displayQueue();
+        updateNextSongDisplay();
+        
         // Check if bootup can be hidden
         checkBootupCompletion();
-        displayQueue();
     }, (error) => {
         console.error('❌ Firebase queue listener error:', error);
     });

@@ -1077,31 +1077,79 @@
                 // Write to Firebase first (primary method)
                 if (useSingerFirebase && typeof firebase !== 'undefined' && firebase.database) {
                     try {
-                        // Load current queue from localStorage
-                        let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
-                        queue.push(newSong);
-                        
-                        // Save entire queue to Firebase (replaces old approach of individual songs)
-                        firebase.database().ref('queue').set(queue).then(() => {
-                            console.log('✅ Song added to Firebase queue:', newSong.title);
-                            addToLocalQueue(newSong);
-                            setCurrentSongAndAutoPlay(newSong);
-                            successCallback(btn, title);
-                        }).catch(err => {
-                            console.warn('Firebase write failed:', err.message);
-                            // Fallback to localStorage
-                            addToLocalQueue(newSong);
-                            setCurrentSongAndAutoPlay(newSong);
-                            successCallback(btn, title);
+                        // Load current queue from Firebase first (to ensure we have the latest)
+                        firebase.database().ref('queue').once('value', firebaseSnapshot => {
+                            let queue = [];
+                            const firebaseQueue = firebaseSnapshot.val();
+                            
+                            // Get queue from Firebase if it exists
+                            if (firebaseQueue) {
+                                queue = Array.isArray(firebaseQueue) ? firebaseQueue : Object.values(firebaseQueue);
+                            } else {
+                                // Fallback to localStorage if Firebase is empty
+                                queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+                            }
+                            
+                            // Add the new song to the queue
+                            queue.push(newSong);
+                            
+                            console.log('📡 Saving queue to Firebase with', queue.length, 'songs');
+                            console.log('📡 Queue contents:', queue.map(s => ({ title: s.title, requestedBy: s.requestedBy })));
+                            
+                            // Save entire queue to Firebase
+                            firebase.database().ref('queue').set(queue).then(() => {
+                                console.log('✅ Song added to Firebase queue:', newSong.title);
+                                // Also save to localStorage for fallback
+                                localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+                                addToLocalQueue(newSong);
+                                setCurrentSongAndAutoPlay(newSong);
+                                successCallback(btn, title);
+                            }).catch(err => {
+                                console.warn('Firebase write failed:', err.message);
+                                // Fallback to localStorage
+                                let fallbackQueue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+                                fallbackQueue.push(newSong);
+                                localStorage.setItem('karaoke_queue', JSON.stringify(fallbackQueue));
+                                addToLocalQueue(newSong);
+                                setCurrentSongAndAutoPlay(newSong);
+                                successCallback(btn, title);
+                            });
+                        }).catch(fbReadErr => {
+                            console.warn('Firebase read error:', fbReadErr.message);
+                            // Fallback: Load from localStorage and try again
+                            let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+                            queue.push(newSong);
+                            
+                            firebase.database().ref('queue').set(queue).then(() => {
+                                console.log('✅ Song added to Firebase queue (after read retry):', newSong.title);
+                                localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+                                addToLocalQueue(newSong);
+                                setCurrentSongAndAutoPlay(newSong);
+                                successCallback(btn, title);
+                            }).catch(err => {
+                                console.warn('Firebase write failed after retry:', err.message);
+                                let fallbackQueue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+                                fallbackQueue.push(newSong);
+                                localStorage.setItem('karaoke_queue', JSON.stringify(fallbackQueue));
+                                addToLocalQueue(newSong);
+                                setCurrentSongAndAutoPlay(newSong);
+                                successCallback(btn, title);
+                            });
                         });
                     } catch (fbError) {
                         console.warn('Firebase error:', fbError.message);
+                        let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+                        queue.push(newSong);
+                        localStorage.setItem('karaoke_queue', JSON.stringify(queue));
                         addToLocalQueue(newSong);
                         setCurrentSongAndAutoPlay(newSong);
                         successCallback(btn, title);
                     }
                 } else {
                     // Fallback to localStorage
+                    let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+                    queue.push(newSong);
+                    localStorage.setItem('karaoke_queue', JSON.stringify(queue));
                     addToLocalQueue(newSong);
                     setCurrentSongAndAutoPlay(newSong);
                     successCallback(btn, title);

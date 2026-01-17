@@ -178,9 +178,15 @@ function updateAdminActivity() {
     const now = Date.now();
     
     // Update ONLY the logged-in user in the local users array (don't overwrite others)
-    const userIndex = users.findIndex(u => u.id === loggedInUser.id);
+    // Try to find by id first, then by username as fallback
+    let userIndex = users.findIndex(u => u.id === loggedInUser.id);
+    if (userIndex === -1) {
+        // Fallback: search by username
+        userIndex = users.findIndex(u => u.username === loggedInUser.username);
+    }
+    
     if (userIndex !== -1) {
-        // Make a copy to avoid mutation issues
+        // User found, update their lastActivity
         const updatedUsers = [...users];
         updatedUsers[userIndex] = {
             ...updatedUsers[userIndex],
@@ -197,6 +203,33 @@ function updateAdminActivity() {
             } catch (error) {
                 console.warn('Error updating admin activity:', error.message);
             }
+        }
+    } else {
+        // User not found in users array, add them to the list if they're an admin
+        if (loggedInUser.role === 'admin') {
+            const newAdminUser = {
+                id: loggedInUser.id || (Math.max(...users.map(u => u.id || 0), 0) + 1),
+                username: loggedInUser.username,
+                password: loggedInUser.password || '',
+                role: 'admin',
+                joined: loggedInUser.joined || new Date().toISOString().split('T')[0],
+                lastActivity: now,
+                disabled: false
+            };
+            
+            users.push(newAdminUser);
+            loggedInUser.lastActivity = now;
+            
+            // Update in Firebase
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('users').set(users).catch(err => console.warn('Firebase admin activity update failed:', err.message));
+                } catch (error) {
+                    console.warn('Error adding admin to users list:', error.message);
+                }
+            }
+            
+            console.log('✅ Admin user added to singers list:', loggedInUser.username);
         }
     }
     
