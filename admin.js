@@ -84,6 +84,7 @@ function validateSessionValidity() {
     const stored = localStorage.getItem('karaoke_logged_in_user');
     if (!stored) {
         // User data was cleared (logged in from another device)
+        console.warn('⚠️ User session cleared from localStorage');
         alert('Your session has been disconnected. You were logged in from another device.');
         window.location.href = 'index.html';
         return false;
@@ -134,7 +135,8 @@ function validateAdminSession() {
     }
     
     if (!deviceSessionId) {
-        console.warn('❌ No device session ID in memory or sessionStorage');
+        console.warn('⚠️ No device session ID in memory or sessionStorage - user may have lost session');
+        // Don't disconnect here - let user continue and login again if needed
         return;
     }
     
@@ -147,17 +149,48 @@ function validateAdminSession() {
                 const data = snapshot.val();
                 
                 if (!data || !data.sessionId) {
-                    console.warn('❌ No active admin session found in Firebase');
-                    // Session was cleared, logout
-                    alert('Your session has been disconnected.');
-                    window.location.href = 'index.html';
+                    console.log('ℹ️ No active admin session in Firebase (may have expired)');
+                    // Don't disconnect automatically - Firebase session may have expired
+                    // Re-register the current session
+                    try {
+                        firebase.database().ref('activeLogin/' + username).set({
+                            sessionId: deviceSessionId,
+                            timestamp: Date.now(),
+                            loginTime: new Date().toISOString()
+                        });
+                        console.log('✅ Re-registered current session in Firebase');
+                    } catch (e) {
+                        console.warn('Could not re-register session:', e.message);
+                    }
                     return;
                 }
                 
+                // Check if sessionId matches current device
                 if (data.sessionId !== deviceSessionId) {
-                    console.warn('❌ Admin session mismatch! Logged in from another device.');
-                    alert('Your session has been disconnected. You were logged in from another device.');
-                    window.location.href = 'index.html';
+                    // Different device logged in, but check the timestamp
+                    const timeSinceLogin = Date.now() - (data.timestamp || 0);
+                    
+                    // Only show disconnect warning if the OTHER login is very recent (within 2 minutes)
+                    // This prevents false positives from stale Firebase data
+                    if (timeSinceLogin < 120000) {
+                        console.warn('❌ Admin session mismatch! Logged in from another device within last 2 minutes.');
+                        console.warn(`Other device logged in ${(timeSinceLogin / 1000).toFixed(0)} seconds ago`);
+                        alert('Your session has been disconnected. You were logged in from another device.');
+                        window.location.href = 'index.html';
+                        return;
+                    } else {
+                        console.log(`ℹ️ Different device in Firebase but login was ${(timeSinceLogin / 1000).toFixed(0)}s ago - likely stale data`);
+                        // Re-register current session to update Firebase
+                        try {
+                            firebase.database().ref('activeLogin/' + username).set({
+                                sessionId: deviceSessionId,
+                                timestamp: Date.now(),
+                                loginTime: new Date().toISOString()
+                            });
+                        } catch (e) {
+                            console.warn('Could not update session:', e.message);
+                        }
+                    }
                     return;
                 }
                 
