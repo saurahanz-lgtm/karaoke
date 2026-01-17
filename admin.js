@@ -450,54 +450,78 @@ function loadUsers() {
 // Load from localStorage fallback
 function loadFromLocalStorage() {
     const stored = localStorage.getItem('karaoke_users');
-    if (stored) {
-        users = JSON.parse(stored);
-        // Ensure all users have required properties with safe defaults
-        users = users.map((u, idx) => ({
-            id: u.id || (idx + 1),
-            username: u.username || `user_${idx}`,
-            password: u.password || 'temp123',
-            role: u.role || 'user',
-            joined: u.joined || new Date().toISOString().split('T')[0],
-            lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity,
-            disabled: u.disabled === true ? true : false
-        }));
-    } else {
-        // Demo data - all admin accounts, explicitly set lastActivity to 0
-        users = [
-            { id: 1, username: "john_doe", password: "pass123", role: "admin", joined: "2024-01-01", lastActivity: 0, disabled: false },
-            { id: 2, username: "maria_santos", password: "pass123", role: "admin", joined: "2024-01-02", lastActivity: 0, disabled: false },
-            { id: 3, username: "sarah_johnson", password: "pass123", role: "admin", joined: "2024-01-03", lastActivity: 0, disabled: false },
-            { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", lastActivity: 0, disabled: false }
-        ];
-        saveUsers();
+    console.log('📂 Loading from localStorage. Data exists:', !!stored);
+    
+    if (stored && stored.length > 0) {
+        try {
+            let parsedUsers = JSON.parse(stored);
+            console.log('✅ Parsed users from localStorage:', parsedUsers.length, 'users');
+            
+            if (Array.isArray(parsedUsers) && parsedUsers.length > 0) {
+                // Validate and normalize each user
+                users = parsedUsers.map((u, idx) => ({
+                    id: u.id || (idx + 1),
+                    username: u.username || `user_${idx}`,
+                    password: u.password || 'temp123',
+                    role: u.role || 'user',
+                    joined: u.joined || new Date().toISOString().split('T')[0],
+                    lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity,
+                    disabled: u.disabled === true ? true : false
+                }));
+                console.log('✅ Users loaded from localStorage - Total:', users.length);
+                return; // Successfully loaded
+            }
+        } catch (error) {
+            console.error('❌ Error parsing localStorage data:', error.message);
+            console.log('📝 Raw localStorage content:', stored.substring(0, 100) + '...');
+        }
     }
+    
+    // Fallback to demo data if localStorage is empty or invalid
+    console.log('⚠️ localStorage empty or invalid. Using demo data.');
+    users = [
+        { id: 1, username: "john_doe", password: "pass123", role: "admin", joined: "2024-01-01", lastActivity: 0, disabled: false },
+        { id: 2, username: "maria_santos", password: "pass123", role: "admin", joined: "2024-01-02", lastActivity: 0, disabled: false },
+        { id: 3, username: "sarah_johnson", password: "pass123", role: "admin", joined: "2024-01-03", lastActivity: 0, disabled: false },
+        { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", lastActivity: 0, disabled: false }
+    ];
+    saveUsers(); // Save demo data
 }
 
 // Save users to Firebase/localStorage
 function saveUsers() {
-    // Always save to localStorage as backup (keep as array)
-    localStorage.setItem('karaoke_users', JSON.stringify(users));
+    // CRITICAL: Always save to localStorage first (this is the reliable backup)
+    try {
+        const usersJson = JSON.stringify(users);
+        localStorage.setItem('karaoke_users', usersJson);
+        console.log('✅ Users SAVED to localStorage:', users.length, 'users');
+        console.log('📦 localStorage data:', usersJson.substring(0, 100) + '...');
+    } catch (error) {
+        console.error('❌ CRITICAL: Failed to save to localStorage:', error.message);
+        showNotification('⚠️ Warning: Could not save to browser storage', 'warning');
+        return; // Don't proceed if localStorage fails
+    }
     
-    // Try to save to Firebase - IMMEDIATE WRITE
+    // Then try to save to Firebase as backup (non-critical)
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
             const usersRef = firebase.database().ref('users');
             // Save as array directly to Firebase for cleaner retrieval
             usersRef.set(users).then(() => {
-                console.log('✅ Users IMMEDIATELY saved to Firebase as array');
+                console.log('✅ Users synced to Firebase');
                 // Broadcast change to all tabs/windows
                 broadcastUserUpdate();
             }).catch((error) => {
-                console.warn('Firebase save error:', error.message);
+                console.warn('⚠️ Firebase save error (data in localStorage):', error.message);
                 // Still broadcast even if Firebase fails
                 broadcastUserUpdate();
             });
         } catch (error) {
-            console.warn('Firebase not available, saved to localStorage only', error.message);
+            console.warn('⚠️ Firebase not available, using localStorage only', error.message);
             broadcastUserUpdate();
         }
     } else {
+        console.log('ℹ️ Firebase not available, using localStorage only');
         // Firebase not available, just broadcast localStorage update
         broadcastUserUpdate();
     }
@@ -647,8 +671,27 @@ function continueAddUser(username, password, role) {
         disabled: false   // New users are enabled by default
     };
     
+    console.log('➕ Adding new user:', newUser);
     users.push(newUser);
-    saveUsers(); // This saves to both Firebase and localStorage
+    console.log('📋 Total users after add:', users.length);
+    
+    // CRITICAL: Save immediately
+    saveUsers();
+    
+    // VERIFY: Check if data was saved to localStorage
+    const verification = localStorage.getItem('karaoke_users');
+    if (verification) {
+        const verifyData = JSON.parse(verification);
+        console.log('✅ Verification: localStorage now has', verifyData.length, 'users');
+        const userExists = verifyData.some(u => u.username === username);
+        if (!userExists) {
+            console.error('❌ VERIFICATION FAILED: New user not found in localStorage!');
+        } else {
+            console.log('✅ New user successfully verified in localStorage');
+        }
+    } else {
+        console.error('❌ CRITICAL: localStorage is empty after save!');
+    }
     
     // Reset form
     document.getElementById('addUserForm').reset();
@@ -685,10 +728,8 @@ function handleAddUser(e) {
         return;
     }
     
-    // Reload users from Firebase before adding (ensures we have latest data)
-    reloadUsersFromFirebase(function() {
-        continueAddUser(username, password, role);
-    });
+    // Add user directly without Firebase reload (to avoid stale data)
+    continueAddUser(username, password, role);
 }
 
 // Display users in table
