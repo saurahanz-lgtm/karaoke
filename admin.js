@@ -307,8 +307,13 @@ function logout() {
 function loadUsers() {
     // First, always load from localStorage immediately
     loadFromLocalStorage();
+    console.log('📂 Initial load from localStorage: ', users.length, 'users');
     
-    // Then try to sync from Firebase if available
+    // Display immediately with localStorage data (ensures users see data right away)
+    displayUsers();
+    updateStats();
+    
+    // Then try to sync from Firebase if available (update in background)
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
             const usersRef = firebase.database().ref('users');
@@ -320,35 +325,41 @@ function loadUsers() {
                     // Filter out invalid entries (must have username)
                     firebaseUsers = firebaseUsers.filter(u => u && u.username);
                     // Ensure all users have correct lastActivity format (default to 0 if missing)
-                    users = firebaseUsers.map(u => ({
+                    firebaseUsers = firebaseUsers.map(u => ({
                         ...u,
                         lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
                     }));
-                    console.log('✅ Users loaded from Firebase:', users.length, users);
-                    // Sync back to localStorage
-                    localStorage.setItem('karaoke_users', JSON.stringify(users));
+                    
+                    console.log('📡 Firebase loaded:', firebaseUsers.length, 'users');
+                    
+                    // SMART MERGE: Keep the version with more users (newer data)
+                    if (firebaseUsers.length > users.length) {
+                        console.log('✅ Firebase has newer data (', firebaseUsers.length, '>', users.length, ') - syncing to local');
+                        users = firebaseUsers;
+                        localStorage.setItem('karaoke_users', JSON.stringify(users));
+                        displayUsers();
+                        updateStats();
+                    } else if (firebaseUsers.length < users.length) {
+                        console.log('✅ localStorage has newer data (', users.length, '>', firebaseUsers.length, ') - syncing to Firebase');
+                        // localStorage has newer data, sync it back to Firebase
+                        usersRef.set(users).catch(err => console.warn('Re-sync to Firebase failed:', err.message));
+                    } else {
+                        console.log('✅ Both sources in sync -', users.length, 'users');
+                    }
                 } else {
-                    // Firebase is empty, keep localStorage version
-                    console.log('ℹ️ Firebase empty, using localStorage version');
+                    console.log('ℹ️ Firebase is empty - keeping localStorage version');
                 }
-                displayUsers();
-                updateStats();
             }).catch((error) => {
-                console.warn('Firebase error, keeping localStorage version:', error.message);
-                displayUsers();
-                updateStats();
+                console.warn('Firebase read error (keeping localStorage):', error.message);
             });
         } catch (error) {
             console.warn('Firebase not configured, using localStorage:', error.message);
-            displayUsers();
-            updateStats();
         }
     } else {
-        displayUsers();
-        updateStats();
+        console.log('ℹ️ Firebase not available, using localStorage only');
     }
     
-    // Set up real-time listener to catch updates from other admin windows (AFTER initial load)
+    // Set up real-time listener ONLY for real-time updates from other admin windows (with safety checks)
     setTimeout(() => {
         if (typeof firebase !== 'undefined' && firebase.database) {
             try {
@@ -357,18 +368,17 @@ function loadUsers() {
                     const data = snapshot.val();
                     if (data && Object.keys(data).length > 0) {
                         let firebaseUsers = Array.isArray(data) ? data : Object.values(data);
-                        // Filter out invalid entries (must have username)
                         firebaseUsers = firebaseUsers.filter(u => u && u.username);
-                        // Ensure all have correct lastActivity format
                         firebaseUsers = firebaseUsers.map(u => ({
                             ...u,
                             lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
                         }));
-                        // Only update display if data actually changed
-                        if (JSON.stringify(firebaseUsers) !== JSON.stringify(users)) {
+                        
+                        // SAFETY: Only update if Firebase has MORE users (newer data from another admin)
+                        // Don't overwrite if we have more users locally (we just added one)
+                        if (firebaseUsers.length > users.length) {
+                            console.log('🔄 Real-time update: Firebase has', firebaseUsers.length, 'vs local', users.length);
                             users = firebaseUsers;
-                            console.log('🔄 Users updated from Firebase real-time listener');
-                            // Sync back to localStorage
                             localStorage.setItem('karaoke_users', JSON.stringify(users));
                             displayUsers();
                             updateStats();
@@ -379,7 +389,7 @@ function loadUsers() {
                 console.warn('Firebase real-time listener setup failed:', error.message);
             }
         }
-    }, 500); // Delay to avoid race condition with initial load
+    }, 1000); // Increased delay to ensure new user is fully saved
     
     // Set up activity tracking - refresh every 2 seconds to show real-time status
     let lastDisplayHash = '';
@@ -502,27 +512,45 @@ function saveUsers() {
         return; // Don't proceed if localStorage fails
     }
     
-    // Then try to save to Firebase as backup (non-critical)
+    // Then WAIT for Firebase save to complete (critical for persistence)
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
             const usersRef = firebase.database().ref('users');
-            // Save as array directly to Firebase for cleaner retrieval
-            usersRef.set(users).then(() => {
-                console.log('✅ Users synced to Firebase');
-                // Broadcast change to all tabs/windows
-                broadcastUserUpdate();
-            }).catch((error) => {
-                console.warn('⚠️ Firebase save error (data in localStorage):', error.message);
-                // Still broadcast even if Firebase fails
-                broadcastUserUpdate();
-            });
+            // Save as array directly to Firebase
+            usersRef.set(users)
+                .then(() => {
+                    console.log('✅ CONFIRMED: Users synced to Firebase successfully');
+                    console.log('📊 Firebase now has', users.length, 'users');
+                    
+                    // Verify write was successful by reading back immediately
+                    usersRef.once('value', (snapshot) => {
+                        const fbData = snapshot.val();
+                        const fbUsers = Array.isArray(fbData) ? fbData : Object.values(fbData || {});
+                        console.log('✅ Firebase verification: Read back', fbUsers.length, 'users');
+                        if (fbUsers.length !== users.length) {
+                            console.warn('⚠️ Verification warning: Count mismatch - local:', users.length, 'Firebase:', fbUsers.length);
+                        }
+                    }).catch(err => {
+                        console.warn('Verification read error:', err.message);
+                    });
+                    
+                    // Broadcast change to all tabs/windows
+                    broadcastUserUpdate();
+                })
+                .catch((error) => {
+                    console.error('❌ Firebase save FAILED:', error.message);
+                    console.error('Error code:', error.code);
+                    showNotification('⚠️ Firebase sync failed (data saved locally)', 'warning');
+                    // Still broadcast even if Firebase fails
+                    broadcastUserUpdate();
+                });
         } catch (error) {
-            console.warn('⚠️ Firebase not available, using localStorage only', error.message);
+            console.error('❌ Firebase exception:', error.message);
+            console.warn('⚠️ Firebase not available, using localStorage only');
             broadcastUserUpdate();
         }
     } else {
         console.log('ℹ️ Firebase not available, using localStorage only');
-        // Firebase not available, just broadcast localStorage update
         broadcastUserUpdate();
     }
 }
