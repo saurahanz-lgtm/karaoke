@@ -305,13 +305,16 @@ function logout() {
 
 // Load users from Firebase/localStorage
 function loadUsers() {
-    // Check if Firebase is available
+    // First, always load from localStorage immediately
+    loadFromLocalStorage();
+    
+    // Then try to sync from Firebase if available
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
             const usersRef = firebase.database().ref('users');
             usersRef.once('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data) {
+                if (data && Object.keys(data).length > 0) {
                     // Handle both array and object formats from Firebase
                     let firebaseUsers = Array.isArray(data) ? data : Object.values(data);
                     // Filter out invalid entries (must have username)
@@ -322,68 +325,71 @@ function loadUsers() {
                         lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
                     }));
                     console.log('✅ Users loaded from Firebase:', users.length, users);
+                    // Sync back to localStorage
+                    localStorage.setItem('karaoke_users', JSON.stringify(users));
                 } else {
-                    // Firebase is empty, use default/localStorage
-                    loadFromLocalStorage();
+                    // Firebase is empty, keep localStorage version
+                    console.log('ℹ️ Firebase empty, using localStorage version');
                 }
                 displayUsers();
                 updateStats();
             }).catch((error) => {
-                console.warn('Firebase error, falling back to localStorage:', error.message);
-                loadFromLocalStorage();
+                console.warn('Firebase error, keeping localStorage version:', error.message);
                 displayUsers();
                 updateStats();
             });
         } catch (error) {
             console.warn('Firebase not configured, using localStorage:', error.message);
-            loadFromLocalStorage();
             displayUsers();
             updateStats();
         }
     } else {
-        loadFromLocalStorage();
         displayUsers();
         updateStats();
     }
     
-    // Set up real-time listener to catch updates from other admin windows
-    if (typeof firebase !== 'undefined' && firebase.database) {
-        try {
-            const usersRef = firebase.database().ref('users');
-            usersRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    let firebaseUsers = Array.isArray(data) ? data : Object.values(data);
-                    // Filter out invalid entries (must have username)
-                    firebaseUsers = firebaseUsers.filter(u => u && u.username);
-                    // Ensure all have correct lastActivity format
-                    firebaseUsers = firebaseUsers.map(u => ({
-                        ...u,
-                        lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
-                    }));
-                    // Only update display if data actually changed
-                    if (JSON.stringify(firebaseUsers) !== JSON.stringify(users)) {
-                        users = firebaseUsers;
-                        console.log('🔄 Users updated from Firebase listener');
-                        displayUsers();
-                        updateStats();
+    // Set up real-time listener to catch updates from other admin windows (AFTER initial load)
+    setTimeout(() => {
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            try {
+                const usersRef = firebase.database().ref('users');
+                usersRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data && Object.keys(data).length > 0) {
+                        let firebaseUsers = Array.isArray(data) ? data : Object.values(data);
+                        // Filter out invalid entries (must have username)
+                        firebaseUsers = firebaseUsers.filter(u => u && u.username);
+                        // Ensure all have correct lastActivity format
+                        firebaseUsers = firebaseUsers.map(u => ({
+                            ...u,
+                            lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
+                        }));
+                        // Only update display if data actually changed
+                        if (JSON.stringify(firebaseUsers) !== JSON.stringify(users)) {
+                            users = firebaseUsers;
+                            console.log('🔄 Users updated from Firebase real-time listener');
+                            // Sync back to localStorage
+                            localStorage.setItem('karaoke_users', JSON.stringify(users));
+                            displayUsers();
+                            updateStats();
+                        }
                     }
-                }
-            });
-        } catch (error) {
-            console.warn('Firebase listener setup failed:', error.message);
+                });
+            } catch (error) {
+                console.warn('Firebase real-time listener setup failed:', error.message);
+            }
         }
-    }
+    }, 500); // Delay to avoid race condition with initial load
     
     // Set up activity tracking - refresh every 2 seconds to show real-time status
     let lastDisplayHash = '';
     setInterval(() => {
-        // Reload users from database to get latest activity
+        // First try Firebase, then fallback to localStorage
         if (typeof firebase !== 'undefined' && firebase.database) {
             try {
                 firebase.database().ref('users').once('value', (snapshot) => {
                     const data = snapshot.val();
-                    if (data) {
+                    if (data && Object.keys(data).length > 0) {
                         let fetchedUsers = Array.isArray(data) ? data : Object.values(data);
                         // Filter out invalid entries (ensure all have username)
                         fetchedUsers = fetchedUsers.filter(u => u && u.username);
@@ -398,19 +404,45 @@ function loadUsers() {
                         if (currentHash !== lastDisplayHash) {
                             users = fetchedUsers;
                             lastDisplayHash = currentHash;
+                            // Always sync to localStorage
+                            localStorage.setItem('karaoke_users', JSON.stringify(users));
                             displayUsers();
                             updateStats();
-                            console.log('📊 Activity display updated - ' + users.length + ' users');
+                            console.log('📊 Activity display updated from Firebase - ' + users.length + ' users');
+                        }
+                    }
+                }).catch(err => {
+                    // If Firebase fails, sync from localStorage
+                    const stored = localStorage.getItem('karaoke_users');
+                    if (stored) {
+                        let localUsers = JSON.parse(stored);
+                        const currentHash = JSON.stringify(localUsers);
+                        if (currentHash !== lastDisplayHash) {
+                            users = localUsers;
+                            lastDisplayHash = currentHash;
+                            displayUsers();
+                            updateStats();
+                            console.log('📊 Activity display updated from localStorage - ' + users.length + ' users');
                         }
                     }
                 });
             } catch (error) {
-                console.warn('Activity tracking error:', error.message);
+                console.warn('Activity tracking Firebase error:', error.message);
             }
         } else {
-            loadFromLocalStorage();
-            displayUsers();
-            updateStats();
+            // Firebase not available, just use localStorage
+            const stored = localStorage.getItem('karaoke_users');
+            if (stored) {
+                let localUsers = JSON.parse(stored);
+                const currentHash = JSON.stringify(localUsers);
+                if (currentHash !== lastDisplayHash) {
+                    users = localUsers;
+                    lastDisplayHash = currentHash;
+                    displayUsers();
+                    updateStats();
+                    console.log('📊 Activity display updated from localStorage only - ' + users.length + ' users');
+                }
+            }
         }
     }, 2000);
 }
