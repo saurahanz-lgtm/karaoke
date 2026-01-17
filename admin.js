@@ -391,10 +391,11 @@ function loadUsers() {
         }
     }, 1000); // Increased delay to ensure new user is fully saved
     
-    // Set up activity tracking - refresh every 2 seconds to show real-time status
+    // Set up activity tracking - refresh every 1 second (was 2) to show accurate real-time status
     let lastDisplayHash = '';
+    let lastOnlineUserCount = -1;
     setInterval(() => {
-        // First try Firebase, then fallback to localStorage
+        // Always fetch from Firebase to get latest activity status
         if (typeof firebase !== 'undefined' && firebase.database) {
             try {
                 firebase.database().ref('users').once('value', (snapshot) => {
@@ -409,16 +410,27 @@ function loadUsers() {
                             lastActivity: (u.lastActivity === undefined || u.lastActivity === null) ? 0 : u.lastActivity
                         }));
                         
-                        // Check if data changed to avoid unnecessary re-renders
-                        const currentHash = JSON.stringify(fetchedUsers);
-                        if (currentHash !== lastDisplayHash) {
+                        // Count how many are online NOW (fresh calculation)
+                        const currentOnlineCount = fetchedUsers.filter(u => isUserOnline(u)).length;
+                        
+                        // Create a hash based on user count and online status ONLY (ignore exact timestamps)
+                        const statusHash = fetchedUsers.map(u => ({
+                            id: u.id,
+                            username: u.username,
+                            isOnline: isUserOnline(u)
+                        }));
+                        const currentHash = JSON.stringify(statusHash);
+                        
+                        // Update if status changed OR if online count changed
+                        if (currentHash !== lastDisplayHash || currentOnlineCount !== lastOnlineUserCount) {
                             users = fetchedUsers;
                             lastDisplayHash = currentHash;
+                            lastOnlineUserCount = currentOnlineCount;
                             // Always sync to localStorage
                             localStorage.setItem('karaoke_users', JSON.stringify(users));
                             displayUsers();
                             updateStats();
-                            console.log('📊 Activity display updated from Firebase - ' + users.length + ' users');
+                            console.log('📊 Online status updated:', currentOnlineCount, 'online,', (fetchedUsers.length - currentOnlineCount), 'offline');
                         }
                     }
                 }).catch(err => {
@@ -426,13 +438,21 @@ function loadUsers() {
                     const stored = localStorage.getItem('karaoke_users');
                     if (stored) {
                         let localUsers = JSON.parse(stored);
-                        const currentHash = JSON.stringify(localUsers);
-                        if (currentHash !== lastDisplayHash) {
+                        const currentOnlineCount = localUsers.filter(u => isUserOnline(u)).length;
+                        const statusHash = localUsers.map(u => ({
+                            id: u.id,
+                            username: u.username,
+                            isOnline: isUserOnline(u)
+                        }));
+                        const currentHash = JSON.stringify(statusHash);
+                        
+                        if (currentHash !== lastDisplayHash || currentOnlineCount !== lastOnlineUserCount) {
                             users = localUsers;
                             lastDisplayHash = currentHash;
+                            lastOnlineUserCount = currentOnlineCount;
                             displayUsers();
                             updateStats();
-                            console.log('📊 Activity display updated from localStorage - ' + users.length + ' users');
+                            console.log('📊 Online status updated from localStorage');
                         }
                     }
                 });
@@ -444,17 +464,25 @@ function loadUsers() {
             const stored = localStorage.getItem('karaoke_users');
             if (stored) {
                 let localUsers = JSON.parse(stored);
-                const currentHash = JSON.stringify(localUsers);
-                if (currentHash !== lastDisplayHash) {
+                const currentOnlineCount = localUsers.filter(u => isUserOnline(u)).length;
+                const statusHash = localUsers.map(u => ({
+                    id: u.id,
+                    username: u.username,
+                    isOnline: isUserOnline(u)
+                }));
+                const currentHash = JSON.stringify(statusHash);
+                
+                if (currentHash !== lastDisplayHash || currentOnlineCount !== lastOnlineUserCount) {
                     users = localUsers;
                     lastDisplayHash = currentHash;
+                    lastOnlineUserCount = currentOnlineCount;
                     displayUsers();
                     updateStats();
-                    console.log('📊 Activity display updated from localStorage only - ' + users.length + ' users');
+                    console.log('📊 Online status updated from localStorage only');
                 }
             }
         }
-    }, 2000);
+    }, 1000); // Check every 1 second for accurate online status
 }
 
 // Load from localStorage fallback
@@ -838,12 +866,33 @@ function updateStats() {
 
 // Check if user is online (active in last 5 minutes)
 function isUserOnline(user) {
-    if (!user.lastActivity || user.lastActivity === 0 || user.lastActivity === '0') return false;
+    // User is offline if they have no lastActivity or it's 0
+    if (!user.lastActivity || user.lastActivity === 0 || user.lastActivity === '0') {
+        return false;
+    }
+    
     // Handle both number and string formats
     const lastActivityNum = typeof user.lastActivity === 'string' ? parseInt(user.lastActivity) : user.lastActivity;
-    if (!lastActivityNum || lastActivityNum <= 0) return false;
+    
+    // If lastActivity is invalid or zero, they're offline
+    if (!lastActivityNum || lastActivityNum <= 0) {
+        return false;
+    }
+    
+    // User is online if their lastActivity is within the last 5 minutes
     const fiveMinutesAgo = new Date().getTime() - (5 * 60 * 1000);
-    return lastActivityNum > fiveMinutesAgo;
+    const isOnline = lastActivityNum > fiveMinutesAgo;
+    
+    // Debug logging for tracking online status changes
+    if (lastActivityNum > 0) {
+        const minutesAgo = Math.round((Date.now() - lastActivityNum) / 60000);
+        if (isOnline) {
+            // Only log for users who ARE online (to see who's active)
+            // Uncomment for debugging: console.log('🟢', user.username, 'is online -', minutesAgo, 'minutes ago');
+        }
+    }
+    
+    return isOnline;
 }
 
 // Filter singers by status
