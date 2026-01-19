@@ -636,18 +636,34 @@ function syncUsersToFirebase() {
     if (typeof firebase !== 'undefined' && firebase.database) {
         try {
             const usersRef = firebase.database().ref('users');
-            usersRef.set(users).then(() => {
-                console.log('✅ Users synced to Firebase (' + users.length + ' users)');
+            
+            // Ensure all users have proper format before syncing
+            const sanitizedUsers = users.map(u => ({
+                id: u.id || 0,
+                username: u.username || '',
+                password: u.password || '',
+                role: u.role || 'user',
+                joined: u.joined || new Date().toISOString().split('T')[0],
+                lastActivity: u.lastActivity || 0,
+                disabled: u.disabled || false
+            }));
+            
+            usersRef.set(sanitizedUsers).then(() => {
+                console.log('✅ Users synced to Firebase (' + sanitizedUsers.length + ' users)');
                 
                 // Verify write was successful by reading back
                 usersRef.once('value', (snapshot) => {
                     const data = snapshot.val();
                     if (data) {
                         const writtenUsers = Array.isArray(data) ? data : Object.values(data);
-                        if (writtenUsers.length === users.length) {
-                            console.log('✅ Firebase write verification passed');
+                        if (writtenUsers.length === sanitizedUsers.length) {
+                            console.log('✅ Firebase write verification passed - ' + writtenUsers.length + ' users confirmed');
                         } else {
-                            console.warn('⚠️ Write verification failed - user count mismatch');
+                            console.warn('⚠️ Write verification failed - user count mismatch. Local: ' + sanitizedUsers.length + ', Firebase: ' + writtenUsers.length);
+                            // Force re-sync if mismatch detected
+                            setTimeout(() => {
+                                usersRef.set(sanitizedUsers).catch(err => console.warn('Firebase re-sync failed:', err.message));
+                            }, 2000);
                         }
                     }
                 });
@@ -655,7 +671,7 @@ function syncUsersToFirebase() {
                 console.warn('⚠️ Firebase sync error:', error.message);
                 // Retry once on error
                 setTimeout(() => {
-                    usersRef.set(users).catch(err => console.warn('Firebase sync retry failed:', err.message));
+                    usersRef.set(sanitizedUsers).catch(err => console.warn('Firebase sync retry failed:', err.message));
                 }, 1000);
             });
         } catch (error) {
@@ -703,6 +719,98 @@ function fullFirebaseSync() {
             console.warn('Full sync exception:', error.message);
         }
     }
+}
+
+// Verify and sync all user data to ensure consistency
+function verifyAndSyncAllUsers() {
+    console.log('🔍 Starting complete user data verification...');
+    
+    if (!users || users.length === 0) {
+        console.warn('⚠️ No users to verify');
+        return Promise.reject('No users to verify');
+    }
+    
+    return new Promise((resolve, reject) => {
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            try {
+                const usersRef = firebase.database().ref('users');
+                
+                // Step 1: Verify local data integrity
+                const localValidUsers = users.filter(u => u && u.username && u.username.trim().length > 0);
+                console.log('✅ Local verification: ' + localValidUsers.length + '/' + users.length + ' valid users');
+                
+                if (localValidUsers.length !== users.length) {
+                    console.warn('⚠️ Removing ' + (users.length - localValidUsers.length) + ' invalid users from local data');
+                    users = localValidUsers;
+                    localStorage.setItem('karaoke_users', JSON.stringify(users));
+                }
+                
+                // Step 2: Sync to Firebase
+                const sanitizedUsers = localValidUsers.map(u => ({
+                    id: u.id || 0,
+                    username: u.username.trim(),
+                    password: u.password || '',
+                    role: u.role || 'user',
+                    joined: u.joined || new Date().toISOString().split('T')[0],
+                    lastActivity: u.lastActivity || 0,
+                    disabled: u.disabled || false
+                }));
+                
+                usersRef.set(sanitizedUsers).then(() => {
+                    console.log('✅ Step 1: Synced ' + sanitizedUsers.length + ' users to Firebase');
+                    
+                    // Step 3: Verify Firebase data
+                    setTimeout(() => {
+                        usersRef.once('value', (snapshot) => {
+                            const fbData = snapshot.val();
+                            const fbUsers = Array.isArray(fbData) ? fbData : Object.values(fbData || {});
+                            
+                            console.log('✅ Step 2: Firebase verification - ' + fbUsers.length + ' users');
+                            
+                            if (fbUsers.length === sanitizedUsers.length) {
+                                console.log('✅ ✅ DATA SYNC COMPLETE AND VERIFIED - All ' + fbUsers.length + ' users synced successfully!');
+                                displayUsers();
+                                updateStats();
+                                showNotification('✅ All users synced to Firebase successfully!', 'success');
+                                resolve({ success: true, userCount: fbUsers.length });
+                            } else {
+                                console.warn('⚠️ Count mismatch - expected ' + sanitizedUsers.length + ', got ' + fbUsers.length);
+                                reject('Data mismatch after sync');
+                            }
+                        }).catch(err => {
+                            console.error('❌ Verification read error:', err.message);
+                            reject(err);
+                        });
+                    }, 500);
+                }).catch(err => {
+                    console.error('❌ Firebase sync failed:', err.message);
+                    reject(err);
+                });
+            } catch (error) {
+                console.error('❌ Exception during verification:', error.message);
+                reject(error);
+            }
+        } else {
+            console.warn('⚠️ Firebase not available');
+            reject('Firebase not available');
+        }
+    });
+}
+
+// Force sync users from localStorage to Firebase (admin command)
+function forceSyncAllUsersToFirebase() {
+    console.log('🔄 FORCE SYNCING all users to Firebase...');
+    showNotification('🔄 Syncing all users to Firebase...', 'info');
+    
+    verifyAndSyncAllUsers()
+        .then(result => {
+            console.log('✅ SYNC SUCCESSFUL:', result);
+            showNotification('✅ Successfully synced ' + result.userCount + ' users to Firebase!', 'success');
+        })
+        .catch(error => {
+            console.error('❌ SYNC FAILED:', error);
+            showNotification('❌ Sync failed: ' + error, 'danger');
+        });
 }
 
 // Reload users from Firebase to ensure we have latest data
