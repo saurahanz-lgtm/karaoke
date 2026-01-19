@@ -85,8 +85,8 @@ function validateSessionValidity() {
     if (!stored) {
         // User data was cleared (logged in from another device)
         console.warn('⚠️ User session cleared from localStorage');
-        alert('Your session has been disconnected. You were logged in from another device.');
-        window.location.href = 'index.html';
+        // Don't immediately redirect - give Firebase time to update
+        // Just log a warning and let validateAdminSession handle it
         return false;
     }
     return true;

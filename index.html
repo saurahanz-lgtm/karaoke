@@ -780,13 +780,11 @@
                             // If timestamp is missing, invalid, or 0, treat as stale
                             if (!lastActivity || typeof lastActivity !== 'number' || lastActivity === 0) {
                                 console.log('⚠️ Invalid or missing timestamp in Firebase session, treating as stale');
-                                // Clear the corrupted/invalid session
-                                try {
-                                    firebase.database().ref('activeLogin/' + username).remove()
-                                        .catch(err => console.warn('Error clearing invalid session:', err.message));
-                                } catch (e) {
-                                    console.warn('Error clearing invalid session:', e.message);
-                                }
+                                // Clear the corrupted/invalid session immediately and asynchronously
+                                firebase.database().ref('activeLogin/' + username).remove()
+                                    .then(() => console.log('✅ Cleared corrupted session'))
+                                    .catch(err => console.warn('⚠️ Error clearing invalid session:', err.message));
+                                // Allow login regardless of clearing result
                                 callback(false);
                                 return;
                             }
@@ -800,12 +798,9 @@
                                 if (sessionAge > SESSION_TIMEOUT) {
                                     console.log('⏱️ Old session is stale (' + Math.round(sessionAge / 60000) + ' min), clearing and allowing login');
                                     // Clear the stale session but allow login immediately
-                                    try {
-                                        firebase.database().ref('activeLogin/' + username).remove()
-                                            .catch(err => console.warn('Error clearing stale session:', err.message));
-                                    } catch (e) {
-                                        console.warn('Error clearing stale session:', e.message);
-                                    }
+                                    firebase.database().ref('activeLogin/' + username).remove()
+                                        .then(() => console.log('✅ Cleared stale session'))
+                                        .catch(err => console.warn('⚠️ Error clearing stale session:', err.message));
                                     callback(false);
                                 } else {
                                     console.log('❌ User already logged in with different session:', data.sessionId);
@@ -1041,11 +1036,28 @@
         
         // Force reload users from Firebase - gets latest data from Firebase
         function forceReloadUsersForLogin(callback) {
+            let callbackCalled = false;
+            
+            // Set a timeout to ensure callback is called even if Firebase hangs
+            const timeoutId = setTimeout(() => {
+                if (!callbackCalled) {
+                    callbackCalled = true;
+                    console.warn('⏱️ Firebase timeout - falling back to localStorage');
+                    const stored = localStorage.getItem('karaoke_users');
+                    const users = stored ? JSON.parse(stored) : [];
+                    callback(users);
+                }
+            }, 5000); // 5 second timeout
+            
             if (typeof firebase !== 'undefined' && firebase.database) {
                 try {
                     const usersRef = firebase.database().ref('users');
                     // Force refresh - bypass cache
                     usersRef.once('value', (snapshot) => {
+                        if (callbackCalled) return; // Already handled by timeout
+                        callbackCalled = true;
+                        clearTimeout(timeoutId);
+                        
                         const data = snapshot.val();
                         if (data) {
                             const users = Array.isArray(data) ? data : Object.values(data);
@@ -1059,18 +1071,27 @@
                             callback(users);
                         }
                     }).catch((error) => {
+                        if (callbackCalled) return; // Already handled by timeout
+                        callbackCalled = true;
+                        clearTimeout(timeoutId);
                         console.warn('Firebase error, falling back to localStorage:', error.message);
                         const stored = localStorage.getItem('karaoke_users');
                         const users = stored ? JSON.parse(stored) : [];
                         callback(users);
                     });
                 } catch (error) {
+                    if (callbackCalled) return; // Already handled by timeout
+                    callbackCalled = true;
+                    clearTimeout(timeoutId);
                     console.warn('Firebase not configured, using localStorage:', error.message);
                     const stored = localStorage.getItem('karaoke_users');
                     const users = stored ? JSON.parse(stored) : [];
                     callback(users);
                 }
             } else {
+                if (callbackCalled) return; // Already handled by timeout
+                callbackCalled = true;
+                clearTimeout(timeoutId);
                 // Firebase not available, use localStorage
                 const stored = localStorage.getItem('karaoke_users');
                 const users = stored ? JSON.parse(stored) : [];
