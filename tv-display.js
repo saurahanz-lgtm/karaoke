@@ -756,8 +756,30 @@ function generateQRCode() {
 
 // Load queue data from Firebase only
 function loadQueueData() {
-    // Firebase listeners handle real-time updates
-    // This function is kept for backward compatibility
+    // Load queue from localStorage (for same-window updates from singer.html)
+    try {
+        const localQueue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
+        if (Array.isArray(localQueue) && localQueue.length > 0) {
+            tvQueue = localQueue;
+            console.log('✅ Queue loaded from localStorage:', tvQueue.length, 'songs');
+            console.log('📋 Queue details:', tvQueue.map(s => ({ title: s.title, requestedBy: s.requestedBy })));
+            
+            // Sync to Firebase if enabled
+            if (useFirebase && typeof firebase !== 'undefined' && firebase.database) {
+                try {
+                    firebase.database().ref('queue').set(tvQueue).then(() => {
+                        console.log('✅ Queue synced to Firebase');
+                    }).catch(err => {
+                        console.warn('⚠️ Could not sync queue to Firebase:', err.message);
+                    });
+                } catch (e) {
+                    console.warn('⚠️ Firebase sync error:', e.message);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ Error loading queue from localStorage:', e.message);
+    }
 }
 
 // Check and play current song (only when YouTube API is ready)
