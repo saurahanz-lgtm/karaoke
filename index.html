@@ -737,7 +737,7 @@
 
         // Check if user is already logged in from another device (using Firebase)
         function checkIfLoggedInElsewhere(username, callback) {
-            console.log('🔍 Checking if', username, 'is logged in elsewhere...');
+            console.log('🔍 Checking session for', username, '...');
             
             let callbackCalled = false;
             let isFirebaseAvailable = false;
@@ -803,8 +803,17 @@
                                         .catch(err => console.warn('⚠️ Error clearing stale session:', err.message));
                                     callback(false);
                                 } else {
-                                    console.log('❌ User already logged in with different session:', data.sessionId);
-                                    callback(true); // User logged in elsewhere - BLOCK
+                                    console.log('⚠️ Old session found from different device, clearing old session to allow new login');
+                                    // Clear the old session and allow the new login to proceed
+                                    firebase.database().ref('activeLogin/' + username).remove()
+                                        .then(() => {
+                                            console.log('✅ Cleared previous session from other device');
+                                            callback(false); // Allow the new login
+                                        })
+                                        .catch(err => {
+                                            console.warn('⚠️ Error clearing old session:', err.message);
+                                            callback(false); // Allow login anyway
+                                        });
                                 }
                             } else {
                                 console.log('✅ Safe to login - same session ID');
