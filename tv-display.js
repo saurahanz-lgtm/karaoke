@@ -39,6 +39,7 @@ let bootUpVideoPlayed = true; // Mark as already played to skip boot-up
 // Boot-up splash screen management
 let bootupStartTime = Date.now();
 let bootupHidden = false;
+let qrCodeGenerated = false;
 
 // SCORING SYSTEM
 let songStartTime = null;
@@ -66,15 +67,15 @@ function hideBootupSplash() {
 function checkBootupCompletion() {
     const timeSinceStart = Date.now() - bootupStartTime;
     
-    // Boot-up video disabled - hide splash when systems ready
-    if (firebaseReady && ytReady && timeSinceStart >= 1000) {
+    // Boot-up video disabled - hide splash when systems ready or minimum 1 second passed
+    if (firebaseReady && ytReady && timeSinceStart >= 500) {
         console.log('✅ Systems ready - hiding splash');
         hideBootupSplash();
         return true;
     }
     
-    // Fallback timeout - hide after 5 seconds
-    if (timeSinceStart >= 5000) {
+    // Fallback timeout - hide after 3 seconds (reduced from 5)
+    if (timeSinceStart >= 3000) {
         console.log('⏱️ Timeout - hiding splash');
         hideBootupSplash();
         return true;
@@ -118,13 +119,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize TV Display (after checking if enabled)
 function initializeTVDisplay() {
-    // Verify YouTube API is available
-    if (typeof YT === 'undefined') {
-        console.error('❌ YouTube API not loaded! Check that https://www.youtube.com/iframe_api is accessible');
-    } else {
-        console.log('✅ YouTube API library loaded');
-    }
-    
     // Debug Firebase config
     try {
         const config = firebase.app().options;
@@ -137,8 +131,17 @@ function initializeTVDisplay() {
         console.error('❌ Firebase not initialized:', err.message);
     }
     
-    // Generate QR code on load
-    generateQRCode();
+    // Defer QR code generation until after page is visible
+    if (document.hidden) {
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && !qrCodeGenerated) {
+                generateQRCode();
+            }
+        }, { once: true });
+    } else {
+        // Only generate QR on first visibility
+        setTimeout(generateQRCode, 100);
+    }
     
     // Regenerate QR code every 10 seconds to ensure it's always fresh
     setInterval(generateQRCode, 10000);
@@ -154,30 +157,30 @@ function initializeTVDisplay() {
     
     console.log('🔥 Firebase configured, waiting for data...');
     
-    // Fallback: If YouTube API doesn't load within 5 seconds, force ytReady
+    // Fallback: If YouTube API doesn't load within 3 seconds, force ytReady (reduced from 5s)
     setTimeout(() => {
-        console.log('⏱️ [5s timeout check] ytReady =', ytReady);
+        console.log('⏱️ [3s timeout check] ytReady =', ytReady);
         if (!ytReady) {
-            console.warn('⚠️ YouTube API not responding, forcing ytReady=true after 5s');
+            console.warn('⚠️ YouTube API not responding, forcing ytReady=true after 3s');
             ytReady = true;
             createYouTubePlayer();
             checkBootupCompletion();
         }
-    }, 5000);
+    }, 3000);
     
-    // Check boot-up completion every 500ms
+    // Check boot-up completion every 300ms (faster updates)
     const bootupCheckInterval = setInterval(() => {
         if (checkBootupCompletion()) {
             clearInterval(bootupCheckInterval);
         }
-    }, 500);
+    }, 300);
     
     // Now check connection status
     checkPhoneConnection();
     console.log('✅ Initial connection check done');
     
-    // Check connection status every 1 second for faster updates
-    setInterval(checkPhoneConnection, 1000);
+    // Check connection status every 2 seconds (less frequent)
+    setInterval(checkPhoneConnection, 2000);
     
     // Listen for TV disable status changes in real-time
     if (typeof firebase !== 'undefined' && firebase.database) {
@@ -732,7 +735,14 @@ function showNotification(message) {
 
 // Generate QR code for singer page
 function generateQRCode() {
+    // Skip if already generating
+    if (qrCodeGenerated || typeof QRCode === 'undefined') {
+        return;
+    }
+    
     const qrContainer = document.getElementById('qrcode');
+    if (!qrContainer) return;
+    
     // Clear previous QR code if exists
     qrContainer.innerHTML = '';
     
@@ -752,6 +762,8 @@ function generateQRCode() {
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
     });
+    
+    qrCodeGenerated = true;
 }
 
 // Load queue data from Firebase only
