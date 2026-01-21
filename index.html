@@ -860,7 +860,7 @@
             // Store ONLY in Firebase (no localStorage for sessions)
             if (typeof firebase !== 'undefined' && firebase.database) {
                 try {
-                    // 1. Register session in activeLogin
+                    // 1. Register session in activeLogin ONLY - don't modify users array
                     firebase.database().ref('activeLogin/' + username).set({
                         sessionId: sessionId,
                         timestamp: Date.now(),
@@ -871,22 +871,8 @@
                         console.warn('⚠️ Firebase registration failed:', err.message);
                     });
                     
-                    // 2. Update user's lastActivity to mark as Online
-                    firebase.database().ref('users').once('value', (snapshot) => {
-                        const data = snapshot.val();
-                        if (data) {
-                            const users = Array.isArray(data) ? data : Object.values(data);
-                            // Find and update the user
-                            const userIndex = users.findIndex(u => u.username === username);
-                            if (userIndex !== -1) {
-                                users[userIndex].lastActivity = Date.now();
-                                // Save updated users array
-                                firebase.database().ref('users').set(users).then(() => {
-                                    console.log('✅ User marked as Online');
-                                }).catch(err => console.warn('Failed to update user status:', err.message));
-                            }
-                        }
-                    });
+                    // Note: User status updates are handled by admin.js, not here
+                    // Avoid modifying users array from login page to prevent data loss
                 } catch (e) {
                     console.warn('⚠️ Firebase error:', e.message);
                 }
@@ -911,25 +897,15 @@
                 console.warn('BroadcastChannel not supported:', error.message);
             }
             
-            // Mark user as Offline in users array
+            // Clear from Firebase activeLogin ONLY - don't modify users array
             if (username && typeof firebase !== 'undefined' && firebase.database) {
                 try {
-                    // Update user's lastActivity to 0 (mark as offline)
-                    firebase.database().ref('users').once('value', (snapshot) => {
-                        const data = snapshot.val();
-                        if (data) {
-                            const users = Array.isArray(data) ? data : Object.values(data);
-                            const userIndex = users.findIndex(u => u.username === username);
-                            if (userIndex !== -1) {
-                                users[userIndex].lastActivity = 0;
-                                firebase.database().ref('users').set(users).catch(err => console.warn('Failed to mark offline:', err.message));
-                            }
-                        }
-                    });
-                    
                     // Clear from Firebase activeLogin
                     firebase.database().ref('activeLogin/' + username).remove()
                         .catch(err => console.warn('Firebase logout failed:', err.message));
+                    
+                    // Note: User status updates are handled by admin.js
+                    // Avoid modifying users array from login page to prevent data loss
                 } catch (e) {
                     console.warn('Firebase error:', e.message);
                 }
