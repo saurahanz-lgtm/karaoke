@@ -414,85 +414,68 @@ function loadUsers() {
   updateStats();
 
   // Then try to sync from Firebase if available (update in background)
+  // BUT: Only sync if we have NO data locally (initial setup)
+  // Otherwise, always trust localStorage as source of truth
   if (typeof firebase !== "undefined" && firebase.database) {
     try {
       const usersRef = firebase.database().ref("users");
-      usersRef
-        .once("value", (snapshot) => {
-          const data = snapshot.val();
-          if (data && Object.keys(data).length > 0) {
-            // Handle both array and object formats from Firebase
-            let firebaseUsers = Array.isArray(data)
-              ? data
-              : Object.values(data);
-            // Filter out invalid entries (must have username)
-            firebaseUsers = firebaseUsers.filter((u) => u && u.username);
-            // Ensure all users have correct lastActivity format (default to 0 if missing)
-            firebaseUsers = firebaseUsers.map((u) => ({
-              ...u,
-              lastActivity:
-                u.lastActivity === undefined || u.lastActivity === null
-                  ? 0
-                  : u.lastActivity,
-            }));
 
-            console.log("📡 Firebase loaded:", firebaseUsers.length, "users");
+      // Only load from Firebase if localStorage is empty
+      if (users.length === 0) {
+        console.log(
+          "📡 localStorage is empty, checking Firebase for initial data...",
+        );
+        usersRef
+          .once("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data && Object.keys(data).length > 0) {
+              // Handle both array and object formats from Firebase
+              let firebaseUsers = Array.isArray(data)
+                ? data
+                : Object.values(data);
+              // Filter out invalid entries (must have username)
+              firebaseUsers = firebaseUsers.filter((u) => u && u.username);
+              // Ensure all users have correct lastActivity format (default to 0 if missing)
+              firebaseUsers = firebaseUsers.map((u) => ({
+                ...u,
+                lastActivity:
+                  u.lastActivity === undefined || u.lastActivity === null
+                    ? 0
+                    : u.lastActivity,
+              }));
 
-            // SMART MERGE: Prefer localStorage if it has more users (likely has recent deletions)
-            // Firebase is eventually consistent and may have stale data
-            if (firebaseUsers.length > users.length) {
               console.log(
-                "✅ Firebase has more users (",
+                "📡 Firebase initial load:",
                 firebaseUsers.length,
-                ">",
-                users.length,
-                ") - syncing from Firebase",
+                "users",
               );
               users = firebaseUsers;
               localStorage.setItem("karaoke_users", JSON.stringify(users));
               displayUsers();
               updateStats();
-            } else if (firebaseUsers.length < users.length) {
-              console.log(
-                "✅ localStorage has more users (",
-                users.length,
-                ">",
-                firebaseUsers.length,
-                ") - this is correct after deletions, keeping local",
-              );
-              // localStorage has more users - this is expected after deletions
-              // Don't sync back to Firebase, it should eventually update via delete operations
-              console.log(
-                "✅ Firebase will be updated via explicit delete/save calls",
-              );
             } else {
-              // Same count - check if content differs
-              const localIds = users.map((u) => u.id).sort((a, b) => a - b);
-              const fbIds = firebaseUsers
-                .map((u) => u.id)
-                .sort((a, b) => a - b);
-              if (JSON.stringify(localIds) !== JSON.stringify(fbIds)) {
-                console.log(
-                  "✅ Both have same count but different users - syncing from Firebase",
-                );
-                users = firebaseUsers;
-                localStorage.setItem("karaoke_users", JSON.stringify(users));
-                displayUsers();
-                updateStats();
-              } else {
-                console.log("✅ Both sources in sync -", users.length, "users");
-              }
+              console.log("ℹ️ Firebase is also empty - using demo data");
             }
-          } else {
-            console.log("ℹ️ Firebase is empty - keeping localStorage version");
-          }
-        })
-        .catch((error) => {
-          console.warn(
-            "Firebase read error (keeping localStorage):",
-            error.message,
+          })
+          .catch((error) => {
+            console.warn(
+              "Firebase read error (keeping localStorage):",
+              error.message,
+            );
+          });
+      } else {
+        console.log(
+          "✅ localStorage has",
+          users.length,
+          "users - using as source of truth",
+        );
+        // Ensure Firebase is synced with localStorage (in case of sync delay)
+        usersRef
+          .set(users)
+          .catch((err) =>
+            console.warn("Initial Firebase sync failed:", err.message),
           );
-        });
+      }
     } catch (error) {
       console.warn(
         "Firebase not configured, using localStorage:",
@@ -527,59 +510,64 @@ function loadUsers() {
                   : u.lastActivity,
             }));
 
-            // CRITICAL: Only sync if user list structure changed (add/remove), not just activity
+            // CRITICAL: ONLY sync if Firebase has NEW USERS from another admin
+            // NEVER sync if Firebase has fewer users (that's a deletion we made locally)
+            // NEVER sync if same count (could be stale activity updates)
             const currentIds = firebaseUsers
               .map((u) => u.id)
               .sort((a, b) => a - b);
-            const idListChanged =
-              JSON.stringify(lastKnownIds) !== JSON.stringify(currentIds);
+            const localIds = users.map((u) => u.id).sort((a, b) => a - b);
 
-            if (idListChanged) {
+            if (firebaseUsers.length > users.length) {
+              // Firebase has MORE users - another admin added users
               console.log(
-                "🔄 Real-time update: User list structure changed! Local IDs:",
-                lastKnownIds,
-                "Firebase IDs:",
+                "🔄 Real-time update: Another admin added users! Firebase:",
                 currentIds,
+                "Local:",
+                localIds,
               );
 
-              // User list actually changed (add/remove), sync from Firebase
-              if (firebaseUsers.length > users.length) {
-                console.log(
-                  "✅ Firebase has new users (",
-                  firebaseUsers.length,
-                  "vs local",
-                  users.length,
-                  ") - syncing from Firebase",
-                );
-                users = firebaseUsers;
-                lastKnownIds = currentIds;
-                localStorage.setItem("karaoke_users", JSON.stringify(users));
-                displayUsers();
-                updateStats();
-              } else if (firebaseUsers.length < users.length) {
-                // Local has more users - we might have just deleted one
-                console.log(
-                  "✅ Local has more users (",
-                  users.length,
-                  "vs Firebase",
-                  firebaseUsers.length,
-                  ") - keeping local (likely a deletion)",
-                );
-                // Re-sync local to Firebase to confirm deletion
-                lastKnownIds = currentIds;
-                usersRef
-                  .set(users)
-                  .catch((err) =>
-                    console.warn(
-                      "Could not re-sync deletion to Firebase:",
-                      err.message,
-                    ),
-                  );
-              }
-            } else {
-              // Only activity changed, don't update display
+              // Find which users are new in Firebase
+              const newUserIds = currentIds.filter(
+                (id) => !localIds.includes(id),
+              );
+              console.log("➕ New users from another admin:", newUserIds);
+
+              // Only add the new users, keep existing local ones
+              const newUsers = firebaseUsers.filter((u) =>
+                newUserIds.includes(u.id),
+              );
+              users = [...users, ...newUsers];
+
+              lastKnownIds = JSON.stringify(currentIds);
+              localStorage.setItem("karaoke_users", JSON.stringify(users));
+              displayUsers();
+              updateStats();
+            } else if (firebaseUsers.length < users.length) {
+              // Firebase has FEWER users - we deleted locally
               console.log(
-                "📊 Real-time update: Only activity changed (no user add/remove), skipping display update",
+                "🔄 Real-time update: We have more users than Firebase (local deletion pending)",
+                "Local:",
+                localIds,
+                "Firebase:",
+                currentIds,
+              );
+              // DO NOT SYNC - keep local version (we deleted someone)
+              // Just re-confirm the deletion to Firebase
+              lastKnownIds = JSON.stringify(currentIds);
+              usersRef
+                .set(users)
+                .catch((err) =>
+                  console.warn(
+                    "Could not re-sync deletion to Firebase:",
+                    err.message,
+                  ),
+                );
+            } else {
+              // Same count - only activity changed, ignore
+              lastKnownIds = JSON.stringify(currentIds);
+              console.log(
+                "📊 Real-time update: Only activity changed (no user add/remove), skipping",
               );
             }
           }
