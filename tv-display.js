@@ -165,6 +165,14 @@ function initializeTVDisplay() {
 
   console.log("🔥 Firebase configured, waiting for data...");
 
+  // [2] Initialize Firebase listeners IMMEDIATELY (don't wait for YouTube API)
+  console.log("⏱️ Initializing Firebase listeners immediately...");
+  try {
+    initializeFirebaseListeners();
+  } catch (err) {
+    console.error("❌ Error initializing Firebase listeners early:", err);
+  }
+
   // Fallback: If YouTube API doesn't load within 3 seconds, force ytReady (reduced from 5s)
   setTimeout(() => {
     console.log("⏱️ [3s timeout check] ytReady =", ytReady);
@@ -601,7 +609,7 @@ function onYouTubeIframeAPIReady() {
 
 // B. YouTube API - Initialize player when ready
 function createYouTubePlayer() {
-  console.log("✅ YouTube API Ready, initializing Firebase listeners");
+  console.log("✅ YouTube API Ready");
   console.log(
     "🔍 DEBUG: useFirebase =",
     useFirebase,
@@ -609,20 +617,19 @@ function createYouTubePlayer() {
     firebaseListenersSet,
   );
 
-  // Initialize Firebase listeners immediately after YouTube API is ready
-  if (useFirebase && !firebaseListenersSet) {
+  // Firebase listeners should already be initialized by initializeTVDisplay()
+  // No need to reinitialize here
+  if (!firebaseListenersSet && useFirebase) {
+    console.log(
+      "⚠️ Firebase listeners not yet initialized, initializing now...",
+    );
     try {
       initializeFirebaseListeners();
     } catch (err) {
       console.error("❌ Error initializing Firebase listeners:", err);
     }
   } else {
-    console.log(
-      "⚠️ Firebase listeners not initialized: useFirebase =",
-      useFirebase,
-      "firebaseListenersSet =",
-      firebaseListenersSet,
-    );
+    console.log("✅ Firebase listeners already initialized");
   }
 
   // Check if bootup splash should be hidden
