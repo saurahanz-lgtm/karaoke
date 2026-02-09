@@ -504,10 +504,14 @@ function loadUsers() {
   }
 
   // Set up real-time listener ONLY for real-time updates from other admin windows (with safety checks)
+  // BUT: Only listen for user add/remove, not activity changes
   setTimeout(() => {
     if (typeof firebase !== "undefined" && firebase.database) {
       try {
         const usersRef = firebase.database().ref("users");
+        // Track the list of user IDs to detect actual additions/deletions
+        let lastKnownIds = users.map((u) => u.id).sort((a, b) => a - b);
+
         usersRef.on("value", (snapshot) => {
           const data = snapshot.val();
           if (data && Object.keys(data).length > 0) {
@@ -523,45 +527,46 @@ function loadUsers() {
                   : u.lastActivity,
             }));
 
-            // CRITICAL: Only sync from Firebase if data genuinely changed (not just user count)
-            // Create content hash to compare actual data, not just count
-            const localHash = JSON.stringify(
-              users
-                .map((u) => ({ id: u.id, username: u.username }))
-                .sort((a, b) => a.id - b.id),
-            );
-            const firebaseHash = JSON.stringify(
-              firebaseUsers
-                .map((u) => ({ id: u.id, username: u.username }))
-                .sort((a, b) => a.id - b.id),
-            );
+            // CRITICAL: Only sync if user list structure changed (add/remove), not just activity
+            const currentIds = firebaseUsers
+              .map((u) => u.id)
+              .sort((a, b) => a - b);
+            const idListChanged =
+              JSON.stringify(lastKnownIds) !== JSON.stringify(currentIds);
 
-            if (localHash !== firebaseHash) {
-              // Data actually changed, but prefer local deletions
-              // Only sync if this looks like an addition from another admin
+            if (idListChanged) {
+              console.log(
+                "🔄 Real-time update: User list structure changed! Local IDs:",
+                lastKnownIds,
+                "Firebase IDs:",
+                currentIds,
+              );
+
+              // User list actually changed (add/remove), sync from Firebase
               if (firebaseUsers.length > users.length) {
                 console.log(
-                  "🔄 Real-time update: Firebase has new users (",
+                  "✅ Firebase has new users (",
                   firebaseUsers.length,
                   "vs local",
                   users.length,
-                  ") - syncing",
+                  ") - syncing from Firebase",
                 );
                 users = firebaseUsers;
+                lastKnownIds = currentIds;
                 localStorage.setItem("karaoke_users", JSON.stringify(users));
                 displayUsers();
                 updateStats();
               } else if (firebaseUsers.length < users.length) {
                 // Local has more users - we might have just deleted one
-                // Ignore Firebase data and keep local version
                 console.log(
-                  "🔄 Real-time update: Local has more users (",
+                  "✅ Local has more users (",
                   users.length,
                   "vs Firebase",
                   firebaseUsers.length,
                   ") - keeping local (likely a deletion)",
                 );
                 // Re-sync local to Firebase to confirm deletion
+                lastKnownIds = currentIds;
                 usersRef
                   .set(users)
                   .catch((err) =>
@@ -570,16 +575,12 @@ function loadUsers() {
                       err.message,
                     ),
                   );
-              } else {
-                // Same count but different content - data changed (user modified)
-                console.log(
-                  "🔄 Real-time update: User data changed, syncing from Firebase",
-                );
-                users = firebaseUsers;
-                localStorage.setItem("karaoke_users", JSON.stringify(users));
-                displayUsers();
-                updateStats();
               }
+            } else {
+              // Only activity changed, don't update display
+              console.log(
+                "📊 Real-time update: Only activity changed (no user add/remove), skipping display update",
+              );
             }
           }
         });
@@ -632,9 +633,71 @@ function loadUsers() {
       );
     }
   }, 1000);
-}
 
-// Load from localStorage fallback
+  // Periodic Firebase consistency check every 30 seconds
+  // This ensures if Firebase got out of sync, we catch it and fix it
+  setInterval(() => {
+    if (typeof firebase !== "undefined" && firebase.database) {
+      try {
+        firebase
+          .database()
+          .ref("users")
+          .once("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data && Object.keys(data).length > 0) {
+              let firebaseUsers = Array.isArray(data)
+                ? data
+                : Object.values(data);
+              firebaseUsers = firebaseUsers.filter((u) => u && u.username);
+
+              // Check if Firebase user list matches local
+              const firebaseIds = firebaseUsers
+                .map((u) => u.id)
+                .sort((a, b) => a - b);
+              const localIds = users.map((u) => u.id).sort((a, b) => a - b);
+
+              if (JSON.stringify(firebaseIds) !== JSON.stringify(localIds)) {
+                console.warn(
+                  "⚠️ Firebase consistency issue detected!",
+                  "Firebase IDs:",
+                  firebaseIds,
+                  "Local IDs:",
+                  localIds,
+                );
+
+                // Firebase has different users - local is source of truth
+                if (users.length > firebaseUsers.length) {
+                  console.log(
+                    "✅ Local has more users - syncing deletion to Firebase",
+                  );
+                  firebase
+                    .database()
+                    .ref("users")
+                    .set(users)
+                    .then(() =>
+                      console.log("✅ Firebase corrected with local data"),
+                    )
+                    .catch((err) =>
+                      console.error("Could not correct Firebase:", err.message),
+                    );
+                }
+              } else {
+                console.log("✅ Firebase consistency check: Data is in sync");
+              }
+            }
+          })
+          .catch((err) =>
+            console.warn("Consistency check error:", err.message),
+          );
+      } catch (error) {
+        console.warn(
+          "Periodic Firebase consistency check error:",
+          error.message,
+        );
+      }
+    }
+  }, 30000); // Check every 30 seconds
+}
 function loadFromLocalStorage() {
   const stored = localStorage.getItem("karaoke_users");
   console.log("📂 Loading from localStorage. Data exists:", !!stored);
