@@ -103,14 +103,22 @@ document.addEventListener("DOMContentLoaded", function () {
   try {
     const userUpdateChannel = new BroadcastChannel("karaoke_user_updates");
     userUpdateChannel.addEventListener("message", (event) => {
-      if (
-        event.data.type === "user_login" ||
-        event.data.type === "user_logout"
-      ) {
-        console.log("📢 User update received:", event.data.type);
-        // Reload users from Firebase immediately
-        loadUsers();
+      if (event.data?.type === "user_logout") {
+        if (loggedInUser?.username === event.data.username) {
+          console.log("🚪 Current admin was logged out from another device");
+          localStorage.removeItem("karaoke_logged_in_user");
+          window.location.replace("index.html");
+          return;
+        }
+        console.log("📢 User logout received:", event.data.username);
       }
+
+      if (event.data?.type === "user_login") {
+        console.log("📢 User login received:", event.data.username);
+      }
+
+      // Reload users from Firebase immediately
+      loadUsers();
     });
   } catch (error) {
     console.warn("BroadcastChannel not supported:", error.message);
