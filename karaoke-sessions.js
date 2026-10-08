@@ -3,6 +3,7 @@
   const ROOM_DATA_PATH = "karaokeSessions";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
   const MAX_DEVICES = 5;
+  const DEFAULT_ROOM_VOLUME = 70;
   const MEMBER_TIMEOUT_MS = 60000;
   const HEARTBEAT_INTERVAL_MS = 15000;
   let heartbeatTimer = null;
@@ -182,6 +183,29 @@
     };
   }
 
+  function normalizeVolume(value) {
+    const volume = Number(value);
+    if (!Number.isFinite(volume)) return DEFAULT_ROOM_VOLUME;
+    return Math.max(0, Math.min(100, Math.round(volume)));
+  }
+
+  function listenVolume(roomId, callback) {
+    const ref = roomRef(roomId, "volume");
+    const handler = (snapshot) => {
+      callback(
+        snapshot.val() === null
+          ? DEFAULT_ROOM_VOLUME
+          : normalizeVolume(snapshot.val()),
+      );
+    };
+    ref.on("value", handler);
+    return () => ref.off("value", handler);
+  }
+
+  function setRoomVolume(roomId, volume) {
+    return roomRef(roomId, "volume").set(normalizeVolume(volume));
+  }
+
   async function joinRoom(roomId, username) {
     const db = database();
     const roomSnapshot = await db
@@ -334,6 +358,7 @@
 
   global.KaraokeSessions = {
     MAX_DEVICES,
+    DEFAULT_ROOM_VOLUME,
     addSong,
     advanceToNextSong,
     claimNextSong,
@@ -347,7 +372,9 @@
     listenMembers,
     listenRoom,
     listenRooms,
+    listenVolume,
     roomRef,
+    setRoomVolume,
     sendControl,
   };
 })(window);

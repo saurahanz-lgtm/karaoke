@@ -45,6 +45,8 @@ let karaokeRooms = [];
 let stopListeningToRoom = null;
 let stopListeningToMembers = null;
 let stopListeningToRooms = null;
+let stopListeningToRoomVolume = null;
+let activeRoomVolume = 70;
 
 // SCORING SYSTEM
 let songStartTime = null;
@@ -127,7 +129,9 @@ function activateKaraokeRoom(roomId) {
 
   stopListeningToRoom?.();
   stopListeningToMembers?.();
+  stopListeningToRoomVolume?.();
   activeKaraokeRoomId = roomId;
+  activeRoomVolume = KaraokeSessions.DEFAULT_ROOM_VOLUME;
   sessionStorage.setItem("karaokeTvRoomId", roomId);
   currentSong = null;
   tvQueue = [];
@@ -140,6 +144,13 @@ function activateKaraokeRoom(roomId) {
   if (label)
     label.textContent = `${room?.name || "Karaoke Room"} · Scan to Join`;
   generateQRCode();
+
+  stopListeningToRoomVolume = KaraokeSessions.listenVolume(roomId, (volume) => {
+    activeRoomVolume = volume;
+    if (activeKaraokeRoomId === roomId && window.tvPlayer) {
+      window.tvPlayer.setVolume(volume);
+    }
+  });
 
   stopListeningToRoom = KaraokeSessions.listenRoom(
     roomId,
@@ -253,7 +264,8 @@ function handleRoomControl(control) {
       break;
     case "setVolume":
       if (window.tvPlayer && typeof control.volume === "number") {
-        window.tvPlayer.setVolume(Math.max(0, Math.min(100, control.volume)));
+        activeRoomVolume = Math.max(0, Math.min(100, control.volume));
+        window.tvPlayer.setVolume(activeRoomVolume);
       }
       break;
   }
@@ -894,6 +906,7 @@ function loadSong(song) {
         onReady: (e) => {
           console.log("🎬 Karaoke Player Ready");
           playerReady = true;
+          e.target.setVolume(activeRoomVolume);
           checkBootupCompletion();
           // Try to play with autoplay - if blocked by browser, will be caught in onError
           try {

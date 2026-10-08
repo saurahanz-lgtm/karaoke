@@ -629,6 +629,7 @@
       let reservedSongs = [];
       let useSingerFirebase = false;
       let activeKaraokeRoomId = null;
+      let stopListeningToRoomVolume = null;
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
 
@@ -776,6 +777,11 @@
             loggedInUser.username,
           );
           activeKaraokeRoomId = roomId;
+          stopListeningToRoomVolume?.();
+          stopListeningToRoomVolume = KaraokeSessions.listenVolume(
+            roomId,
+            updateVolumeDisplay,
+          );
           document.getElementById("karaokeRoomStatus").textContent =
             `${membership.room.name} · connected`;
         } catch (error) {
@@ -999,22 +1005,6 @@
         updateUserDisplay();
         updateSingerActivity();
 
-        // Initialize volume control
-        const volumeSlider = document.getElementById("volumeSlider");
-        if (volumeSlider) {
-          if (!audioPlayer) {
-            audioPlayer = document.getElementById("audioPlayer");
-            console.log("🎵 Audio player reassigned");
-          }
-
-          if (audioPlayer) {
-            audioPlayer.volume = volumeSlider.value / 100;
-            console.log("🔊 Initial volume set to:", volumeSlider.value + "%");
-          } else {
-            console.warn("⚠️ Audio player still not found");
-          }
-        }
-
         // Listen for Firebase queue updates if available
         if (
           useSingerFirebase &&
@@ -1123,6 +1113,8 @@
           const username = loggedInUser?.username;
           let clearSessionPromise = Promise.resolve();
           try {
+            stopListeningToRoomVolume?.();
+            stopListeningToRoomVolume = null;
             await KaraokeSessions.leaveRoom(activeKaraokeRoomId);
           } catch (error) {
             console.warn(
@@ -1695,51 +1687,27 @@
 
       // Update volume control
       function updateVolume(value) {
-        console.log("📢 updateVolume called with value:", value);
+        const numericVolume = Number(value);
+        if (!Number.isFinite(numericVolume)) return;
+        const volume = Math.max(0, Math.min(100, Math.round(numericVolume)));
+        updateVolumeDisplay(volume);
+        if (!activeKaraokeRoomId || !useSingerFirebase) return;
 
+        KaraokeSessions.setRoomVolume(activeKaraokeRoomId, volume).catch(
+          (error) => console.warn("Room volume update failed:", error.message),
+        );
+      }
+
+      function updateVolumeDisplay(value) {
+        const volume = Math.max(0, Math.min(100, Number(value) || 0));
+        const slider = document.getElementById("volumeSlider");
         const volumeValue = document.getElementById("volumeValue");
-        if (volumeValue) {
-          volumeValue.textContent = value;
-        }
+        if (slider) slider.value = String(volume);
+        if (volumeValue) volumeValue.textContent = String(volume);
 
-        // Get the audio player element for local preview
-        let player = audioPlayer || document.getElementById("audioPlayer");
-
-        if (player) {
-          // Convert percentage (0-100) to decimal (0-1)
-          const volumeDecimal = value / 100;
-          player.volume = volumeDecimal;
-          console.log(
-            "🔊 Local volume set to:",
-            value + "% (decimal: " + volumeDecimal.toFixed(2) + ")",
-          );
-        }
-
-        // Send volume command to TV display via Firebase
-        if (
-          useSingerFirebase &&
-          typeof firebase !== "undefined" &&
-          firebase.database
-        ) {
-          try {
-            firebase.database();
-            KaraokeSessions.sendControl(activeKaraokeRoomId, "setVolume", {
-              volume: parseInt(value),
-            });
-            console.log("📡 Volume command sent to TV display:", value);
-          } catch (err) {
-            console.warn("Firebase volume control error:", err.message);
-          }
-        }
-
-        // Update mute button state based on volume
         const muteBtn = document.getElementById("muteBtn");
         if (muteBtn) {
-          if (value == 0) {
-            muteBtn.textContent = "🔇";
-          } else {
-            muteBtn.textContent = "🔊";
-          }
+          muteBtn.textContent = volume === 0 ? "🔇" : "🔊";
         }
       }
 
