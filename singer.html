@@ -676,7 +676,9 @@
       let activeKaraokeRoomId = null;
       let roomRequestRoomId = null;
       let stopListeningToRoomMembers = null;
+      let stopListeningToRoomMuted = null;
       let stopListeningToRoomVolume = null;
+      let roomMuted = false;
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
 
@@ -842,6 +844,11 @@
           stopListeningToRoomVolume = KaraokeSessions.listenVolume(
             roomId,
             updateVolumeDisplay,
+          );
+          stopListeningToRoomMuted?.();
+          stopListeningToRoomMuted = KaraokeSessions.listenMuted(
+            roomId,
+            updateMuteDisplay,
           );
           document.getElementById("karaokeRoomStatus").textContent =
             `${membership.room.name} · connected`;
@@ -1213,6 +1220,8 @@
           try {
             stopListeningToRoomMembers?.();
             stopListeningToRoomMembers = null;
+            stopListeningToRoomMuted?.();
+            stopListeningToRoomMuted = null;
             stopListeningToRoomVolume?.();
             stopListeningToRoomVolume = null;
             await KaraokeSessions.leaveRoom(activeKaraokeRoomId);
@@ -1761,28 +1770,17 @@
 
       // Toggle mute on TV display
       function toggleMute() {
-        const btn = document.getElementById("muteBtn");
-        console.log("🔇 Mute toggled");
-
-        if (
-          useSingerFirebase &&
-          typeof firebase !== "undefined" &&
-          firebase.database
-        ) {
-          try {
-            firebase.database();
-            KaraokeSessions.sendControl(activeKaraokeRoomId, "toggleMute");
-            if (btn) {
-              btn.textContent = btn.textContent === "🔊" ? "🔇" : "🔊";
-            }
-            showAlert("Sent mute/unmute command to TV display", "info");
-          } catch (err) {
-            console.warn("Firebase control error:", err.message);
-            showAlert("Could not send mute command", "warning");
-          }
-        } else {
+        if (!activeKaraokeRoomId || !useSingerFirebase) {
           showAlert("Firebase not available - controls disabled", "warning");
+          return;
         }
+
+        KaraokeSessions.setRoomMuted(activeKaraokeRoomId, !roomMuted).catch(
+          (error) => {
+            console.warn("Room mute update failed:", error.message);
+            showAlert("Could not update room mute state", "warning");
+          },
+        );
       }
 
       // Update volume control
@@ -1804,10 +1802,14 @@
         const volumeValue = document.getElementById("volumeValue");
         if (slider) slider.value = String(volume);
         if (volumeValue) volumeValue.textContent = String(volume);
+      }
 
+      function updateMuteDisplay(muted) {
+        roomMuted = Boolean(muted);
         const muteBtn = document.getElementById("muteBtn");
         if (muteBtn) {
-          muteBtn.textContent = volume === 0 ? "🔇" : "🔊";
+          muteBtn.textContent = roomMuted ? "🔇" : "🔊";
+          muteBtn.setAttribute("aria-pressed", String(roomMuted));
         }
       }
 

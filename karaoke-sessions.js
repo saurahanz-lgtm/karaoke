@@ -264,20 +264,29 @@
   }
 
   function listenVolume(roomId, callback) {
-    const ref = roomRef(roomId, "volume");
+    const ref = roomRef(roomId, "control");
     const handler = (snapshot) => {
-      callback(
-        snapshot.val() === null
-          ? DEFAULT_ROOM_VOLUME
-          : normalizeVolume(snapshot.val()),
-      );
+      callback(normalizeVolume(snapshot.val()?.volume));
     };
     ref.on("value", handler);
     return () => ref.off("value", handler);
   }
 
+  function listenMuted(roomId, callback) {
+    const ref = roomRef(roomId, "control");
+    const handler = (snapshot) => callback(Boolean(snapshot.val()?.muted));
+    ref.on("value", handler);
+    return () => ref.off("value", handler);
+  }
+
   function setRoomVolume(roomId, volume) {
-    return roomRef(roomId, "volume").set(normalizeVolume(volume));
+    return sendControl(roomId, "setVolume", {
+      volume: normalizeVolume(volume),
+    });
+  }
+
+  function setRoomMuted(roomId, muted) {
+    return sendControl(roomId, "setMuted", { muted: Boolean(muted) });
   }
 
   async function joinRoom(roomId, username) {
@@ -418,7 +427,7 @@
   }
 
   function sendControl(roomId, command, payload = {}) {
-    return roomRef(roomId, "control").set({
+    return roomRef(roomId, "control").update({
       ...payload,
       command,
       timestamp: Date.now(),
@@ -446,6 +455,7 @@
     joinRoom,
     leaveRoom,
     listenMembers,
+    listenMuted,
     listenRoom,
     listenRooms,
     listenRoomRequests,
@@ -453,6 +463,7 @@
     roomRef,
     resolveRoomRequest,
     setRoomVolume,
+    setRoomMuted,
     sendControl,
   };
 })(window);
