@@ -28,10 +28,9 @@
         .admin-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: clamp(15px, 3vw, 25px);
-            margin-bottom: clamp(25px, 5vw, 40px);
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 28px;
         }
 
         .admin-header-left h1 {
@@ -39,14 +38,140 @@
             margin: 0;
         }
 
-        .admin-header-right {
+        .admin-header-left p {
+            margin-bottom: 0;
+        }
+
+        .admin-menu-toggle,
+        .admin-menu-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 46px;
+            min-height: 46px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+        }
+
+        .admin-menu-toggle {
+            gap: 10px;
+            padding: 0 16px;
+            font-weight: 600;
+        }
+
+        .admin-menu-toggle:hover,
+        .admin-menu-close:hover {
+            background: rgba(102, 126, 234, 0.28);
+        }
+
+        .admin-menu-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 1040;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: rgba(5, 5, 15, 0.7);
+        }
+
+        .admin-menu-backdrop[hidden],
+        .admin-menu[hidden] {
+            display: none;
+        }
+
+        .admin-menu {
+            position: fixed;
+            inset: 0 0 0 auto;
+            z-index: 1041;
+            width: min(520px, 94vw);
+            height: 100vh;
+            overflow-y: auto;
+            padding: 24px;
+            background: #171426;
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .admin-menu-header {
             display: flex;
-            gap: clamp(8px, 2vw, 12px);
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .admin-menu-header h2 {
+            margin: 0;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+
+        .admin-menu-content > .logout-btn {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .admin-menu .form-section {
+            padding-top: 4px;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .form-section {
             margin-bottom: clamp(25px, 5vw, 40px);
+        }
+
+        #userManagementSection {
+            padding: clamp(18px, 3vw, 28px);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.035);
+        }
+
+        .user-management-heading {
+            color: #d8dfff;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .singer-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+
+        .singer-filter {
+            padding: 9px 16px;
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 9px;
+            color: white;
+            background: rgba(102, 126, 234, 0.2);
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+
+        .singer-filter:focus-visible,
+        .admin-menu-toggle:focus-visible,
+        .admin-menu-close:focus-visible {
+            outline: 2px solid #aab8ff;
+            outline-offset: 3px;
+        }
+
+        #filterTotal[aria-pressed="true"] {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        #filterOnline[aria-pressed="true"] {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        #filterOffline[aria-pressed="true"] {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
         }
 
         .form-section h3 {
@@ -200,12 +325,7 @@
 
         @media (max-width: 768px) {
             .admin-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .admin-header-right {
-                width: 100%;
+                margin-bottom: 22px;
             }
 
             .form-grid {
@@ -228,6 +348,14 @@
             .tv-btn {
                 flex: 1;
             }
+
+            .admin-menu {
+                padding: 18px;
+            }
+
+            #userManagementSection {
+                padding: 16px 12px;
+            }
         }
     </style>
 </head>
@@ -247,11 +375,28 @@
                 <h1 class="page-title">👨‍💼 USER MANAGEMENT</h1>
                 <p class="text-white-50 mt-2" id="loggedInUser" style="font-size: clamp(0.85rem, 2vw, 0.95rem);"></p>
             </div>
-            <div class="admin-header-right">
+            <button
+                class="admin-menu-toggle"
+                id="adminMenuToggle"
+                type="button"
+                aria-controls="adminMenu"
+                aria-expanded="false"
+                aria-label="Open admin menu"
+            >
+                <span aria-hidden="true">☰</span>
+                <span>Menu</span>
+            </button>
+        </div>
+
+        <button class="admin-menu-backdrop" id="adminMenuBackdrop" type="button" aria-label="Close admin menu" hidden></button>
+        <aside class="admin-menu" id="adminMenu" aria-label="Additional admin controls" hidden>
+            <div class="admin-menu-header">
+                <h2>Admin menu</h2>
+                <button class="admin-menu-close" id="adminMenuClose" type="button" aria-label="Close admin menu">✕</button>
+            </div>
+            <div class="admin-menu-content">
                 <button class="logout-btn" data-bs-toggle="modal" data-bs-target="#addUserModal">➕ Add New User</button>
                 <button onclick="logout()" class="logout-btn">← Logout</button>
-            </div>
-        </div>
 
         <!-- TV Display Control Section -->
         <div class="tv-control-card">
@@ -326,20 +471,22 @@
                 </table>
             </div>
         </section>
+            </div>
+        </aside>
 
         <!-- Users List -->
-        <div>
-            <h2 class="table-title" style="color: #667eea; font-weight: 700;">🎤 SINGER STATUS</h2>
+        <section id="userManagementSection" aria-labelledby="userManagementHeading">
+            <h2 class="user-management-heading" id="userManagementHeading">🎤 Singer accounts</h2>
             
             <!-- Filter Buttons -->
-            <div style="display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap;">
-                <button onclick="filterSingers('total')" id="filterTotal" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+            <div class="singer-filters" aria-label="Filter singers by status">
+                <button class="singer-filter" onclick="filterSingers('total')" id="filterTotal" aria-pressed="true">
                     👥 Total Singer
                 </button>
-                <button onclick="filterSingers('online')" id="filterOnline" style="padding: 10px 20px; background: rgba(102, 126, 234, 0.3); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+                <button class="singer-filter" onclick="filterSingers('online')" id="filterOnline" aria-pressed="false">
                     🟢 Online
                 </button>
-                <button onclick="filterSingers('offline')" id="filterOffline" style="padding: 10px 20px; background: rgba(102, 126, 234, 0.3); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+                <button class="singer-filter" onclick="filterSingers('offline')" id="filterOffline" aria-pressed="false">
                     ⚫ Offline
                 </button>
             </div>
@@ -359,29 +506,26 @@
                     <p class="stat-number" id="totalAdmins" style="color: #6c757d;">0</p>
                 </div>
             </div>
-                    <div class="table-responsive">
-                        <table class="table table-dark table-hover" id="usersTable">
-                            <thead style="background: linear-gradient(135deg, #667eea, #764ba2);">
-                                <tr>
-                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">#</th>
-                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Singer Name</th>
-                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Status</th>
-                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Last Active</th>
-                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Joined</th>
-                                    <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div id="emptyMessage" class="text-center p-5">
-                        <p style="font-size: clamp(1rem, 2.5vw, 1.2rem); color: #999; opacity: 0.7;">No users registered yet...</p>
-                    </div>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover" id="usersTable">
+                    <thead style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                        <tr>
+                            <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">#</th>
+                            <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Singer Name</th>
+                            <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Status</th>
+                            <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Last Active</th>
+                            <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Joined</th>
+                            <th style="padding: clamp(0.8rem, 2vw, 1.2rem); font-weight: 600; font-size: clamp(0.8rem, 1.8vw, 0.95rem);">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody"></tbody>
+                </table>
             </div>
-        </div>
+
+            <div id="emptyMessage" class="text-center p-5">
+                <p style="font-size: clamp(1rem, 2.5vw, 1.2rem); color: #999; opacity: 0.7;">No users registered yet...</p>
+            </div>
+        </section>
     </div>
 
     <!-- Edit User Modal -->

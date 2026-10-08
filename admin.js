@@ -41,6 +41,18 @@ document.addEventListener("DOMContentLoaded", function () {
   // Check if user is logged in
   if (!checkAuthentication()) return;
 
+  const adminMenuToggle = document.getElementById("adminMenuToggle");
+  const adminMenuClose = document.getElementById("adminMenuClose");
+  const adminMenuBackdrop = document.getElementById("adminMenuBackdrop");
+  adminMenuToggle.addEventListener("click", () => setAdminMenuOpen(true));
+  adminMenuClose.addEventListener("click", () => setAdminMenuOpen(false));
+  adminMenuBackdrop.addEventListener("click", () => setAdminMenuOpen(false));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !document.getElementById("adminMenu").hidden) {
+      setAdminMenuOpen(false);
+    }
+  });
+
   // Load users from localStorage
   loadUsers();
   initializePresenceListener();
@@ -97,6 +109,27 @@ document.addEventListener("DOMContentLoaded", function () {
   // Load TV display status on page load
   loadTVDisplayStatus();
 });
+
+function setAdminMenuOpen(isOpen) {
+  const menu = document.getElementById("adminMenu");
+  const toggle = document.getElementById("adminMenuToggle");
+  const backdrop = document.getElementById("adminMenuBackdrop");
+
+  menu.hidden = !isOpen;
+  backdrop.hidden = !isOpen;
+  toggle.setAttribute("aria-expanded", String(isOpen));
+  toggle.setAttribute(
+    "aria-label",
+    isOpen ? "Close admin menu" : "Open admin menu",
+  );
+  document.body.style.overflow = isOpen ? "hidden" : "";
+
+  if (isOpen) {
+    document.getElementById("adminMenuClose").focus();
+  } else {
+    toggle.focus();
+  }
+}
 
 function initializeRoomManagement() {
   if (
@@ -1522,27 +1555,12 @@ function updateFilterButtons() {
   const filterTotal = document.getElementById("filterTotal");
   const filterOnline = document.getElementById("filterOnline");
   const filterOffline = document.getElementById("filterOffline");
-
-  // Reset all buttons
-  if (filterTotal) {
-    filterTotal.style.background = "rgba(102, 126, 234, 0.3)";
-  }
-  if (filterOnline) {
-    filterOnline.style.background = "rgba(102, 126, 234, 0.3)";
-  }
-  if (filterOffline) {
-    filterOffline.style.background = "rgba(102, 126, 234, 0.3)";
-  }
-
-  // Highlight active button
-  if (currentFilter === "total" && filterTotal) {
-    filterTotal.style.background = "linear-gradient(135deg, #667eea, #764ba2)";
-  } else if (currentFilter === "online" && filterOnline) {
-    filterOnline.style.background = "linear-gradient(135deg, #28a745, #20c997)";
-  } else if (currentFilter === "offline" && filterOffline) {
-    filterOffline.style.background =
-      "linear-gradient(135deg, #6c757d, #5a6268)";
-  }
+  filterTotal.setAttribute("aria-pressed", String(currentFilter === "total"));
+  filterOnline.setAttribute("aria-pressed", String(currentFilter === "online"));
+  filterOffline.setAttribute(
+    "aria-pressed",
+    String(currentFilter === "offline"),
+  );
 }
 
 // Update user activity when they interact with singer page
