@@ -40,6 +40,12 @@ let bootUpVideoPlayed = true; // Mark as already played to skip boot-up
 let bootupStartTime = Date.now();
 let bootupHidden = false;
 let qrCodeGenerated = false;
+let activeKaraokeRoomId = null;
+let karaokeRooms = [];
+let stopListeningToRoom = null;
+let stopListeningToMembers = null;
+let stopListeningToRooms = null;
+let stopListeningToActiveRoom = null;
 
 // SCORING SYSTEM
 let songStartTime = null;
@@ -100,6 +106,176 @@ function isFirebaseConfigured() {
     return false;
   }
   return false;
+}
+
+function renderKaraokeRooms() {
+  const select = document.getElementById("activeRoomSelect");
+  if (!select) return;
+
+  select.replaceChildren();
+  karaokeRooms.forEach((room) => {
+    const option = document.createElement("option");
+    option.value = room.id;
+    option.textContent = room.name;
+    select.appendChild(option);
+  });
+  if (activeKaraokeRoomId) select.value = activeKaraokeRoomId;
+}
+
+function activateKaraokeRoom(roomId) {
+  if (!roomId || (roomId === activeKaraokeRoomId && stopListeningToRoom))
+    return;
+
+  stopListeningToRoom?.();
+  stopListeningToMembers?.();
+  activeKaraokeRoomId = roomId;
+  currentSong = null;
+  tvQueue = [];
+  clearCurrentSongPlayback();
+  qrCodeGenerated = false;
+  renderKaraokeRooms();
+
+  const room = karaokeRooms.find((item) => item.id === roomId);
+  const label = document.getElementById("roomCodeLabel");
+  if (label)
+    label.textContent = `${room?.name || "Karaoke Room"} · Scan to Join`;
+  generateQRCode();
+
+  stopListeningToRoom = KaraokeSessions.listenRoom(
+    roomId,
+    {
+      onQueue: (queue) => {
+        tvQueue = queue;
+        firebaseReady = true;
+        if (queue.length && (!currentSong || !currentSong.videoId)) {
+          const firstSong = queue[0];
+          const firstCurrentSong = {
+            title: firstSong.title,
+            artist: firstSong.artist,
+            videoId: firstSong.videoId,
+            requestedBy: firstSong.requestedBy,
+            singer: firstSong.requestedBy,
+          };
+          KaraokeSessions.roomRef(roomId, "currentSong").transaction(
+            (current) => (current?.videoId ? undefined : firstCurrentSong),
+          );
+        }
+        displayQueue();
+        updateNextSongDisplay();
+        checkBootupCompletion();
+      },
+      onCurrentSong: (song) => {
+        if (!song?.videoId) {
+          clearCurrentSongPlayback();
+          return;
+        }
+        currentSong = song;
+        setNoSongMessage(false);
+        displayQueue();
+        updateNextSongDisplay();
+        tryInitPlayback();
+      },
+      onControl: handleRoomControl,
+    },
+    (error) => console.error("Karaoke room listener error:", error.message),
+  );
+
+  stopListeningToMembers = KaraokeSessions.listenMembers(roomId, (count) => {
+    const memberCount = document.getElementById("roomMemberCount");
+    if (memberCount) memberCount.textContent = `${count} / 5 phones`;
+  });
+}
+
+function initializeKaraokeRooms() {
+  KaraokeSessions.ensureDefaultRoom()
+    .then(() => {
+      stopListeningToRooms = KaraokeSessions.listenRooms((rooms) => {
+        karaokeRooms = rooms;
+        renderKaraokeRooms();
+        const activeRoom = rooms.find(
+          (room) => room.id === activeKaraokeRoomId,
+        );
+        const label = document.getElementById("roomCodeLabel");
+        if (activeRoom && label) {
+          label.textContent = `${activeRoom.name} · Scan to Join`;
+        }
+      });
+      stopListeningToActiveRoom =
+        KaraokeSessions.listenActiveRoom(activateKaraokeRoom);
+    })
+    .catch((error) => {
+      console.error("Could not initialize karaoke rooms:", error.message);
+    });
+}
+
+function selectKaraokeRoom(roomId) {
+  KaraokeSessions.setActiveRoom(roomId).catch((error) => {
+    console.error("Could not switch karaoke room:", error.message);
+    alert("Could not switch rooms. Check the Firebase connection.");
+  });
+}
+
+async function createKaraokeRoom() {
+  const password = prompt("Enter admin password to create a room:");
+  if (password === null) return;
+
+  let users = [];
+  try {
+    users = JSON.parse(localStorage.getItem("karaoke_users") || "[]");
+  } catch (error) {
+    console.warn("Could not read admin list:", error.message);
+  }
+  if (
+    !users.some((user) => user.role === "admin" && user.password === password)
+  ) {
+    alert("❌ Incorrect admin password.");
+    return;
+  }
+
+  const roomName = prompt("Name the new karaoke room:");
+  if (!roomName?.trim()) return;
+  try {
+    await KaraokeSessions.createRoom(roomName);
+  } catch (error) {
+    console.error("Could not create karaoke room:", error.message);
+    alert("Could not create a room. Check the Firebase connection.");
+  }
+}
+
+function handleRoomControl(control) {
+  if (!control?.command) return;
+  console.log("📱 Room control command received:", control.command);
+
+  switch (control.command) {
+    case "togglePlay":
+      if (!window.tvPlayer || typeof YT === "undefined") return;
+      if (window.tvPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+        window.tvPlayer.pauseVideo();
+      } else {
+        window.tvPlayer.playVideo();
+      }
+      break;
+    case "skip":
+      playNextSong();
+      break;
+    case "restart":
+      if (window.tvPlayer && currentSong) {
+        window.tvPlayer.seekTo(0);
+        window.tvPlayer.playVideo();
+      }
+      break;
+    case "toggleMute":
+      if (!window.tvPlayer) return;
+      window.tvPlayer.isMuted()
+        ? window.tvPlayer.unMute()
+        : window.tvPlayer.mute();
+      break;
+    case "setVolume":
+      if (window.tvPlayer && typeof control.volume === "number") {
+        window.tvPlayer.setVolume(Math.max(0, Math.min(100, control.volume)));
+      }
+      break;
+  }
 }
 
 // Initialize TV display
@@ -248,7 +424,7 @@ function initializeTVDisplay() {
 
 /* ===== FIREBASE LISTENERS ===== */
 
-function initializeFirebaseListeners() {
+function initializeLegacyFirebaseListeners() {
   console.log("🔥 [3/7] Attaching Firebase listeners");
   console.log("🔍 DEBUG: firebaseListenersSet =", firebaseListenersSet);
 
@@ -580,8 +756,28 @@ function initializeFirebaseListeners() {
     });
 }
 
+function initializeFirebaseListeners() {
+  if (firebaseListenersSet) return;
+  firebaseListenersSet = true;
+  initializeKaraokeRooms();
+
+  firebase
+    .database()
+    .ref("activity")
+    .on("value", (snapshot) => {
+      const activityData = snapshot.val();
+      if (activityData) {
+        console.log(
+          "📱 Activity updated from Firebase:",
+          activityData.timestamp,
+        );
+      }
+    });
+}
+
 // Set current song from queue item
 function setCurrentFromQueue(song) {
+  if (!activeKaraokeRoomId) return;
   currentSong = {
     title: song.title,
     artist: song.artist,
@@ -590,8 +786,7 @@ function setCurrentFromQueue(song) {
     singer: song.requestedBy,
   };
 
-  // Update Firebase
-  firebase.database().ref("currentSong").set(currentSong);
+  KaraokeSessions.roomRef(activeKaraokeRoomId, "currentSong").set(currentSong);
 
   isPlaying = true;
   checkAndPlayCurrentSong();
@@ -862,11 +1057,8 @@ function generateQRCode() {
   // Clear previous QR code if exists
   qrContainer.innerHTML = "";
 
-  // Get the current domain and path
-  const baseUrl =
-    window.location.origin +
-    window.location.pathname.split("/").slice(0, -1).join("/");
-  const indexPageUrl = baseUrl + "/index.html";
+  if (!activeKaraokeRoomId) return;
+  const indexPageUrl = KaraokeSessions.getJoinUrl(activeKaraokeRoomId);
 
   // Debug logging
   console.log("📱 QR Code URL:", indexPageUrl);
@@ -886,44 +1078,19 @@ function generateQRCode() {
 
 // Load queue data from Firebase only
 function loadQueueData() {
-  // Load queue from localStorage (for same-window updates from singer.html)
-  try {
-    const localQueue = JSON.parse(
-      localStorage.getItem("karaoke_queue") || "[]",
+  if (!activeKaraokeRoomId) return;
+  KaraokeSessions.roomRef(activeKaraokeRoomId, "queue")
+    .once("value")
+    .then((snapshot) => {
+      tvQueue = Array.isArray(snapshot.val())
+        ? snapshot.val()
+        : Object.values(snapshot.val() || {});
+      displayQueue();
+      updateNextSongDisplay();
+    })
+    .catch((error) =>
+      console.warn("Could not load active room queue:", error.message),
     );
-    if (Array.isArray(localQueue) && localQueue.length > 0) {
-      tvQueue = localQueue;
-      console.log(
-        "✅ Queue loaded from localStorage:",
-        tvQueue.length,
-        "songs",
-      );
-      console.log(
-        "📋 Queue details:",
-        tvQueue.map((s) => ({ title: s.title, requestedBy: s.requestedBy })),
-      );
-
-      // Sync to Firebase if enabled
-      if (useFirebase && typeof firebase !== "undefined" && firebase.database) {
-        try {
-          firebase
-            .database()
-            .ref("queue")
-            .set(tvQueue)
-            .then(() => {
-              console.log("✅ Queue synced to Firebase");
-            })
-            .catch((err) => {
-              console.warn("⚠️ Could not sync queue to Firebase:", err.message);
-            });
-        } catch (e) {
-          console.warn("⚠️ Firebase sync error:", e.message);
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("⚠️ Error loading queue from localStorage:", e.message);
-  }
 }
 
 // Check and play current song (only when YouTube API is ready)
@@ -1348,16 +1515,13 @@ function showVideoUnavailableMessage() {
 }
 
 function playNextSong() {
+  if (!activeKaraokeRoomId) return;
   if (tvQueue.length === 0) {
-    if (useFirebase) {
-      firebase
-        .database()
-        .ref("currentSong")
-        .set(null)
-        .catch((error) =>
-          console.warn("Could not clear finished song:", error.message),
-        );
-    }
+    KaraokeSessions.roomRef(activeKaraokeRoomId, "currentSong")
+      .set(null)
+      .catch((error) =>
+        console.warn("Could not clear finished song:", error.message),
+      );
     clearCurrentSongPlayback();
     return;
   }
@@ -1373,14 +1537,11 @@ function playNextSong() {
 
   isPlaying = true;
 
-  // Update Firebase
-  if (useFirebase) {
-    firebase.database().ref("currentSong").set(currentSong);
-    firebase
-      .database()
-      .ref("queue")
-      .set(tvQueue.length > 0 ? tvQueue : null);
-  }
+  const updates = {};
+  updates[`karaokeSessions/${activeKaraokeRoomId}/currentSong`] = currentSong;
+  updates[`karaokeSessions/${activeKaraokeRoomId}/queue`] =
+    tvQueue.length > 0 ? tvQueue : null;
+  firebase.database().ref().update(updates);
 
   displayQueue();
   checkAndPlayCurrentSong();
@@ -1480,6 +1641,7 @@ function updateReserveList() {
 
 // Function to add song to queue (called from singer page)
 function addSongToQueue(title, artist, requestedBy) {
+  if (!activeKaraokeRoomId) return;
   const newSong = {
     id: Math.max(...tvQueue.map((s) => s.id || 0), 0) + 1,
     title,
@@ -1488,7 +1650,9 @@ function addSongToQueue(title, artist, requestedBy) {
   };
 
   tvQueue.push(newSong);
-  localStorage.setItem("karaoke_queue", JSON.stringify(tvQueue));
+  KaraokeSessions.addSong(activeKaraokeRoomId, newSong).catch((error) =>
+    console.warn("Could not add song to active room:", error.message),
+  );
 
   // Refresh display
   displayQueue();
@@ -1501,15 +1665,11 @@ function skipToNextSong() {
 
 // Function to remove song from queue (called from admin)
 function removeSongFromQueue(songId) {
+  if (!activeKaraokeRoomId) return;
   tvQueue = tvQueue.filter((s) => s.id !== songId);
-
-  if (useFirebase) {
-    // Update Firebase
-    firebase
-      .database()
-      .ref("queue")
-      .set(tvQueue.length > 0 ? tvQueue : null);
-  }
+  KaraokeSessions.roomRef(activeKaraokeRoomId, "queue").set(
+    tvQueue.length > 0 ? tvQueue : null,
+  );
 
   displayQueue();
 }
@@ -1538,11 +1698,10 @@ function deleteQueue() {
     tvQueue = [];
     clearCurrentSongPlayback();
 
-    if (useFirebase) {
-      // Clear Firebase
-      firebase.database().ref("queue").set(null);
-      firebase.database().ref("currentSong").set(null);
-    }
+    const updates = {};
+    updates[`karaokeSessions/${activeKaraokeRoomId}/queue`] = null;
+    updates[`karaokeSessions/${activeKaraokeRoomId}/currentSong`] = null;
+    firebase.database().ref().update(updates);
     alert("✅ Queue cleared successfully!");
   }
 }

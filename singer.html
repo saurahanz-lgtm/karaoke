@@ -19,6 +19,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="karaoke-sessions.js"></script>
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="youtube-api.js"></script>
@@ -68,6 +69,12 @@
         display: flex;
         gap: 12px;
         margin-bottom: 18px;
+      }
+
+      .room-status {
+        margin-bottom: 14px;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.9rem;
       }
 
       .controls button {
@@ -522,6 +529,7 @@
         >
           🎤 Welcome, mel!
         </div>
+        <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
 
         <div class="refresh" onclick="reloadPlayer()">
           <span class="refresh-icon">🔄</span>
@@ -620,6 +628,7 @@
       let allSongs = [];
       let reservedSongs = [];
       let useSingerFirebase = false;
+      let activeKaraokeRoomId = null;
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
 
@@ -742,8 +751,33 @@
       initializeDeviceSessionId();
 
       // Initialize page on load
-      document.addEventListener("DOMContentLoaded", function () {
+      document.addEventListener("DOMContentLoaded", async function () {
         if (!checkSingerLogin()) return;
+
+        try {
+          const roomId =
+            KaraokeSessions.getRoomIdFromUrl() ||
+            sessionStorage.getItem("karaokeRoomId") ||
+            (await KaraokeSessions.getActiveRoomId());
+          if (!roomId) throw new Error("NO_ACTIVE_ROOM");
+          const membership = await KaraokeSessions.joinRoom(
+            roomId,
+            loggedInUser.username,
+          );
+          activeKaraokeRoomId = roomId;
+          document.getElementById("karaokeRoomStatus").textContent =
+            `${membership.room.name} · connected`;
+        } catch (error) {
+          const message =
+            error.message === "ROOM_FULL"
+              ? "This room already has 5 connected phones. Ask the TV host to switch rooms."
+              : error.message === "ROOM_NOT_FOUND"
+                ? "This karaoke room no longer exists. Scan the QR code on the TV again."
+                : "No active karaoke room found. Scan the QR code on the TV to join.";
+          alert(message);
+          window.location.href = "index.html";
+          return;
+        }
 
         console.log("🎤 Singer page loaded");
 
@@ -977,10 +1011,9 @@
           firebase.database
         ) {
           try {
-            firebase
-              .database()
-              .ref("queue")
-              .on("value", (snapshot) => {
+            KaraokeSessions.roomRef(activeKaraokeRoomId, "queue").on(
+              "value",
+              (snapshot) => {
                 const data = snapshot.val();
                 console.log("🔥 Firebase queue snapshot:", data);
                 if (data) {
@@ -994,7 +1027,7 @@
                     queueArray,
                   );
                   localStorage.setItem(
-                    "karaoke_queue",
+                    `karaoke_queue_${activeKaraokeRoomId}`,
                     JSON.stringify(queueArray),
                   );
 
@@ -1012,7 +1045,7 @@
                   );
                   reservedSongs = reservedArray;
                   localStorage.setItem(
-                    "karaoke_reserved_songs",
+                    `karaoke_reserved_songs_${activeKaraokeRoomId}`,
                     JSON.stringify(reservedArray),
                   );
                   displayReservedSongs();
@@ -1028,9 +1061,12 @@
                     "⚪ Firebase queue is empty - clearing reserved songs",
                   );
                   reservedSongs = [];
-                  localStorage.setItem("karaoke_queue", JSON.stringify([]));
                   localStorage.setItem(
-                    "karaoke_reserved_songs",
+                    `karaoke_queue_${activeKaraokeRoomId}`,
+                    JSON.stringify([]),
+                  );
+                  localStorage.setItem(
+                    `karaoke_reserved_songs_${activeKaraokeRoomId}`,
                     JSON.stringify([]),
                   );
                   displayReservedSongs();
@@ -1045,7 +1081,8 @@
                     "🗑️ All reserved songs and search results cleared",
                   );
                 }
-              });
+              },
+            );
           } catch (fbError) {
             console.warn(
               "⚠️ Could not set Firebase listener:",
@@ -1056,7 +1093,7 @@
 
         // Listen for localStorage changes from TV display
         window.addEventListener("storage", function (e) {
-          if (e.key === "karaoke_queue") {
+          if (e.key === `karaoke_queue_${activeKaraokeRoomId}`) {
             console.log("📡 Queue updated from TV display");
             loadReservedSongs();
             displayReservedSongs();
@@ -1074,6 +1111,14 @@
         if (confirm("Are you sure you want to disconnect?")) {
           const username = loggedInUser?.username;
           let clearSessionPromise = Promise.resolve();
+          try {
+            await KaraokeSessions.leaveRoom(activeKaraokeRoomId);
+          } catch (error) {
+            console.warn(
+              "Could not leave karaoke room cleanly:",
+              error.message,
+            );
+          }
 
           // Broadcast logout event to all tabs
           try {
@@ -1295,7 +1340,7 @@
       }
 
       // Request song
-      function requestSong(title, artist, videoId, userName, btn) {
+      async function requestSong(title, artist, videoId, userName, btn) {
         if (!userName.trim()) {
           alert("Please enter your name first");
           return;
@@ -1323,88 +1368,18 @@
             }
           }
 
-          // Write to Firebase first (primary method)
-          if (
-            useSingerFirebase &&
-            typeof firebase !== "undefined" &&
-            firebase.database
-          ) {
-            try {
-              // First add to localStorage immediately (this is the source of truth)
-              let localQueue = JSON.parse(
-                localStorage.getItem("karaoke_queue") || "[]",
-              );
-              localQueue.push(newSong);
-              localStorage.setItem("karaoke_queue", JSON.stringify(localQueue));
-              console.log(
-                "✅ Song added to localStorage immediately:",
-                newSong.title,
-              );
-              console.log(
-                "📋 localStorage queue now has",
-                localQueue.length,
-                "songs",
-              );
-
-              // Then try to sync to Firebase for TV display (Firebase is secondary)
-              firebase
-                .database()
-                .ref("queue")
-                .set(localQueue)
-                .then(() => {
-                  console.log(
-                    "✅ Queue synced to Firebase:",
-                    localQueue.length,
-                    "songs",
-                  );
-                  addToLocalQueue(newSong);
-                  setCurrentSongAndAutoPlay(newSong);
-                  successCallback(btn, title);
-                })
-                .catch((err) => {
-                  console.warn(
-                    "⚠️ Firebase write failed (using localStorage only):",
-                    err.message,
-                  );
-                  // Still update UI with localStorage version
-                  addToLocalQueue(newSong);
-                  setCurrentSongAndAutoPlay(newSong);
-                  successCallback(btn, title);
-                });
-            } catch (fbError) {
-              console.warn(
-                "⚠️ Firebase error (using localStorage only):",
-                fbError.message,
-              );
-              // Fallback to localStorage only
-              let localQueue = JSON.parse(
-                localStorage.getItem("karaoke_queue") || "[]",
-              );
-              if (!localQueue.some((s) => s.id === newSong.id)) {
-                localQueue.push(newSong);
-                localStorage.setItem(
-                  "karaoke_queue",
-                  JSON.stringify(localQueue),
-                );
-              }
-              addToLocalQueue(newSong);
-              setCurrentSongAndAutoPlay(newSong);
-              successCallback(btn, title);
-            }
-          } else {
-            // Fallback to localStorage
-            let queue = JSON.parse(
-              localStorage.getItem("karaoke_queue") || "[]",
-            );
-            queue.push(newSong);
-            localStorage.setItem("karaoke_queue", JSON.stringify(queue));
-            addToLocalQueue(newSong);
-            setCurrentSongAndAutoPlay(newSong);
-            successCallback(btn, title);
-          }
+          if (!activeKaraokeRoomId) throw new Error("No karaoke room joined");
+          await KaraokeSessions.addSong(activeKaraokeRoomId, newSong);
+          addToLocalQueue(newSong);
+          successCallback(btn, title);
         } catch (error) {
           console.error("Error requesting song:", error);
-          showAlert("Error adding song", "danger");
+          showAlert(
+            error.message === "ROOM_FULL"
+              ? "This room is full. Join another room from the TV."
+              : "Error adding song. Check your connection and try again.",
+            "danger",
+          );
           btn.disabled = false;
           btn.textContent = "✓ Select";
         }
@@ -1412,11 +1387,12 @@
 
       // Helper function to add song to local queue
       function addToLocalQueue(song) {
-        let queue = JSON.parse(localStorage.getItem("karaoke_queue") || "[]");
+        const queueKey = `karaoke_queue_${activeKaraokeRoomId}`;
+        let queue = JSON.parse(localStorage.getItem(queueKey) || "[]");
         // Only add if not already added by the calling function
         if (!queue.some((s) => s.id === song.id)) {
           queue.push(song);
-          localStorage.setItem("karaoke_queue", JSON.stringify(queue));
+          localStorage.setItem(queueKey, JSON.stringify(queue));
           console.log(
             "✅ Song added to local queue. Queue length:",
             queue.length,
@@ -1440,7 +1416,7 @@
           ) {
             reservedSongs.push(reservedSong);
             localStorage.setItem(
-              "karaoke_reserved_songs",
+              `karaoke_reserved_songs_${activeKaraokeRoomId}`,
               JSON.stringify(reservedSongs),
             );
             displayReservedSongs();
@@ -1456,7 +1432,7 @@
         // Notify TV display of queue update
         window.dispatchEvent(
           new CustomEvent("karaoke-queue-updated", {
-            detail: { song, queue },
+            detail: { song, queue, roomId: activeKaraokeRoomId },
           }),
         );
 
@@ -1464,147 +1440,22 @@
       }
 
       // Set current song and trigger auto-play
-      function setCurrentSongAndAutoPlay(song) {
-        // Only set as current song if no current song exists in Firebase
-        // Otherwise, just add to queue - TV display will auto-play when ready
-
-        if (
-          useSingerFirebase &&
-          typeof firebase !== "undefined" &&
-          firebase.database
-        ) {
-          try {
-            firebase
-              .database()
-              .ref("currentSong")
-              .once("value", (snapshot) => {
-                const firebaseCurrentSong = snapshot.val();
-
-                if (!firebaseCurrentSong || !firebaseCurrentSong.videoId) {
-                  // No current song playing in Firebase - set this as current
-                  const newCurrentSong = {
-                    title: song.title,
-                    artist: song.artist,
-                    videoId: song.videoId,
-                    requestedBy: song.requestedBy,
-                    singer: song.requestedBy,
-                    timestamp: Date.now(),
-                  };
-
-                  firebase.database().ref("currentSong").set(newCurrentSong);
-                  localStorage.setItem(
-                    "karaoke_current_song",
-                    JSON.stringify(newCurrentSong),
-                  );
-                  console.log(
-                    "✅ Current song set (no song playing):",
-                    song.title,
-                  );
-                } else {
-                  // Song already playing in Firebase - don't interrupt
-                  console.log(
-                    "✅ Song added to queue (not interrupting):",
-                    song.title,
-                    "| Currently playing:",
-                    firebaseCurrentSong.title,
-                  );
-                }
-              });
-          } catch (fbError) {
-            // Fallback to localStorage if Firebase fails
-            let currentSongData = JSON.parse(
-              localStorage.getItem("karaoke_current_song") || "null",
-            );
-            if (!currentSongData || !currentSongData.videoId) {
-              const currentSong = {
-                title: song.title,
-                artist: song.artist,
-                videoId: song.videoId,
-                requestedBy: song.requestedBy,
-                singer: song.requestedBy,
-              };
-              localStorage.setItem(
-                "karaoke_current_song",
-                JSON.stringify(currentSong),
-              );
-              console.log(
-                "✅ Current song set in localStorage (Firebase unavailable):",
-                song.title,
-              );
-            } else {
-              console.log(
-                "✅ Song added to queue (localStorage check):",
-                song.title,
-              );
-            }
-          }
-        } else {
-          // Fallback to localStorage
-          let currentSongData = JSON.parse(
-            localStorage.getItem("karaoke_current_song") || "null",
-          );
-          if (!currentSongData || !currentSongData.videoId) {
-            const currentSong = {
-              title: song.title,
-              artist: song.artist,
-              videoId: song.videoId,
-              requestedBy: song.requestedBy,
-              singer: song.requestedBy,
-            };
-            localStorage.setItem(
-              "karaoke_current_song",
-              JSON.stringify(currentSong),
-            );
-            console.log(
-              "✅ Current song set in localStorage (Firebase not configured):",
-              song.title,
-            );
-          } else {
-            console.log("✅ Song added to queue:", song.title);
-          }
-        }
-
-        // Set audio source for singer to hear preview/karaoke track
-        // Note: Direct YouTube audio streaming requires special handling
-        // For now, we disable audio preview to avoid errors
-        if (audioPlayer && song.videoId) {
-          // YouTube watch URLs are not valid audio sources
-          // Audio preview would require server-side processing
-          suppressAudioErrors = true;
-          audioPlayer.pause();
-          audioPlayer.currentTime = 0;
-          audioPlayer.removeAttribute("src");
-          suppressAudioErrors = false;
-          console.log(
-            "📻 Audio preview disabled (YouTube videos require special handling)",
-          );
-          // Singer can watch the video on TV display for playback timing
-        }
-
-        // Update Firebase if available
-        if (
-          useSingerFirebase &&
-          typeof firebase !== "undefined" &&
-          firebase.database
-        ) {
-          try {
-            const newCurrentSong = {
-              title: song.title,
-              artist: song.artist,
-              videoId: song.videoId,
-              requestedBy: song.requestedBy,
-              singer: song.requestedBy,
-              timestamp: Date.now(),
-            };
-            // Note: The actual currentSong update is handled in the async Firebase check above
-            console.log("📤 Current song updated (Firebase)");
-          } catch (err) {
-            console.warn("Firebase error:", err.message);
-          }
-        }
-
-        // Auto-play removed - users must manually start the TV display
-        console.log("🎵 Song requested for:", song.title);
+      async function setCurrentSongAndAutoPlay(song) {
+        if (!activeKaraokeRoomId) return;
+        const roomCurrentSong = {
+          title: song.title,
+          artist: song.artist,
+          videoId: song.videoId,
+          requestedBy: song.requestedBy,
+          singer: song.requestedBy,
+          timestamp: Date.now(),
+        };
+        await KaraokeSessions.roomRef(
+          activeKaraokeRoomId,
+          "currentSong",
+        ).transaction((current) =>
+          current?.videoId ? undefined : roomCurrentSong,
+        );
       }
 
       // Helper function for successful request
@@ -1650,7 +1501,9 @@
 
       // Load reserved songs
       function loadReservedSongs() {
-        const stored = localStorage.getItem("karaoke_reserved_songs");
+        const stored = localStorage.getItem(
+          `karaoke_reserved_songs_${activeKaraokeRoomId}`,
+        );
         if (stored) {
           try {
             reservedSongs = JSON.parse(stored);
@@ -1739,10 +1592,8 @@
           firebase.database
         ) {
           try {
-            firebase
-              .database()
-              .ref("control")
-              .set({ command: "restart", timestamp: Date.now() });
+            firebase.database();
+            KaraokeSessions.sendControl(activeKaraokeRoomId, "restart");
             showAlert("Restarting current song on TV display", "info");
           } catch (err) {
             console.warn("Firebase control error:", err.message);
@@ -1764,10 +1615,8 @@
           firebase.database
         ) {
           try {
-            firebase
-              .database()
-              .ref("control")
-              .set({ command: "togglePlay", timestamp: Date.now() });
+            firebase.database();
+            KaraokeSessions.sendControl(activeKaraokeRoomId, "togglePlay");
             if (btn) {
               btn.textContent = btn.textContent === "▶" ? "⏸" : "▶";
             }
@@ -1791,10 +1640,8 @@
           firebase.database
         ) {
           try {
-            firebase
-              .database()
-              .ref("control")
-              .set({ command: "skip", timestamp: Date.now() });
+            firebase.database();
+            KaraokeSessions.sendControl(activeKaraokeRoomId, "skip");
             const btn = document.getElementById("playPauseBtn");
             if (btn) {
               btn.textContent = "▶";
@@ -1820,10 +1667,8 @@
           firebase.database
         ) {
           try {
-            firebase
-              .database()
-              .ref("control")
-              .set({ command: "toggleMute", timestamp: Date.now() });
+            firebase.database();
+            KaraokeSessions.sendControl(activeKaraokeRoomId, "toggleMute");
             if (btn) {
               btn.textContent = btn.textContent === "🔊" ? "🔇" : "🔊";
             }
@@ -1866,14 +1711,10 @@
           firebase.database
         ) {
           try {
-            firebase
-              .database()
-              .ref("control")
-              .set({
-                command: "setVolume",
-                volume: parseInt(value),
-                timestamp: Date.now(),
-              });
+            firebase.database();
+            KaraokeSessions.sendControl(activeKaraokeRoomId, "setVolume", {
+              volume: parseInt(value),
+            });
             console.log("📡 Volume command sent to TV display:", value);
           } catch (err) {
             console.warn("Firebase volume control error:", err.message);
