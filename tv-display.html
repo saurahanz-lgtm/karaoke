@@ -314,6 +314,47 @@
         }
       }
 
+      @media (max-width: 768px) and (orientation: portrait) {
+        .tv-container {
+          padding: 12px;
+        }
+
+        .button-group {
+          top: 12px;
+          right: 12px;
+          left: 12px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: 8px;
+        }
+
+        #activeRoomSelect {
+          grid-column: 1 / -1;
+          width: 100%;
+          max-width: none;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        .button-group button {
+          width: 100%;
+          min-width: 0;
+          min-height: 44px;
+          padding: 8px;
+          font-size: 0.8rem;
+          white-space: nowrap;
+        }
+
+        #nextSongDisplay {
+          top: 116px;
+          right: 12px;
+          left: 12px;
+          width: auto;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+      }
+
       /* Connection Status (Bottom Left) */
       #connectionStatus {
         position: fixed;
