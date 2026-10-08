@@ -67,6 +67,66 @@
         position: relative;
       }
 
+      .tv-container.fullscreen-active {
+        position: fixed;
+        inset: 0;
+        z-index: 9998;
+        box-sizing: border-box;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        padding: 0;
+        background: #000;
+      }
+
+      .tv-container.fullscreen-active
+        > :not(.now-playing-section):not(#exitFullscreenBtn) {
+        display: none !important;
+      }
+
+      .tv-container.fullscreen-active .now-playing-section {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+      }
+
+      .tv-container.fullscreen-active .now-playing-card {
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .tv-container.fullscreen-active #noSongMessage,
+      .tv-container.fullscreen-active #centerSingerName {
+        display: none !important;
+      }
+
+      #exitFullscreenBtn[hidden] {
+        display: none;
+      }
+
+      #exitFullscreenBtn:not([hidden]) {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 10001;
+        min-height: 44px;
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 8px;
+        background: rgba(20, 20, 20, 0.8);
+        color: #fff;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      body.fullscreen-ui-active {
+        overflow: hidden;
+      }
+
+      body.fullscreen-ui-active > :not(.tv-container):not(script):not(link) {
+        display: none !important;
+      }
+
       /* Video Player / Now Playing */
       .now-playing-section {
         flex: 1;
@@ -646,6 +706,15 @@
           🗑️ Clear Queue
         </button>
       </div>
+
+      <button
+        id="exitFullscreenBtn"
+        type="button"
+        onclick="toggleFullscreen()"
+        hidden
+      >
+        Exit Full Screen
+      </button>
 
       <!-- Footer Text -->
       <div id="connectionStatus" class="disconnected">

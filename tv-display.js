@@ -874,38 +874,117 @@ function tryInitPlayback() {
 
 /* ===== FULLSCREEN & CONNECTION ===== */
 
-function toggleFullscreen() {
-  const tvContainer = document.querySelector(".tv-container");
+let fullscreenOrientationLocked = false;
 
-  if (
-    !document.fullscreenElement &&
-    !document.webkitFullscreenElement &&
-    !document.mozFullScreenElement &&
-    !document.msFullscreenElement
-  ) {
-    // Enter fullscreen
-    if (tvContainer.requestFullscreen) {
-      tvContainer.requestFullscreen();
-    } else if (tvContainer.webkitRequestFullscreen) {
-      tvContainer.webkitRequestFullscreen();
-    } else if (tvContainer.mozRequestFullScreen) {
-      tvContainer.mozRequestFullScreen();
-    } else if (tvContainer.msRequestFullscreen) {
-      tvContainer.msRequestFullscreen();
-    }
-  } else {
-    // Exit fullscreen
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    } else if (document.mozCancelFullScreen) {
-      document.mozCancelFullScreen();
-    } else if (document.msExitFullscreen) {
-      document.msExitFullscreen();
-    }
+function getFullscreenElement() {
+  return (
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement
+  );
+}
+
+function updateFullscreenUi() {
+  const tvContainer = document.querySelector(".tv-container");
+  const fullscreenElement = getFullscreenElement();
+  const isFullscreen =
+    fullscreenElement === tvContainer ||
+    tvContainer.classList.contains("fullscreen-fallback");
+
+  tvContainer.classList.toggle("fullscreen-active", isFullscreen);
+  document.body.classList.toggle("fullscreen-ui-active", isFullscreen);
+  document.getElementById("exitFullscreenBtn").hidden = !isFullscreen;
+  if (!isFullscreen && fullscreenOrientationLocked) {
+    fullscreenOrientationLocked = false;
+    screen.orientation?.unlock?.();
   }
 }
+
+function lockLandscapeIfPortrait() {
+  const orientation = screen.orientation;
+  if (
+    !orientation?.type?.startsWith("portrait") ||
+    typeof orientation.lock !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    Promise.resolve(orientation.lock("landscape"))
+      .then(() => {
+        const tvContainer = document.querySelector(".tv-container");
+        if (getFullscreenElement() === tvContainer) {
+          fullscreenOrientationLocked = true;
+        } else {
+          orientation.unlock?.();
+        }
+      })
+      .catch((error) => {
+        console.warn("Could not lock the screen to landscape:", error.message);
+      });
+  } catch (error) {
+    console.warn("Could not lock the screen to landscape:", error.message);
+  }
+}
+
+function toggleFullscreen() {
+  const tvContainer = document.querySelector(".tv-container");
+  const fullscreenElement = getFullscreenElement();
+
+  if (tvContainer.classList.contains("fullscreen-fallback")) {
+    tvContainer.classList.remove("fullscreen-fallback");
+    updateFullscreenUi();
+    return;
+  }
+
+  if (fullscreenElement) {
+    const exitFullscreen =
+      document.exitFullscreen ||
+      document.webkitExitFullscreen ||
+      document.mozCancelFullScreen ||
+      document.msExitFullscreen;
+    if (exitFullscreen) exitFullscreen.call(document);
+    return;
+  }
+
+  const requestFullscreen =
+    tvContainer.requestFullscreen ||
+    tvContainer.webkitRequestFullscreen ||
+    tvContainer.mozRequestFullScreen ||
+    tvContainer.msRequestFullscreen;
+  if (!requestFullscreen) {
+    tvContainer.classList.add("fullscreen-fallback");
+    updateFullscreenUi();
+    return;
+  }
+
+  try {
+    Promise.resolve(requestFullscreen.call(tvContainer))
+      .then(lockLandscapeIfPortrait)
+      .catch((error) => {
+        console.warn(
+          "Native fullscreen unavailable; using display mode:",
+          error,
+        );
+        tvContainer.classList.add("fullscreen-fallback");
+        updateFullscreenUi();
+      });
+  } catch (error) {
+    console.warn("Native fullscreen unavailable; using display mode:", error);
+    tvContainer.classList.add("fullscreen-fallback");
+    updateFullscreenUi();
+  }
+}
+
+[
+  "fullscreenchange",
+  "webkitfullscreenchange",
+  "mozfullscreenchange",
+  "MSFullscreenChange",
+].forEach((eventName) =>
+  document.addEventListener(eventName, updateFullscreenUi),
+);
 
 // D. LOAD SONG - Unified playback handler
 // E. PLAYER CREATION (ONCE LANG)
