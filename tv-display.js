@@ -386,6 +386,7 @@ function initializeFirebaseListeners() {
 
       if (!data || !data.videoId) {
         console.log("📻 No current song in Firebase");
+        clearCurrentSongPlayback();
         return;
       }
 
@@ -399,6 +400,7 @@ function initializeFirebaseListeners() {
 
       currentSong = data;
       firebaseReady = true;
+      setNoSongMessage(false);
 
       // Update display immediately
       displayQueue();
@@ -698,6 +700,7 @@ function toggleFullscreen() {
 function loadSong(song) {
   // Boot-up video disabled - create player directly with karaoke song
   currentVideoId = song.videoId;
+  setNoSongMessage(false);
 
   if (!window.tvPlayer) {
     console.log("🎬 [FIRST LOAD] Creating player with karaoke song");
@@ -927,8 +930,11 @@ function loadQueueData() {
 function checkAndPlayCurrentSong() {
   if (!currentSong || !currentSong.videoId) {
     console.warn("⚠ No current song data");
+    clearCurrentSongPlayback();
     return;
   }
+
+  setNoSongMessage(false);
 
   // 🔴 Player NOT ready → store first
   if (!youtubeAPIReady || !player) {
@@ -951,6 +957,34 @@ function checkAndPlayCurrentSong() {
 
   pendingSongToPlay = null;
   isLoadingSong = false;
+}
+
+function setNoSongMessage(visible) {
+  const message = document.getElementById("noSongMessage");
+  if (message) message.style.display = visible ? "flex" : "none";
+}
+
+function clearCurrentSongPlayback() {
+  currentSong = null;
+  currentVideoId = null;
+  pendingSongToPlay = null;
+  isLoadingSong = false;
+  isPlaying = false;
+
+  for (const activePlayer of new Set(
+    [player, window.tvPlayer].filter(Boolean),
+  )) {
+    try {
+      activePlayer.stopVideo?.();
+      activePlayer.clearVideo?.();
+    } catch (error) {
+      console.warn("Could not clear the previous video:", error.message);
+    }
+  }
+
+  setNoSongMessage(true);
+  displayQueue();
+  updateNextSongDisplay();
 }
 
 // Display song information in lyrics section
@@ -1315,7 +1349,16 @@ function showVideoUnavailableMessage() {
 
 function playNextSong() {
   if (tvQueue.length === 0) {
-    isPlaying = false;
+    if (useFirebase) {
+      firebase
+        .database()
+        .ref("currentSong")
+        .set(null)
+        .catch((error) =>
+          console.warn("Could not clear finished song:", error.message),
+        );
+    }
+    clearCurrentSongPlayback();
     return;
   }
 
@@ -1493,16 +1536,13 @@ function deleteQueue() {
 
   if (confirm("Are you sure you want to clear all songs from the queue?")) {
     tvQueue = [];
-    currentSong = null;
+    clearCurrentSongPlayback();
 
     if (useFirebase) {
       // Clear Firebase
       firebase.database().ref("queue").set(null);
       firebase.database().ref("currentSong").set(null);
     }
-
-    displayQueue();
-    checkAndPlayCurrentSong();
     alert("✅ Queue cleared successfully!");
   }
 }

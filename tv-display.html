@@ -1,451 +1,539 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDkaraoke - TV Display</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SDkaraoke - TV Display</title>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
 
-<!-- Firebase SDK (Compat Version) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-<script src="firebase-config.js"></script>
+    <!-- Firebase SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
 
-<!-- YouTube API - Deferred loading for faster initial render -->
-<script>
-window.onYouTubeIframeAPIReady = function() {
-    console.log('✅ YouTube API ready');
-    window.ytReady = true;
-    if (window.createYouTubePlayer) createYouTubePlayer();
-    if (window.checkBootupCompletion) checkBootupCompletion();
-};
-</script>
-<script async defer src="https://www.youtube.com/iframe_api"></script>
+    <!-- YouTube API - Deferred loading for faster initial render -->
+    <script>
+      window.onYouTubeIframeAPIReady = function () {
+        console.log("✅ YouTube API ready");
+        window.ytReady = true;
+        if (window.createYouTubePlayer) createYouTubePlayer();
+        if (window.checkBootupCompletion) checkBootupCompletion();
+      };
+    </script>
+    <script async defer src="https://www.youtube.com/iframe_api"></script>
 
-<!-- QRCode - Deferred loading -->
-<script async defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- QRCode - Deferred loading -->
+    <script
+      async
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+    ></script>
 
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🎤</text></svg>" type="image/svg+xml">
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🎤</text></svg>"
+      type="image/svg+xml"
+    />
 
-<style>
-body {
-    margin: 0;
-    padding: 0;
-    background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 50%, #0f0f1e 100%);
-    font-family: 'Roboto', sans-serif;
-    overflow: hidden;
-    color: white;
-}
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(
+          135deg,
+          #0f0f1e 0%,
+          #1a0a2e 50%,
+          #0f0f1e 100%
+        );
+        font-family: "Roboto", sans-serif;
+        overflow: hidden;
+        color: white;
+      }
 
-/* TV Container */
-.tv-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100vw;
-    padding: 40px;
-    position: relative;
-}
+      /* TV Container */
+      .tv-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        width: 100vw;
+        padding: 40px;
+        position: relative;
+      }
 
-/* Video Player / Now Playing */
-.now-playing-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
+      /* Video Player / Now Playing */
+      .now-playing-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
 
-.now-playing-card {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    background: #000;
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-}
+      .now-playing-card {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        background: #000;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      }
 
-/* Video */
-#videoPlayer {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+      /* Video */
+      #videoPlayer {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
 
-/* Next Song Display (Top Left) */
-#nextSongDisplay {
-    position: fixed;
-    top: 30px;
-    left: 30px;
-    background: rgba(30,30,50,0.85);
-    backdrop-filter: blur(6px);
-    padding: 12px 20px;
-    border-radius: 20px;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    min-width: 300px;
-}
+      #noSongMessage {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: #080808;
+        color: white;
+        text-align: center;
+      }
 
-#nextSongDisplay span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+      #noSongMessage strong {
+        font-size: clamp(1.5rem, 4vw, 3rem);
+      }
 
-/* Fullscreen & Clear Queue Buttons (Top Right) */
-.button-group {
-    position: fixed;
-    top: 30px;
-    right: 30px;
-    display: flex;
-    gap: 12px;
-    z-index: 100;
-}
+      #noSongMessage span {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: clamp(0.95rem, 2vw, 1.25rem);
+      }
 
-.button-group button {
-    padding: 12px 20px;
-    border-radius: 50px;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 1rem;
-    border: none;
-    color: white;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-    transition: all 0.3s ease;
-}
+      /* Next Song Display (Top Left) */
+      #nextSongDisplay {
+        position: fixed;
+        top: 30px;
+        left: 30px;
+        background: rgba(30, 30, 50, 0.85);
+        backdrop-filter: blur(6px);
+        padding: 12px 20px;
+        border-radius: 20px;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        min-width: 300px;
+      }
 
-#fullscreenBtn {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-}
+      #nextSongDisplay span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
-#fullscreenBtn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-}
+      /* Fullscreen & Clear Queue Buttons (Top Right) */
+      .button-group {
+        position: fixed;
+        top: 30px;
+        right: 30px;
+        display: flex;
+        gap: 12px;
+        z-index: 100;
+      }
 
-#clearQueueBtn {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-}
+      .button-group button {
+        padding: 12px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 1rem;
+        border: none;
+        color: white;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease;
+      }
 
-#clearQueueBtn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 10px 30px rgba(220, 53, 69, 0.4);
-}
+      #fullscreenBtn {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+      }
 
-/* QR Code Bottom Right */
-#qrcode-container {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    background: rgba(255,255,255,0.95);
-    padding: 12px;
-    border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    z-index: 100;
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #666;
-}
+      #fullscreenBtn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+      }
 
-/* Center Singer Name */
-.center-singer-name {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 15;
-    text-align: center;
-    font-size: 3rem;
-    font-weight: 900;
-    color: white;
-    text-shadow: 3px 3px 15px rgba(0,0,0,0.7);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
+      #clearQueueBtn {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+      }
 
-.center-singer-name.show {
-    opacity: 1;
-}
+      #clearQueueBtn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(220, 53, 69, 0.4);
+      }
 
-/* Responsive */
-@media (max-width: 1024px) {
-    .tv-container {
-        padding: 20px;
-    }
+      /* QR Code Bottom Right */
+      #qrcode-container {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 12px;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        z-index: 100;
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #666;
+      }
 
-    #nextSongDisplay {
-        top: 15px;
-        left: 15px;
-        min-width: 250px;
-        font-size: 0.9rem;
-    }
+      /* Center Singer Name */
+      .center-singer-name {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 15;
+        text-align: center;
+        font-size: 3rem;
+        font-weight: 900;
+        color: white;
+        text-shadow: 3px 3px 15px rgba(0, 0, 0, 0.7);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
 
-    .button-group {
-        top: 15px;
-        right: 15px;
-        gap: 8px;
-    }
-
-    .button-group button {
-        padding: 10px 16px;
-        font-size: 0.9rem;
-    }
-}
-
-@media (max-width: 768px) {
-    #nextSongDisplay {
-        min-width: 200px;
-        font-size: 0.8rem;
-        padding: 8px 12px;
-    }
-
-    .button-group {
-        gap: 6px;
-    }
-
-    .button-group button {
-        padding: 8px 12px;
-        font-size: 0.8rem;
-    }
-
-    .center-singer-name {
-        font-size: 2rem;
-    }
-}
-
-/* Connection Status (Bottom Left) */
-#connectionStatus {
-    position: fixed;
-    bottom: 30px;
-    left: 30px;
-    background: rgba(30,30,50,0.85);
-    backdrop-filter: blur(6px);
-    padding: 12px 20px;
-    border-radius: 20px;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    font-size: 1rem;
-    min-width: 180px;
-}
-
-#connectionStatus.connected {
-    color: #22c55e;
-}
-
-#connectionStatus.disconnected {
-    color: #ef4444;
-}
-
-#connectionStatus .status-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-
-#connectionStatus.connected .status-indicator {
-    background: #22c55e;
-    box-shadow: 0 0 10px #22c55e;
-}
-
-#connectionStatus.disconnected .status-indicator {
-    background: #ef4444;
-    animation: none;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* Boot-up Splash Screen */
-#bootupSplash {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 50%, #0f0f1e 100%);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    opacity: 1;
-    transition: opacity 0.8s ease-out;
-}
-
-#bootupSplash.hidden {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.bootup-container {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 40px;
-}
-
-.bootup-logo {
-    font-size: 120px;
-    animation: bootup-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes bootup-pulse {
-    0%, 100% {
-        transform: scale(1) rotate(0deg);
+      .center-singer-name.show {
         opacity: 1;
-    }
-    50% {
-        transform: scale(1.15) rotate(5deg);
-        opacity: 0.8;
-    }
-}
+      }
 
-.bootup-text {
-    font-size: 32px;
-    font-weight: 700;
-    color: white;
-    letter-spacing: 3px;
-    animation: bootup-fade 1s ease-in-out 1s both;
-}
+      /* Responsive */
+      @media (max-width: 1024px) {
+        .tv-container {
+          padding: 20px;
+        }
 
-@keyframes bootup-fade {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
+        #nextSongDisplay {
+          top: 15px;
+          left: 15px;
+          min-width: 250px;
+          font-size: 0.9rem;
+        }
 
-.bootup-subtitle {
-    font-size: 18px;
-    color: #a0a0c0;
-    letter-spacing: 2px;
-    animation: bootup-fade 1s ease-in-out 1.5s both;
-}
+        .button-group {
+          top: 15px;
+          right: 15px;
+          gap: 8px;
+        }
 
-.bootup-loading {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    animation: bootup-fade 1s ease-in-out 2s both;
-}
+        .button-group button {
+          padding: 10px 16px;
+          font-size: 0.9rem;
+        }
+      }
 
-.bootup-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    animation: bootup-bounce 1.4s ease-in-out infinite;
-}
+      @media (max-width: 768px) {
+        #nextSongDisplay {
+          min-width: 200px;
+          font-size: 0.8rem;
+          padding: 8px 12px;
+        }
 
-.bootup-dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
+        .button-group {
+          gap: 6px;
+        }
 
-.bootup-dot:nth-child(3) {
-    animation-delay: 0.4s;
-}
+        .button-group button {
+          padding: 8px 12px;
+          font-size: 0.8rem;
+        }
 
-@keyframes bootup-bounce {
-    0%, 100% { transform: translateY(0); opacity: 0.6; }
-    50% { transform: translateY(-20px); opacity: 1; }
-}
+        .center-singer-name {
+          font-size: 2rem;
+        }
+      }
 
-.bootup-status {
-    font-size: 14px;
-    color: #22c55e;
-    animation: bootup-fade 1s ease-in-out 2.5s both;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+      /* Connection Status (Bottom Left) */
+      #connectionStatus {
+        position: fixed;
+        bottom: 30px;
+        left: 30px;
+        background: rgba(30, 30, 50, 0.85);
+        backdrop-filter: blur(6px);
+        padding: 12px 20px;
+        border-radius: 20px;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        font-size: 1rem;
+        min-width: 180px;
+      }
 
-.bootup-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #22c55e;
-    animation: bootup-pulse 1s ease-in-out infinite;
-}
-</style>
-</head>
+      #connectionStatus.connected {
+        color: #22c55e;
+      }
 
-<body>
-<!-- Boot-up Splash Screen -->
-<div id="bootupSplash">
-    <div class="bootup-container">
+      #connectionStatus.disconnected {
+        color: #ef4444;
+      }
+
+      #connectionStatus .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      #connectionStatus.connected .status-indicator {
+        background: #22c55e;
+        box-shadow: 0 0 10px #22c55e;
+      }
+
+      #connectionStatus.disconnected .status-indicator {
+        background: #ef4444;
+        animation: none;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      /* Boot-up Splash Screen */
+      #bootupSplash {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          #0f0f1e 0%,
+          #1a0a2e 50%,
+          #0f0f1e 100%
+        );
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 1;
+        transition: opacity 0.8s ease-out;
+      }
+
+      #bootupSplash.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .bootup-container {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 40px;
+      }
+
+      .bootup-logo {
+        font-size: 120px;
+        animation: bootup-pulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes bootup-pulse {
+        0%,
+        100% {
+          transform: scale(1) rotate(0deg);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.15) rotate(5deg);
+          opacity: 0.8;
+        }
+      }
+
+      .bootup-text {
+        font-size: 32px;
+        font-weight: 700;
+        color: white;
+        letter-spacing: 3px;
+        animation: bootup-fade 1s ease-in-out 1s both;
+      }
+
+      @keyframes bootup-fade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .bootup-subtitle {
+        font-size: 18px;
+        color: #a0a0c0;
+        letter-spacing: 2px;
+        animation: bootup-fade 1s ease-in-out 1.5s both;
+      }
+
+      .bootup-loading {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        animation: bootup-fade 1s ease-in-out 2s both;
+      }
+
+      .bootup-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        animation: bootup-bounce 1.4s ease-in-out infinite;
+      }
+
+      .bootup-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .bootup-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes bootup-bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.6;
+        }
+        50% {
+          transform: translateY(-20px);
+          opacity: 1;
+        }
+      }
+
+      .bootup-status {
+        font-size: 14px;
+        color: #22c55e;
+        animation: bootup-fade 1s ease-in-out 2.5s both;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .bootup-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+        animation: bootup-pulse 1s ease-in-out infinite;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Boot-up Splash Screen -->
+    <div id="bootupSplash">
+      <div class="bootup-container">
         <div class="bootup-logo">🎤</div>
         <div class="bootup-text">SDkaraoke</div>
         <div class="bootup-subtitle">TV DISPLAY</div>
         <div class="bootup-loading">
-            <div class="bootup-dot"></div>
-            <div class="bootup-dot"></div>
-            <div class="bootup-dot"></div>
+          <div class="bootup-dot"></div>
+          <div class="bootup-dot"></div>
+          <div class="bootup-dot"></div>
         </div>
         <div class="bootup-status">
-            <div class="bootup-status-dot"></div>
-            <span>Initializing...</span>
+          <div class="bootup-status-dot"></div>
+          <span>Initializing...</span>
         </div>
+      </div>
     </div>
-</div>
 
-<!-- Disable Message Splash Screen -->
-<div id="splashScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: none;"></div>
+    <!-- Disable Message Splash Screen -->
+    <div
+      id="splashScreen"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 9999;
+        display: none;
+      "
+    ></div>
 
-<div class="tv-container">
-    <!-- Video Player -->
-    <div class="now-playing-section">
+    <div class="tv-container">
+      <!-- Video Player -->
+      <div class="now-playing-section">
         <div class="now-playing-card">
-            <div id="videoPlayer"></div>
-            <div id="centerSingerName" class="center-singer-name"></div>
+          <div id="videoPlayer"></div>
+          <div id="noSongMessage" role="status" aria-live="polite">
+            <strong>No song playing</strong>
+            <span>Scan the QR code to request a song.</span>
+          </div>
+          <div id="centerSingerName" class="center-singer-name"></div>
         </div>
-    </div>
+      </div>
 
-    <!-- Next Song Display (Top Left) -->
-    <div id="nextSongDisplay">
+      <!-- Next Song Display (Top Left) -->
+      <div id="nextSongDisplay">
         <span>Next:</span>
         <span id="nextSongTitle">Waiting for next song...</span>
         <span id="nextSongArtist">-</span>
-    </div>
+      </div>
 
-    <!-- Buttons (Top Right) -->
-    <div class="button-group">
-        <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Full Screen</button>
-        <button id="clearQueueBtn" onclick="deleteQueue()">🗑️ Clear Queue</button>
-    </div>
+      <!-- Buttons (Top Right) -->
+      <div class="button-group">
+        <button id="fullscreenBtn" onclick="toggleFullscreen()">
+          ⛶ Full Screen
+        </button>
+        <button id="clearQueueBtn" onclick="deleteQueue()">
+          🗑️ Clear Queue
+        </button>
+      </div>
 
-    <!-- Footer Text -->
-    <div id="connectionStatus" class="disconnected" style="bottom: 20px; left: 20px; position: fixed;">
+      <!-- Footer Text -->
+      <div
+        id="connectionStatus"
+        class="disconnected"
+        style="bottom: 20px; left: 20px; position: fixed"
+      >
         <span id="connectionText">Maintained by Shan Denver</span>
-    </div>
+      </div>
 
-    <!-- QR Code -->
-    <div id="qrcode-container">
+      <!-- QR Code -->
+      <div id="qrcode-container">
         <div id="qrcode"></div>
         <div>Scan to Remote</div>
+      </div>
     </div>
-</div>
 
-<script src="tv-display.js"></script>
-<script async defer src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-</body>
+    <script src="tv-display.js"></script>
+    <script
+      async
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"
+    ></script>
+  </body>
 </html>
