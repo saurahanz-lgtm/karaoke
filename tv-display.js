@@ -211,7 +211,8 @@ function activateKaraokeRoom(roomId) {
 
 function initializeKaraokeRooms() {
   KaraokeSessions.ensureDefaultRoom()
-    .then(() => {
+    .then(async () => {
+      const activeRoomId = await KaraokeSessions.getActiveRoomId();
       stopListeningToRooms = KaraokeSessions.listenRooms((rooms) => {
         karaokeRooms = rooms;
         renderKaraokeRooms();
@@ -222,7 +223,11 @@ function initializeKaraokeRooms() {
           const roomId =
             [requestedRoomId, savedRoomId].find((candidate) =>
               rooms.some((room) => room.id === candidate),
-            ) || rooms[0]?.id;
+            ) ||
+            (rooms.some((room) => room.id === activeRoomId)
+              ? activeRoomId
+              : null) ||
+            rooms[0]?.id;
           if (roomId) activateKaraokeRoom(roomId);
         }
 
@@ -1065,10 +1070,6 @@ function generateQRCode() {
 
   const qrContainer = document.getElementById("qrcode");
   if (!qrContainer) return;
-
-  const roomIdLabel = document.getElementById("roomIdLabel");
-  if (roomIdLabel)
-    roomIdLabel.textContent = `Room ID: ${activeKaraokeRoomId || ""}`;
 
   // Clear previous QR code if exists
   qrContainer.innerHTML = "";

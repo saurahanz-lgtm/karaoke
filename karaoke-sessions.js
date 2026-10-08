@@ -62,6 +62,80 @@
     return [];
   }
 
+  async function migrateLegacyRoomIds(db) {
+    const roomsSnapshot = await db.ref(ROOM_LIST_PATH).once("value");
+    const rooms = roomsSnapshot.val() || {};
+
+    for (const [legacyId, room] of Object.entries(rooms)) {
+      if (legacyId === "main" || /^[A-Za-z0-9]{6}$/.test(legacyId)) continue;
+
+      const legacyRoomRef = db.ref(`${ROOM_LIST_PATH}/${legacyId}`);
+      const claim = await legacyRoomRef.transaction((current) =>
+        current && !current.migrationInProgress
+          ? { ...current, migrationInProgress: true }
+          : undefined,
+      );
+      if (!claim.committed) continue;
+
+      let newRoomRef = null;
+      let migrationCommitted = false;
+      try {
+        const [sessionSnapshot, membersSnapshot] = await Promise.all([
+          db.ref(`${ROOM_DATA_PATH}/${legacyId}`).once("value"),
+          db.ref(`${ROOM_DATA_PATH}/${legacyId}/members`).once("value"),
+        ]);
+        const activeCutoff = Date.now() - MEMBER_TIMEOUT_MS;
+        const hasActiveMembers = Object.values(
+          membersSnapshot.val() || {},
+        ).some((member) => member && Number(member.lastSeen) >= activeCutoff);
+        if (hasActiveMembers) {
+          await legacyRoomRef.transaction((current) =>
+            current?.migrationInProgress ? room : undefined,
+          );
+          continue;
+        }
+
+        let newRoom = null;
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          const roomId = generateRoomId();
+          newRoom = { ...room, id: roomId };
+          delete newRoom.migrationInProgress;
+          newRoomRef = db.ref(`${ROOM_LIST_PATH}/${roomId}`);
+          const reservation = await newRoomRef.transaction((current) =>
+            current ? undefined : newRoom,
+          );
+          if (reservation.committed) break;
+          newRoom = null;
+          newRoomRef = null;
+        }
+        if (!newRoom || !newRoomRef) {
+          throw new Error("ROOM_ID_GENERATION_FAILED");
+        }
+
+        await db.ref().update({
+          [`${ROOM_LIST_PATH}/${newRoom.id}`]: newRoom,
+          [`${ROOM_DATA_PATH}/${newRoom.id}`]: sessionSnapshot.val(),
+          [`${ROOM_LIST_PATH}/${legacyId}`]: null,
+          [`${ROOM_DATA_PATH}/${legacyId}`]: null,
+        });
+        migrationCommitted = true;
+        await db
+          .ref(ACTIVE_ROOM_PATH)
+          .transaction((current) =>
+            current === legacyId ? newRoom.id : current,
+          );
+      } catch (error) {
+        if (!migrationCommitted) {
+          if (newRoomRef) await newRoomRef.remove();
+          await legacyRoomRef.transaction((current) =>
+            current?.migrationInProgress ? room : undefined,
+          );
+        }
+        throw error;
+      }
+    }
+  }
+
   async function ensureDefaultRoom() {
     const db = database();
     const defaultRoomRef = db.ref(`${ROOM_LIST_PATH}/main`);
@@ -99,11 +173,13 @@
       );
     }
 
+    await migrateLegacyRoomIds(db);
+
     const roomsSnapshot = await db.ref(ROOM_LIST_PATH).once("value");
     const rooms = roomsSnapshot.val() || {};
     const activeRef = db.ref(ACTIVE_ROOM_PATH);
     const activeSnapshot = await activeRef.once("value");
-    if (!activeSnapshot.val()) {
+    if (!rooms[activeSnapshot.val()]) {
       const firstRoomId = Object.keys(rooms)[0] || "main";
       await activeRef.set(firstRoomId);
     }
