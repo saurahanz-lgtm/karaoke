@@ -918,24 +918,19 @@
         console.log("🔍 Checking if", username, "is logged in elsewhere...");
 
         let callbackCalled = false;
-        let isFirebaseAvailable = false;
 
         const timeoutId = setTimeout(() => {
           if (!callbackCalled) {
             callbackCalled = true;
             console.warn("⏱️ Firebase check timeout");
-            // If Firebase is not available within timeout, allow login (fail-open)
-            if (!isFirebaseAvailable) {
-              console.log("✅ Allowing login - Firebase not responding");
-              callback(false);
-            }
+            console.log("✅ Allowing login - Firebase session check timed out");
+            callback(false);
           }
         }, 3000); // 3 second timeout
 
         // Try to check from Firebase first
         if (typeof firebase !== "undefined" && firebase.database) {
           try {
-            isFirebaseAvailable = true;
             const loginRef = firebase.database().ref("activeLogin/" + username);
 
             loginRef
@@ -947,42 +942,41 @@
                 const data = snapshot.val();
                 const currentSessionId = getDeviceSessionId();
                 const now = Date.now();
-                const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+                const SESSION_TIMEOUT = 2 * 60 * 1000;
 
                 console.log("📊 Firebase data for", username, ":", data);
                 console.log("🎫 Current session ID:", currentSessionId);
 
                 // If there's an active login
                 if (data && data.sessionId) {
-                  const lastActivity = data.timestamp;
+                  const lastActivity = Number(data.timestamp);
 
-                  // If timestamp is missing, invalid, or 0, treat as stale
+                  const sessionAge = now - lastActivity;
                   if (
-                    !lastActivity ||
-                    typeof lastActivity !== "number" ||
-                    lastActivity === 0
+                    !Number.isFinite(lastActivity) ||
+                    lastActivity <= 0 ||
+                    sessionAge > SESSION_TIMEOUT ||
+                    sessionAge < -60000
                   ) {
                     console.log(
-                      "⚠️ Invalid or missing timestamp in Firebase session, treating as stale",
+                      "⚠️ Stale or invalid Firebase session, clearing before login",
                     );
-                    // Clear the corrupted/invalid session immediately and asynchronously
-                    firebase
-                      .database()
-                      .ref("activeLogin/" + username)
+                    loginRef
                       .remove()
-                      .then(() => console.log("✅ Cleared corrupted session"))
-                      .catch((err) =>
+                      .then(() => {
+                        console.log("✅ Stale session cleared");
+                        callback(false);
+                      })
+                      .catch((err) => {
                         console.warn(
-                          "⚠️ Error clearing invalid session:",
+                          "⚠️ Error clearing stale session:",
                           err.message,
-                        ),
-                      );
-                    // Allow login regardless of clearing result
-                    callback(false);
+                        );
+                        callback(false);
+                      });
                     return;
                   }
 
-                  const sessionAge = now - lastActivity;
                   console.log(
                     "⏱️ Session age:",
                     Math.round(sessionAge / 1000),
@@ -991,34 +985,12 @@
 
                   // Check if the session is from a different device
                   if (data.sessionId !== currentSessionId) {
-                    // Check if the old session is stale (older than 30 minutes)
-                    if (sessionAge > SESSION_TIMEOUT) {
-                      console.log(
-                        "⏱️ Old session is stale (" +
-                          Math.round(sessionAge / 60000) +
-                          " min), clearing and allowing login",
-                      );
-                      // Clear the stale session but allow login immediately
-                      firebase
-                        .database()
-                        .ref("activeLogin/" + username)
-                        .remove()
-                        .then(() => console.log("✅ Cleared stale session"))
-                        .catch((err) =>
-                          console.warn(
-                            "⚠️ Error clearing stale session:",
-                            err.message,
-                          ),
-                        );
-                      callback(false);
-                    } else {
-                      // Active session from different device - BLOCK login (single device only)
-                      console.log(
-                        "❌ User already logged in with different session:",
-                        data.sessionId,
-                      );
-                      callback(true); // Block the login - only one device at a time
-                    }
+                    // A different session with a recent heartbeat is still active.
+                    console.log(
+                      "❌ User already logged in with different session:",
+                      data.sessionId,
+                    );
+                    callback(true);
                   } else {
                     console.log("✅ Safe to login - same session ID");
                     callback(false); // Safe to login

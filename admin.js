@@ -26,6 +26,9 @@ let users = [];
 let currentEditingUserId = null;
 let loggedInUser = null;
 let currentFilter = "total"; // Default filter is all users
+let activeLoginSessions = {};
+let firebasePresenceLoaded = false;
+const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
 
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", function () {
@@ -34,6 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Load users from localStorage
   loadUsers();
+  initializePresenceListener();
 
   // Add event listeners
   document
@@ -1183,8 +1187,44 @@ function updateStats() {
   document.getElementById("totalAdmins").textContent = offlineCount;
 }
 
-// Check if user is online (active in last 5 minutes)
+function initializePresenceListener() {
+  if (typeof firebase === "undefined" || !firebase.database) return;
+
+  firebase
+    .database()
+    .ref("activeLogin")
+    .on(
+      "value",
+      (snapshot) => {
+        activeLoginSessions = snapshot.val() || {};
+        firebasePresenceLoaded = true;
+        displayUsers();
+        updateStats();
+      },
+      (error) => {
+        console.warn("Firebase presence listener failed:", error.message);
+        firebasePresenceLoaded = false;
+        displayUsers();
+        updateStats();
+      },
+    );
+}
+
+// Check Firebase session heartbeat first, then fall back to last activity.
 function isUserOnline(user) {
+  if (firebasePresenceLoaded) {
+    const session = activeLoginSessions[user.username];
+    const timestamp = Number(session?.timestamp);
+    const sessionAge = Date.now() - timestamp;
+    return Boolean(
+      session?.sessionId &&
+      Number.isFinite(timestamp) &&
+      timestamp > 0 &&
+      sessionAge <= ACTIVE_SESSION_TIMEOUT &&
+      sessionAge >= -60000,
+    );
+  }
+
   // User is offline if they have no lastActivity or it's 0
   if (
     !user.lastActivity ||
