@@ -33,6 +33,8 @@ let karaokeRooms = [];
 const roomDeviceCounts = new Map();
 const roomDeviceIds = new Map();
 const roomMemberListeners = new Map();
+const roomRequestListeners = new Map();
+const roomRequestsByRoom = new Map();
 
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", function () {
@@ -109,9 +111,6 @@ function initializeRoomManagement() {
 
   KaraokeSessions.ensureDefaultRoom()
     .then(() => {
-      KaraokeSessions.listenRoomRequests((requests) => {
-        renderRoomRequests(requests);
-      });
       KaraokeSessions.listenRooms((rooms) => {
         karaokeRooms = rooms;
         const roomIds = new Set(rooms.map((room) => room.id));
@@ -122,6 +121,13 @@ function initializeRoomManagement() {
             roomMemberListeners.delete(roomId);
             roomDeviceCounts.delete(roomId);
             roomDeviceIds.delete(roomId);
+          }
+        });
+        roomRequestListeners.forEach((stopListening, roomId) => {
+          if (!roomIds.has(roomId)) {
+            stopListening();
+            roomRequestListeners.delete(roomId);
+            roomRequestsByRoom.delete(roomId);
           }
         });
 
@@ -137,6 +143,19 @@ function initializeRoomManagement() {
               },
             );
             roomMemberListeners.set(room.id, stopListening);
+          }
+
+          if (!roomRequestListeners.has(room.id)) {
+            const stopListening = KaraokeSessions.listenRoomRequests(
+              room.id,
+              (requests) => {
+                roomRequestsByRoom.set(room.id, requests);
+                renderRoomRequests(
+                  Array.from(roomRequestsByRoom.values()).flat(),
+                );
+              },
+            );
+            roomRequestListeners.set(room.id, stopListening);
           }
         });
 
@@ -182,7 +201,7 @@ function renderRoomRequests(requests) {
       resolveButton.className = "btn btn-sm btn-outline-success";
       resolveButton.textContent = "Mark handled";
       resolveButton.addEventListener("click", () =>
-        handleRoomRequestResolved(request.id, resolveButton),
+        handleRoomRequestResolved(request.roomId, request.id, resolveButton),
       );
       actionCell.appendChild(resolveButton);
       row.append(singerCell, roomCell, dateCell, actionCell);
@@ -191,10 +210,10 @@ function renderRoomRequests(requests) {
   );
 }
 
-async function handleRoomRequestResolved(requestId, button) {
+async function handleRoomRequestResolved(roomId, requestId, button) {
   button.disabled = true;
   try {
-    await KaraokeSessions.resolveRoomRequest(requestId);
+    await KaraokeSessions.resolveRoomRequest(roomId, requestId);
   } catch (error) {
     console.error("Could not resolve room request:", error.message);
     button.disabled = false;

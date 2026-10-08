@@ -1,7 +1,6 @@
 (function (global) {
   const ROOM_LIST_PATH = "karaokeRooms";
   const ROOM_DATA_PATH = "karaokeSessions";
-  const ROOM_REQUESTS_PATH = "karaokeRoomRequests";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
   const MAX_DEVICES = 3;
   const DEFAULT_ROOM_VOLUME = 70;
@@ -133,7 +132,8 @@
   }
 
   async function createRoomRequest(username, roomId) {
-    const requestRef = database().ref(ROOM_REQUESTS_PATH).push();
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    const requestRef = roomRef(roomId, "roomRequests").push();
     const request = {
       id: requestRef.key,
       username: String(username || "Singer")
@@ -147,8 +147,8 @@
     return request;
   }
 
-  function listenRoomRequests(callback) {
-    const ref = database().ref(ROOM_REQUESTS_PATH);
+  function listenRoomRequests(roomId, callback) {
+    const ref = roomRef(roomId, "roomRequests");
     const handler = (snapshot) => {
       const requests = snapshot.val() || {};
       callback(
@@ -162,9 +162,9 @@
     return () => ref.off("value", handler);
   }
 
-  function resolveRoomRequest(requestId) {
+  function resolveRoomRequest(roomId, requestId) {
     return database()
-      .ref(`${ROOM_REQUESTS_PATH}/${requestId}`)
+      .ref(`${ROOM_DATA_PATH}/${roomId}/roomRequests/${requestId}`)
       .update({ status: "handled", handledAt: Date.now() });
   }
 

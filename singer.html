@@ -1152,7 +1152,9 @@
         } catch (error) {
           console.error("Could not send room request:", error.message);
           status.textContent =
-            "Could not send request. Check your connection and try again.";
+            error.code === "PERMISSION_DENIED"
+              ? "Firebase blocked the request. Contact the administrator to enable room request access."
+              : `Could not send request: ${error.message || "Check your connection and try again."}`;
           button.disabled = false;
         }
       }
