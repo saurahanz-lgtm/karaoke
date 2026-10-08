@@ -504,7 +504,25 @@
     </style>
   </head>
   <body class="singer-page">
-    <div class="container-main">
+    <main id="roomUnavailablePage" class="container-main" hidden>
+      <section class="card-ui" role="status">
+        <h2>Room is full</h2>
+        <p>
+          This room already has 5 connected phones. Send a request to User
+          Management to open another room.
+        </p>
+        <button
+          class="searchbtn"
+          id="requestAnotherRoomButton"
+          type="button"
+          onclick="submitRoomRequest()"
+        >
+          Request another room
+        </button>
+        <p id="roomRequestStatus" aria-live="polite"></p>
+      </section>
+    </main>
+    <div id="singerApp" class="container-main">
       <!-- HEADER -->
       <div class="header">
         <h1><span class="sd-text">SD</span>karaoke</h1>
@@ -629,6 +647,7 @@
       let reservedSongs = [];
       let useSingerFirebase = false;
       let activeKaraokeRoomId = null;
+      let roomRequestRoomId = null;
       let stopListeningToRoomVolume = null;
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
@@ -766,11 +785,13 @@
       document.addEventListener("DOMContentLoaded", async function () {
         if (!checkSingerLogin()) return;
 
+        let requestedRoomId = null;
         try {
           const roomId =
             KaraokeSessions.getRoomIdFromUrl() ||
             sessionStorage.getItem("karaokeRoomId") ||
             (await KaraokeSessions.getActiveRoomId());
+          requestedRoomId = roomId;
           if (!roomId) throw new Error("NO_ACTIVE_ROOM");
           const membership = await KaraokeSessions.joinRoom(
             roomId,
@@ -785,12 +806,17 @@
           document.getElementById("karaokeRoomStatus").textContent =
             `${membership.room.name} · connected`;
         } catch (error) {
+          if (error.message === "ROOM_FULL") {
+            roomRequestRoomId = requestedRoomId;
+            document.getElementById("singerApp").hidden = true;
+            document.getElementById("roomUnavailablePage").hidden = false;
+            return;
+          }
+
           const message =
-            error.message === "ROOM_FULL"
-              ? "This room already has 5 connected phones. Ask the TV host to switch rooms."
-              : error.message === "ROOM_NOT_FOUND"
-                ? "This karaoke room no longer exists. Scan the QR code on the TV again."
-                : "No active karaoke room found. Scan the QR code on the TV to join.";
+            error.message === "ROOM_NOT_FOUND"
+              ? "This karaoke room no longer exists. Scan the QR code on the TV again."
+              : "No active karaoke room found. Scan the QR code on the TV to join.";
           alert(message);
           window.location.href = "index.html";
           return;
@@ -1106,6 +1132,31 @@
 
         console.log("✅ Singer page initialized successfully");
       });
+
+      async function submitRoomRequest() {
+        const button = document.getElementById("requestAnotherRoomButton");
+        const status = document.getElementById("roomRequestStatus");
+        if (!roomRequestRoomId || !loggedInUser?.username) {
+          status.textContent =
+            "Could not identify your room. Scan its QR code again.";
+          return;
+        }
+
+        button.disabled = true;
+        status.textContent = "Sending request...";
+        try {
+          await KaraokeSessions.createRoomRequest(
+            loggedInUser.username,
+            roomRequestRoomId,
+          );
+          window.location.href = "admin.html?roomRequestSent=1";
+        } catch (error) {
+          console.error("Could not send room request:", error.message);
+          status.textContent =
+            "Could not send request. Check your connection and try again.";
+          button.disabled = false;
+        }
+      }
 
       // Disconnect singer
       async function disconnectSinger() {

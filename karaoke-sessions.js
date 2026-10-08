@@ -1,6 +1,7 @@
 (function (global) {
   const ROOM_LIST_PATH = "karaokeRooms";
   const ROOM_DATA_PATH = "karaokeSessions";
+  const ROOM_REQUESTS_PATH = "karaokeRoomRequests";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
   const MAX_DEVICES = 5;
   const DEFAULT_ROOM_VOLUME = 70;
@@ -129,6 +130,42 @@
       },
     });
     return room;
+  }
+
+  async function createRoomRequest(username, roomId) {
+    const requestRef = database().ref(ROOM_REQUESTS_PATH).push();
+    const request = {
+      id: requestRef.key,
+      username: String(username || "Singer")
+        .trim()
+        .slice(0, 40),
+      roomId: String(roomId || "").slice(0, 128),
+      status: "pending",
+      createdAt: Date.now(),
+    };
+    await requestRef.set(request);
+    return request;
+  }
+
+  function listenRoomRequests(callback) {
+    const ref = database().ref(ROOM_REQUESTS_PATH);
+    const handler = (snapshot) => {
+      const requests = snapshot.val() || {};
+      callback(
+        Object.entries(requests)
+          .map(([id, request]) => ({ ...request, id }))
+          .filter((request) => request.status === "pending")
+          .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)),
+      );
+    };
+    ref.on("value", handler);
+    return () => ref.off("value", handler);
+  }
+
+  function resolveRoomRequest(requestId) {
+    return database()
+      .ref(`${ROOM_REQUESTS_PATH}/${requestId}`)
+      .update({ status: "handled", handledAt: Date.now() });
   }
 
   function listenRoom(roomId, handlers, onError) {
@@ -363,6 +400,7 @@
     advanceToNextSong,
     claimNextSong,
     createRoom,
+    createRoomRequest,
     ensureDefaultRoom,
     getActiveRoomId,
     getJoinUrl,
@@ -372,8 +410,10 @@
     listenMembers,
     listenRoom,
     listenRooms,
+    listenRoomRequests,
     listenVolume,
     roomRef,
+    resolveRoomRequest,
     setRoomVolume,
     sendControl,
   };

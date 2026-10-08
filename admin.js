@@ -37,7 +37,7 @@ const roomMemberListeners = new Map();
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", function () {
   // Check if user is logged in
-  checkAuthentication();
+  if (!checkAuthentication()) return;
 
   // Load users from localStorage
   loadUsers();
@@ -109,6 +109,9 @@ function initializeRoomManagement() {
 
   KaraokeSessions.ensureDefaultRoom()
     .then(() => {
+      KaraokeSessions.listenRoomRequests((requests) => {
+        renderRoomRequests(requests);
+      });
       KaraokeSessions.listenRooms((rooms) => {
         karaokeRooms = rooms;
         const roomIds = new Set(rooms.map((room) => room.id));
@@ -149,6 +152,54 @@ function initializeRoomManagement() {
       document.getElementById("roomsTableBody").innerHTML =
         '<tr><td colspan="3" class="text-center text-danger">Check the Firebase connection.</td></tr>';
     });
+}
+
+function renderRoomRequests(requests) {
+  const tableBody = document.getElementById("roomRequestsTableBody");
+  document.getElementById("pendingRoomRequestCount").textContent =
+    `${requests.length} pending`;
+
+  if (requests.length === 0) {
+    tableBody.innerHTML =
+      '<tr><td colspan="4" class="text-center text-white-50">No pending requests.</td></tr>';
+    return;
+  }
+
+  tableBody.replaceChildren(
+    ...requests.map((request) => {
+      const row = document.createElement("tr");
+      const singerCell = document.createElement("td");
+      const roomCell = document.createElement("td");
+      const dateCell = document.createElement("td");
+      const actionCell = document.createElement("td");
+      const resolveButton = document.createElement("button");
+      singerCell.textContent = request.username || "Singer";
+      roomCell.textContent = request.roomId || "Unknown room";
+      dateCell.textContent = request.createdAt
+        ? new Date(request.createdAt).toLocaleString()
+        : "-";
+      resolveButton.type = "button";
+      resolveButton.className = "btn btn-sm btn-outline-success";
+      resolveButton.textContent = "Mark handled";
+      resolveButton.addEventListener("click", () =>
+        handleRoomRequestResolved(request.id, resolveButton),
+      );
+      actionCell.appendChild(resolveButton);
+      row.append(singerCell, roomCell, dateCell, actionCell);
+      return row;
+    }),
+  );
+}
+
+async function handleRoomRequestResolved(requestId, button) {
+  button.disabled = true;
+  try {
+    await KaraokeSessions.resolveRoomRequest(requestId);
+  } catch (error) {
+    console.error("Could not resolve room request:", error.message);
+    button.disabled = false;
+    alert("Could not update the room request. Check the Firebase connection.");
+  }
 }
 
 function renderKaraokeRooms() {
@@ -224,6 +275,19 @@ function checkAuthentication() {
   const stored = localStorage.getItem("karaoke_logged_in_user");
   if (stored) {
     loggedInUser = JSON.parse(stored);
+    if (loggedInUser.role !== "admin") {
+      const isRoomRequestConfirmation =
+        new URLSearchParams(window.location.search).get("roomRequestSent") ===
+        "1";
+      if (isRoomRequestConfirmation) {
+        document.getElementById("adminDashboard").hidden = true;
+        document.getElementById("roomRequestConfirmation").hidden = false;
+        return false;
+      }
+      window.location.href = "index.html";
+      return false;
+    }
+
     // Show logged in user info
     const userInfoEl = document.getElementById("loggedInUser");
     if (userInfoEl) {
@@ -232,10 +296,12 @@ function checkAuthentication() {
 
     // Validate session immediately
     validateAdminSession();
+    return true;
   } else {
     // Not logged in, redirect to home
     alert("Please login first");
     window.location.href = "index.html";
+    return false;
   }
 }
 
