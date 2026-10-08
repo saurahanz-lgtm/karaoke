@@ -1067,14 +1067,14 @@ function generateQRCode() {
   qrContainer.innerHTML = "";
 
   if (!activeKaraokeRoomId) return;
-  const indexPageUrl = KaraokeSessions.getJoinUrl(activeKaraokeRoomId);
+  const singerPageUrl = KaraokeSessions.getJoinUrl(activeKaraokeRoomId);
 
   // Debug logging
-  console.log("📱 QR Code URL:", indexPageUrl);
+  console.log("📱 QR Code URL:", singerPageUrl);
 
   // Create QR code (smaller size for bottom right)
   new QRCode(qrContainer, {
-    text: indexPageUrl,
+    text: singerPageUrl,
     width: 110,
     height: 110,
     colorDark: "#000000",

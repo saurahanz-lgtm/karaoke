@@ -32,7 +32,7 @@
   }
 
   function getJoinUrl(roomId) {
-    const url = new URL("index.html", global.location.href);
+    const url = new URL("singer.html", global.location.href);
     url.search = new URLSearchParams({ room: roomId }).toString();
     return url.toString();
   }

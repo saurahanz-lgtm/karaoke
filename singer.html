@@ -632,11 +632,22 @@
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
 
+      function getRoomLoginUrl() {
+        const roomId = KaraokeSessions.getRoomIdFromUrl();
+        return roomId
+          ? `index.html?room=${encodeURIComponent(roomId)}`
+          : "index.html";
+      }
+
+      function redirectToRoomLogin() {
+        window.location.href = getRoomLoginUrl();
+      }
+
       // Check if user is logged in
       function checkSingerLogin() {
         const stored = localStorage.getItem("karaoke_logged_in_user");
         if (!stored) {
-          window.location.href = "index.html";
+          redirectToRoomLogin();
           return false;
         }
         loggedInUser = JSON.parse(stored);
@@ -663,7 +674,7 @@
 
         if (!username || !deviceSessionId) {
           console.warn("❌ Missing session data");
-          window.location.href = "index.html";
+          redirectToRoomLogin();
           return;
         }
 
@@ -680,7 +691,7 @@
 
                 if (!data || !data.sessionId) {
                   console.warn("❌ No active session found in Firebase");
-                  window.location.href = "index.html";
+                  redirectToRoomLogin();
                   return;
                 }
 
@@ -691,7 +702,7 @@
                   alert(
                     "Your session has been disconnected. You were logged in from another device.",
                   );
-                  window.location.href = "index.html";
+                  redirectToRoomLogin();
                   return;
                 }
 
@@ -741,7 +752,7 @@
           setTimeout(() => {
             if (!window.deviceSessionId) {
               console.log("❌ Redirecting to login - no session ID");
-              window.location.href = "index.html";
+              redirectToRoomLogin();
             }
           }, 1000);
         }
