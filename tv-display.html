@@ -385,21 +385,25 @@
         #qrcode-container {
           right: 12px;
           bottom: 12px;
+          min-height: 202px;
+          justify-content: center;
         }
 
         #connectionStatus {
-          right: auto;
-          bottom: 226px;
-          left: 50%;
+          right: calc(12px + 166px + 12px);
+          bottom: calc(12px + 101px);
+          left: auto;
           width: max-content;
-          max-width: calc(100vw - 24px);
+          max-width: calc(100vw - 202px);
           min-width: 0;
           box-sizing: border-box;
           justify-content: center;
-          padding: 8px 12px;
-          font-size: 0.8rem;
-          white-space: nowrap;
-          transform: translateX(-50%);
+          padding: 8px 6px;
+          font-size: 0.7rem;
+          line-height: 1.2;
+          text-align: center;
+          white-space: normal;
+          transform: translateY(50%);
         }
       }
 
