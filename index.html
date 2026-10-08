@@ -243,6 +243,24 @@
         .login-btn-cancel:hover {
           background: rgba(255, 255, 255, 0.2);
         }
+
+        .room-qr-scanner {
+          width: 100%;
+          margin-bottom: 18px;
+        }
+
+        #roomQrReader {
+          margin-top: 12px;
+          overflow: hidden;
+          border-radius: 8px;
+        }
+
+        #roomQrStatus {
+          min-height: 1.25rem;
+          margin: 8px 0 0;
+          color: rgba(255, 255, 255, 0.75);
+          font-size: 0.9rem;
+        }
       </style>
 
       <div class="home-container">
@@ -321,6 +339,18 @@
     <!-- Singer Login Modal -->
     <div id="singerLoginModal" class="login-modal-custom">
       <div class="login-title">Singer Login</div>
+      <div class="room-qr-scanner">
+        <button
+          type="button"
+          class="login-btn login-btn-submit"
+          id="scanRoomQrButton"
+          onclick="startRoomQrScanner()"
+        >
+          📷 Scan Room QR
+        </button>
+        <div id="roomQrReader" hidden></div>
+        <p id="roomQrStatus" role="status" aria-live="polite"></p>
+      </div>
       <form onsubmit="validateSingerLogin(event)">
         <div class="login-form-group">
           <label>Username</label>
@@ -357,6 +387,7 @@
 
     <!-- Singer Page (Moved to separate singer.html file) -->
 
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
       // ===== SINGER PAGE STATE =====
@@ -365,6 +396,8 @@
       let allSongs = [];
       let reservedSongs = [];
       let useSingerFirebase = false;
+      let roomQrScanner = null;
+      let roomQrHandled = false;
 
       // Check if Firebase is properly configured
       function isSingerFirebaseConfigured() {
@@ -882,8 +915,89 @@
         document.getElementById("singerUsername").focus();
       }
 
+      function getScannedRoomId(decodedText) {
+        try {
+          const scannedUrl = new URL(decodedText);
+          if (!["http:", "https:"].includes(scannedUrl.protocol)) return null;
+          return scannedUrl.searchParams.get("room")?.trim() || null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      async function startRoomQrScanner() {
+        const status = document.getElementById("roomQrStatus");
+        const reader = document.getElementById("roomQrReader");
+        const button = document.getElementById("scanRoomQrButton");
+
+        if (typeof Html5Qrcode === "undefined") {
+          status.textContent =
+            "QR scanner is unavailable. Refresh and try again.";
+          return;
+        }
+
+        roomQrHandled = false;
+        reader.hidden = false;
+        button.disabled = true;
+        status.textContent =
+          "Allow camera access and point it at the TV QR code.";
+        roomQrScanner = new Html5Qrcode("roomQrReader");
+
+        try {
+          await roomQrScanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            (decodedText) => {
+              if (roomQrHandled) return;
+              const roomId = getScannedRoomId(decodedText);
+              if (!roomId) {
+                status.textContent =
+                  "That QR code does not contain a karaoke room.";
+                return;
+              }
+
+              roomQrHandled = true;
+              const loginUrl = new URL(window.location.href);
+              loginUrl.searchParams.set("room", roomId);
+              window.history.replaceState(null, "", loginUrl);
+              status.textContent = "Room found. Preparing to join...";
+              stopRoomQrScanner();
+
+              if (localStorage.getItem("karaoke_logged_in_user")) {
+                window.location.href = `singer.html?room=${encodeURIComponent(roomId)}`;
+              } else {
+                document.getElementById("singerUsername").focus();
+              }
+            },
+            () => {},
+          );
+        } catch (error) {
+          console.warn("Could not start room QR scanner:", error.message);
+          status.textContent =
+            "Could not open the camera. Allow camera access and use HTTPS.";
+          reader.hidden = true;
+          button.disabled = false;
+        }
+      }
+
+      async function stopRoomQrScanner() {
+        const button = document.getElementById("scanRoomQrButton");
+        if (roomQrScanner?.isScanning) {
+          try {
+            await roomQrScanner.stop();
+            roomQrScanner.clear();
+          } catch (error) {
+            console.warn("Could not stop room QR scanner:", error.message);
+          }
+        }
+        roomQrScanner = null;
+        document.getElementById("roomQrReader").hidden = true;
+        button.disabled = false;
+      }
+
       // Close Login Modal
       function closeLoginModal() {
+        stopRoomQrScanner();
         document.getElementById("loginOverlay").classList.remove("show");
         document.getElementById("adminLoginModal").classList.remove("show");
         document.getElementById("singerLoginModal").classList.remove("show");
