@@ -114,6 +114,29 @@
             margin-bottom: 12px;
         }
 
+        .admin-menu-nav {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .admin-menu-nav-button {
+            width: 100%;
+            padding: 13px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .admin-menu-nav-button:hover,
+        .admin-menu-nav-button[aria-current="page"] {
+            border-color: rgba(102, 126, 234, 0.65);
+            background: rgba(102, 126, 234, 0.24);
+        }
+
         .admin-menu .form-section {
             padding-top: 4px;
             border-top: 1px solid rgba(255, 255, 255, 0.12);
@@ -157,7 +180,8 @@
 
         .singer-filter:focus-visible,
         .admin-menu-toggle:focus-visible,
-        .admin-menu-close:focus-visible {
+        .admin-menu-close:focus-visible,
+        .admin-menu-nav-button:focus-visible {
             outline: 2px solid #aab8ff;
             outline-offset: 3px;
         }
@@ -395,25 +419,35 @@
                 <button class="admin-menu-close" id="adminMenuClose" type="button" aria-label="Close admin menu">✕</button>
             </div>
             <div class="admin-menu-content">
-                <button class="logout-btn" data-bs-toggle="modal" data-bs-target="#addUserModal">➕ Add New User</button>
-                <button onclick="logout()" class="logout-btn">← Logout</button>
+                <nav class="admin-menu-nav" aria-label="User management views">
+                    <button class="admin-menu-nav-button" type="button" data-admin-view-target="singers" aria-controls="userManagementSection" aria-current="page">🎤 Singer Counts</button>
+                    <button class="admin-menu-nav-button" type="button" data-admin-view-target="tv" aria-controls="tvControlSection">📺 TV Display Control</button>
+                    <button class="admin-menu-nav-button" type="button" data-admin-view-target="rooms" aria-controls="roomsSection">🎛️ Karaoke Rooms</button>
+                    <button class="admin-menu-nav-button" type="button" data-admin-view-target="requests" aria-controls="roomRequestsSection">📨 Room Requests</button>
+                </nav>
+                <button class="logout-btn" type="button" data-bs-toggle="modal" data-bs-target="#addUserModal">➕ Add New User</button>
+                <button onclick="logout()" class="logout-btn" type="button">← Logout</button>
+            </div>
+        </aside>
 
         <!-- TV Display Control Section -->
-        <div class="tv-control-card">
-            <div class="tv-control-info">
-                <h3>📺 TV DISPLAY CONTROL</h3>
-                <p>Manage TV display status and availability</p>
-                <div style="margin-top: 12px;">
-                    <span class="tv-status" id="tvStatus">🟢 ENABLED</span>
+        <section id="tvControlSection" data-admin-view="tv" aria-labelledby="tvControlHeading" hidden>
+            <div class="tv-control-card">
+                <div class="tv-control-info">
+                    <h3 id="tvControlHeading">📺 TV DISPLAY CONTROL</h3>
+                    <p>Manage TV display status and availability</p>
+                    <div style="margin-top: 12px;">
+                        <span class="tv-status" id="tvStatus">🟢 ENABLED</span>
+                    </div>
+                </div>
+                <div class="tv-control-buttons">
+                    <button class="tv-btn tv-btn-enable" onclick="enableTVDisplay()" id="enableTVBtn">🟢 Enable TV</button>
+                    <button class="tv-btn tv-btn-disable" onclick="disableTVDisplay()" id="disableTVBtn">🔴 Disable TV</button>
                 </div>
             </div>
-            <div class="tv-control-buttons">
-                <button class="tv-btn tv-btn-enable" onclick="enableTVDisplay()" id="enableTVBtn">🟢 Enable TV</button>
-                <button class="tv-btn tv-btn-disable" onclick="disableTVDisplay()" id="disableTVBtn">🔴 Disable TV</button>
-            </div>
-        </div>
+        </section>
 
-        <section class="form-section" aria-labelledby="roomsHeading">
+        <section id="roomsSection" class="form-section" data-admin-view="rooms" aria-labelledby="roomsHeading" hidden>
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
                 <h2 class="table-title mb-0" id="roomsHeading" style="color: #20c997; font-weight: 700;">🎛️ KARAOKE ROOMS</h2>
                 <span class="text-white-50" id="roomMonitorStatus" role="status">Connecting to rooms...</span>
@@ -450,7 +484,7 @@
             </div>
         </section>
 
-        <section class="form-section" aria-labelledby="roomRequestsHeading">
+        <section id="roomRequestsSection" class="form-section" data-admin-view="requests" aria-labelledby="roomRequestsHeading" hidden>
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
                 <h2 class="table-title mb-0" id="roomRequestsHeading" style="color: #f0ad4e; font-weight: 700;">📨 ROOM REQUESTS</h2>
                 <span class="text-white-50" id="pendingRoomRequestCount">0 pending</span>
@@ -471,11 +505,9 @@
                 </table>
             </div>
         </section>
-            </div>
-        </aside>
 
         <!-- Users List -->
-        <section id="userManagementSection" aria-labelledby="userManagementHeading">
+        <section id="userManagementSection" data-admin-view="singers" aria-labelledby="userManagementHeading">
             <h2 class="user-management-heading" id="userManagementHeading">🎤 Singer accounts</h2>
             
             <!-- Filter Buttons -->

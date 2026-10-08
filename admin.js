@@ -44,6 +44,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const adminMenuToggle = document.getElementById("adminMenuToggle");
   const adminMenuClose = document.getElementById("adminMenuClose");
   const adminMenuBackdrop = document.getElementById("adminMenuBackdrop");
+  document.querySelectorAll("[data-admin-view-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setAdminView(button.dataset.adminViewTarget);
+      setAdminMenuOpen(false);
+    });
+  });
   adminMenuToggle.addEventListener("click", () => setAdminMenuOpen(true));
   adminMenuClose.addEventListener("click", () => setAdminMenuOpen(false));
   adminMenuBackdrop.addEventListener("click", () => setAdminMenuOpen(false));
@@ -52,6 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
       setAdminMenuOpen(false);
     }
   });
+  setAdminView("singers");
 
   // Load users from localStorage
   loadUsers();
@@ -129,6 +136,27 @@ function setAdminMenuOpen(isOpen) {
   } else {
     toggle.focus();
   }
+}
+
+function setAdminView(viewName) {
+  const selectedView = document.querySelector(
+    `[data-admin-view="${viewName}"]`,
+  );
+  if (!selectedView) {
+    console.error("Admin view not found:", viewName);
+    return;
+  }
+
+  document.querySelectorAll("[data-admin-view]").forEach((view) => {
+    view.hidden = view !== selectedView;
+  });
+  document.querySelectorAll("[data-admin-view-target]").forEach((button) => {
+    if (button.dataset.adminViewTarget === viewName) {
+      button.setAttribute("aria-current", "page");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+  });
 }
 
 function initializeRoomManagement() {
