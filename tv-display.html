@@ -201,8 +201,14 @@
         position: fixed;
         bottom: 30px;
         right: 30px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        width: 166px;
         background: rgba(255, 255, 255, 0.95);
-        padding: 12px;
+        padding: 10px;
         border-radius: 15px;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         z-index: 100;
@@ -212,11 +218,34 @@
         color: #666;
       }
 
+      #qrcode {
+        display: grid;
+        width: 110px;
+        height: 110px;
+        flex: 0 0 110px;
+        place-items: center;
+      }
+
+      #qrcode canvas,
+      #qrcode img {
+        display: block;
+        width: 110px !important;
+        height: 110px !important;
+      }
+
+      #roomCodeLabel {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       #roomIdLabel {
-        margin: 4px 0;
+        width: 100%;
         color: #111;
         font-size: 1rem;
         font-weight: 700;
+        white-space: nowrap;
       }
 
       /* Center Singer Name */
