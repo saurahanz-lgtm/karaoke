@@ -161,16 +161,25 @@
 
   function listenMembers(roomId, callback) {
     const ref = database().ref(`${ROOM_DATA_PATH}/${roomId}/members`);
-    const handler = (snapshot) => {
-      const members = snapshot.val() || {};
+    let members = {};
+    const updateCount = () => {
       const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
-      const count = Object.values(members).filter(
-        (member) => member && Number(member.lastSeen) >= cutoff,
-      ).length;
-      callback(Math.min(count, MAX_DEVICES));
+      const activeMemberIds = Object.entries(members)
+        .filter(([, member]) => member && Number(member.lastSeen) >= cutoff)
+        .map(([id]) => id)
+        .slice(0, MAX_DEVICES);
+      callback(activeMemberIds.length, activeMemberIds);
+    };
+    const handler = (snapshot) => {
+      members = snapshot.val() || {};
+      updateCount();
     };
     ref.on("value", handler);
-    return () => ref.off("value", handler);
+    const refreshTimer = global.setInterval(updateCount, HEARTBEAT_INTERVAL_MS);
+    return () => {
+      ref.off("value", handler);
+      global.clearInterval(refreshTimer);
+    };
   }
 
   async function joinRoom(roomId, username) {

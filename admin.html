@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="karaoke-sessions.js"></script>
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="youtube-api.js"></script>
@@ -257,6 +258,42 @@
                 <button class="tv-btn tv-btn-disable" onclick="disableTVDisplay()" id="disableTVBtn">🔴 Disable TV</button>
             </div>
         </div>
+
+        <section class="form-section" aria-labelledby="roomsHeading">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                <h2 class="table-title mb-0" id="roomsHeading" style="color: #20c997; font-weight: 700;">🎛️ KARAOKE ROOMS</h2>
+                <span class="text-white-50" id="roomMonitorStatus" role="status">Connecting to rooms...</span>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 class="text-white mb-2">Total Rooms</h3>
+                    <p class="stat-number" id="totalKaraokeRooms">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3 class="text-white mb-2">Connected Phones</h3>
+                    <p class="stat-number" id="totalRoomDevices" style="color: #20c997;">0</p>
+                </div>
+            </div>
+            <form id="createRoomForm" class="d-flex flex-wrap gap-2 mb-4">
+                <label class="visually-hidden" for="newRoomName">Room name</label>
+                <input class="form-control" id="newRoomName" name="roomName" maxlength="40" placeholder="New room name" required style="max-width: 320px;">
+                <button class="btn btn-success" id="createRoomButton" type="submit">＋ Add Room</button>
+            </form>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover">
+                    <thead style="background: linear-gradient(135deg, #0f9b8e, #087f73);">
+                        <tr>
+                            <th>Room</th>
+                            <th>Room Code</th>
+                            <th>Connected Phones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomsTableBody">
+                        <tr><td colspan="3" class="text-center text-white-50">Loading rooms...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
         <!-- Users List -->
         <div>

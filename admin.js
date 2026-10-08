@@ -29,6 +29,10 @@ let currentFilter = "total"; // Default filter is all users
 let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
 const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
+let karaokeRooms = [];
+const roomDeviceCounts = new Map();
+const roomDeviceIds = new Map();
+const roomMemberListeners = new Map();
 
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", function () {
@@ -38,11 +42,18 @@ document.addEventListener("DOMContentLoaded", function () {
   // Load users from localStorage
   loadUsers();
   initializePresenceListener();
+  initializeRoomManagement();
 
   // Add event listeners
   document
     .getElementById("addUserForm")
     .addEventListener("submit", handleAddUser);
+  document
+    .getElementById("createRoomForm")
+    .addEventListener("submit", handleCreateRoom);
+  if (loggedInUser?.role !== "admin") {
+    document.getElementById("createRoomForm").hidden = true;
+  }
 
   // Display initial users
   displayUsers();
@@ -84,6 +95,116 @@ document.addEventListener("DOMContentLoaded", function () {
   // Load TV display status on page load
   loadTVDisplayStatus();
 });
+
+function initializeRoomManagement() {
+  if (
+    !window.KaraokeSessions ||
+    typeof firebase === "undefined" ||
+    !firebase.database
+  ) {
+    document.getElementById("roomMonitorStatus").textContent =
+      "Room monitoring unavailable";
+    return;
+  }
+
+  KaraokeSessions.ensureDefaultRoom()
+    .then(() => {
+      KaraokeSessions.listenRooms((rooms) => {
+        karaokeRooms = rooms;
+        const roomIds = new Set(rooms.map((room) => room.id));
+
+        roomMemberListeners.forEach((stopListening, roomId) => {
+          if (!roomIds.has(roomId)) {
+            stopListening();
+            roomMemberListeners.delete(roomId);
+            roomDeviceCounts.delete(roomId);
+            roomDeviceIds.delete(roomId);
+          }
+        });
+
+        rooms.forEach((room) => {
+          if (!roomMemberListeners.has(room.id)) {
+            roomDeviceCounts.set(room.id, 0);
+            const stopListening = KaraokeSessions.listenMembers(
+              room.id,
+              (count, deviceIds) => {
+                roomDeviceCounts.set(room.id, count);
+                roomDeviceIds.set(room.id, deviceIds);
+                renderKaraokeRooms();
+              },
+            );
+            roomMemberListeners.set(room.id, stopListening);
+          }
+        });
+
+        document.getElementById("roomMonitorStatus").textContent =
+          "Live room status";
+        renderKaraokeRooms();
+      });
+    })
+    .catch((error) => {
+      console.error("Could not load karaoke rooms:", error.message);
+      document.getElementById("roomMonitorStatus").textContent =
+        "Could not load rooms";
+      document.getElementById("roomsTableBody").innerHTML =
+        '<tr><td colspan="3" class="text-center text-danger">Check the Firebase connection.</td></tr>';
+    });
+}
+
+function renderKaraokeRooms() {
+  const tableBody = document.getElementById("roomsTableBody");
+  const totalDevices = new Set(Array.from(roomDeviceIds.values()).flat()).size;
+
+  document.getElementById("totalKaraokeRooms").textContent = String(
+    karaokeRooms.length,
+  );
+  document.getElementById("totalRoomDevices").textContent =
+    String(totalDevices);
+
+  if (karaokeRooms.length === 0) {
+    tableBody.innerHTML =
+      '<tr><td colspan="3" class="text-center text-white-50">No rooms created yet.</td></tr>';
+    return;
+  }
+
+  tableBody.replaceChildren(
+    ...karaokeRooms.map((room) => {
+      const row = document.createElement("tr");
+      const nameCell = document.createElement("td");
+      const codeCell = document.createElement("td");
+      const devicesCell = document.createElement("td");
+      nameCell.textContent = room.name;
+      codeCell.textContent = room.id;
+      devicesCell.textContent = `${roomDeviceCounts.get(room.id) || 0} / ${KaraokeSessions.MAX_DEVICES}`;
+      row.append(nameCell, codeCell, devicesCell);
+      return row;
+    }),
+  );
+}
+
+async function handleCreateRoom(event) {
+  event.preventDefault();
+  if (loggedInUser?.role !== "admin") {
+    alert("Only admins can create rooms.");
+    return;
+  }
+
+  const input = document.getElementById("newRoomName");
+  const name = input.value.trim();
+  if (!name) return;
+
+  const button = document.getElementById("createRoomButton");
+  button.disabled = true;
+  try {
+    await KaraokeSessions.createRoom(name);
+    input.value = "";
+  } catch (error) {
+    console.error("Could not create karaoke room:", error.message);
+    alert("Could not create room. Check the Firebase connection.");
+  } finally {
+    button.disabled = false;
+  }
+}
 
 // Validate that the current session is still active (not logged in elsewhere)
 function validateSessionValidity() {

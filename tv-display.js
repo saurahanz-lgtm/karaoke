@@ -223,34 +223,6 @@ function selectKaraokeRoom(roomId) {
   }
 }
 
-async function createKaraokeRoom() {
-  const password = prompt("Enter admin password to create a room:");
-  if (password === null) return;
-
-  let users = [];
-  try {
-    users = JSON.parse(localStorage.getItem("karaoke_users") || "[]");
-  } catch (error) {
-    console.warn("Could not read admin list:", error.message);
-  }
-  if (
-    !users.some((user) => user.role === "admin" && user.password === password)
-  ) {
-    alert("❌ Incorrect admin password.");
-    return;
-  }
-
-  const roomName = prompt("Name the new karaoke room:");
-  if (!roomName?.trim()) return;
-  try {
-    const room = await KaraokeSessions.createRoom(roomName);
-    activateKaraokeRoom(room.id);
-  } catch (error) {
-    console.error("Could not create karaoke room:", error.message);
-    alert("Could not create a room. Check the Firebase connection.");
-  }
-}
-
 function handleRoomControl(control) {
   if (!control?.command) return;
   console.log("📱 Room control command received:", control.command);
