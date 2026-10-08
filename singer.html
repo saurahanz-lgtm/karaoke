@@ -334,6 +334,15 @@
         display: block;
       }
 
+      .song-thumbnail-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #20212a;
+        color: #ddd;
+        font-size: 2rem;
+      }
+
       .song-info {
         padding: 15px;
       }
@@ -1361,6 +1370,14 @@
         );
       }
 
+      function getSearchResultThumbnailMarkup(song) {
+        if (!song.thumbnail) {
+          return '<div class="song-thumbnail song-thumbnail-placeholder" role="img" aria-label="Thumbnail unavailable">🎤</div>';
+        }
+
+        return `<img src="${song.thumbnail}" alt="${song.title}" class="song-thumbnail" onerror="this.onerror=null;const placeholder=document.createElement('div');placeholder.className='song-thumbnail song-thumbnail-placeholder';placeholder.setAttribute('role','img');placeholder.setAttribute('aria-label','Thumbnail unavailable');placeholder.textContent='🎤';this.replaceWith(placeholder)">`;
+      }
+
       // Display search results
       function displaySearchResults(results, userName) {
         const container = document.getElementById("resultsContainer");
@@ -1378,10 +1395,10 @@
         html += `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3>`;
 
         results.forEach((song) => {
-          const thumbnailUrl = `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`;
+          const thumbnailMarkup = getSearchResultThumbnailMarkup(song);
           html += `
                     <div class="song-item">
-                        <img src="${thumbnailUrl}" alt="${song.title}" class="song-thumbnail" onerror="this.src='https://via.placeholder.com/320x180?text=Song+Thumbnail'">
+                        ${thumbnailMarkup}
                         <div class="song-info">
                             <div class="song-title">${song.title}</div>
                             <div class="song-artist">🎤 ${song.artist}</div>
