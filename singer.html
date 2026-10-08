@@ -669,6 +669,7 @@
     <script>
       // ===== SINGER PAGE STATE =====
       let searchResults = [];
+      let searchFallbackMessage = "";
       let audioPlayer;
       let allSongs = [];
       let reservedSongs = [];
@@ -1273,6 +1274,7 @@
 
       // YouTube API search function
       async function performSearch(query) {
+        searchFallbackMessage = "";
         try {
           const results = await searchYouTubeKaraoke(query);
           return results.map((item) => ({
@@ -1282,8 +1284,19 @@
             thumbnail: item.thumbnail,
           }));
         } catch (error) {
-          console.error("YouTube API Error:", error);
-          return getFallbackSongs(query);
+          if (error.code === "YOUTUBE_RATE_LIMIT") {
+            console.warn("YouTube API is rate-limited:", error.message);
+            searchFallbackMessage =
+              "YouTube is temporarily rate-limiting searches. Showing popular karaoke picks instead.";
+          } else {
+            console.error("YouTube API Error:", error);
+            searchFallbackMessage =
+              "YouTube search is unavailable. Showing popular karaoke picks instead.";
+          }
+          const matchingFallbacks = getFallbackSongs(query);
+          return matchingFallbacks.length
+            ? matchingFallbacks
+            : getFallbackSongs("");
         }
       }
 
@@ -1359,7 +1372,10 @@
           return;
         }
 
-        let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3>`;
+        let html = searchFallbackMessage
+          ? `<div class="alert alert-custom" role="status">${searchFallbackMessage}</div>`
+          : "";
+        html += `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3>`;
 
         results.forEach((song) => {
           const thumbnailUrl = `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`;
