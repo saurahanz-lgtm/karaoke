@@ -349,7 +349,9 @@
           📷 Scan Room QR
         </button>
         <div id="roomQrReader" hidden></div>
-        <p id="roomQrStatus" role="status" aria-live="polite"></p>
+        <p id="roomQrStatus" role="status" aria-live="polite">
+          Scan the room QR code before logging in.
+        </p>
       </div>
       <form onsubmit="validateSingerLogin(event)">
         <div class="login-form-group">
@@ -371,7 +373,12 @@
           />
         </div>
         <div class="login-buttons">
-          <button type="submit" class="login-btn login-btn-submit">
+          <button
+            type="submit"
+            class="login-btn login-btn-submit"
+            id="singerLoginSubmit"
+            disabled
+          >
             Login
           </button>
           <button
@@ -912,7 +919,20 @@
       function openSingerLogin() {
         document.getElementById("loginOverlay").classList.add("show");
         document.getElementById("singerLoginModal").classList.add("show");
-        document.getElementById("singerUsername").focus();
+        const roomId = updateSingerRoomLoginState();
+        document
+          .getElementById(roomId ? "singerUsername" : "scanRoomQrButton")
+          .focus();
+      }
+
+      function updateSingerRoomLoginState(roomId) {
+        const selectedRoomId = roomId ?? KaraokeSessions.getRoomIdFromUrl();
+        const hasRoom = Boolean(selectedRoomId);
+        document.getElementById("singerLoginSubmit").disabled = !hasRoom;
+        document.getElementById("roomQrStatus").textContent = hasRoom
+          ? "Room selected. Log in to join."
+          : "Scan the room QR code before logging in.";
+        return selectedRoomId;
       }
 
       function getScannedRoomId(decodedText) {
@@ -960,7 +980,7 @@
               const loginUrl = new URL(window.location.href);
               loginUrl.searchParams.set("room", roomId);
               window.history.replaceState(null, "", loginUrl);
-              status.textContent = "Room found. Preparing to join...";
+              updateSingerRoomLoginState(roomId);
               stopRoomQrScanner();
 
               if (localStorage.getItem("karaoke_logged_in_user")) {
@@ -1310,6 +1330,13 @@
       // Validate Singer Login
       function validateSingerLogin(event) {
         event.preventDefault();
+        const roomId = KaraokeSessions.getRoomIdFromUrl();
+        if (!roomId) {
+          updateSingerRoomLoginState();
+          document.getElementById("scanRoomQrButton").focus();
+          return;
+        }
+
         const singerUsername = document
           .getElementById("singerUsername")
           .value.trim();
@@ -1371,10 +1398,7 @@
                     JSON.stringify(singerUser),
                   );
                   closeLoginModal();
-                  const roomId = KaraokeSessions.getRoomIdFromUrl();
-                  window.location.href = roomId
-                    ? `singer.html?room=${encodeURIComponent(roomId)}`
-                    : "singer.html";
+                  window.location.href = `singer.html?room=${encodeURIComponent(roomId)}`;
                 });
               },
             );
