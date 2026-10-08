@@ -105,24 +105,9 @@
     return () => ref.off("value", handler);
   }
 
-  function listenActiveRoom(callback) {
-    const ref = database().ref(ACTIVE_ROOM_PATH);
-    const handler = (snapshot) => callback(snapshot.val());
-    ref.on("value", handler);
-    return () => ref.off("value", handler);
-  }
-
   async function getActiveRoomId() {
     const snapshot = await database().ref(ACTIVE_ROOM_PATH).once("value");
     return snapshot.val();
-  }
-
-  async function setActiveRoom(roomId) {
-    const roomSnapshot = await database()
-      .ref(`${ROOM_LIST_PATH}/${roomId}`)
-      .once("value");
-    if (!roomSnapshot.exists()) throw new Error("Room not found");
-    await database().ref(ACTIVE_ROOM_PATH).set(roomId);
   }
 
   async function createRoom(name) {
@@ -141,7 +126,6 @@
         currentSong: null,
         members: null,
       },
-      [ACTIVE_ROOM_PATH]: room.id,
     });
     return room;
   }
@@ -351,12 +335,10 @@
     getRoomIdFromUrl,
     joinRoom,
     leaveRoom,
-    listenActiveRoom,
     listenMembers,
     listenRoom,
     listenRooms,
     roomRef,
-    setActiveRoom,
     sendControl,
   };
 })(window);

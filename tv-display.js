@@ -45,7 +45,6 @@ let karaokeRooms = [];
 let stopListeningToRoom = null;
 let stopListeningToMembers = null;
 let stopListeningToRooms = null;
-let stopListeningToActiveRoom = null;
 
 // SCORING SYSTEM
 let songStartTime = null;
@@ -129,6 +128,7 @@ function activateKaraokeRoom(roomId) {
   stopListeningToRoom?.();
   stopListeningToMembers?.();
   activeKaraokeRoomId = roomId;
+  sessionStorage.setItem("karaokeTvRoomId", roomId);
   currentSong = null;
   tvQueue = [];
   clearCurrentSongPlayback();
@@ -192,6 +192,17 @@ function initializeKaraokeRooms() {
       stopListeningToRooms = KaraokeSessions.listenRooms((rooms) => {
         karaokeRooms = rooms;
         renderKaraokeRooms();
+
+        if (!rooms.some((room) => room.id === activeKaraokeRoomId)) {
+          const requestedRoomId = KaraokeSessions.getRoomIdFromUrl();
+          const savedRoomId = sessionStorage.getItem("karaokeTvRoomId");
+          const roomId =
+            [requestedRoomId, savedRoomId].find((candidate) =>
+              rooms.some((room) => room.id === candidate),
+            ) || rooms[0]?.id;
+          if (roomId) activateKaraokeRoom(roomId);
+        }
+
         const activeRoom = rooms.find(
           (room) => room.id === activeKaraokeRoomId,
         );
@@ -200,8 +211,6 @@ function initializeKaraokeRooms() {
           label.textContent = `${activeRoom.name} · Scan to Join`;
         }
       });
-      stopListeningToActiveRoom =
-        KaraokeSessions.listenActiveRoom(activateKaraokeRoom);
     })
     .catch((error) => {
       console.error("Could not initialize karaoke rooms:", error.message);
@@ -209,10 +218,9 @@ function initializeKaraokeRooms() {
 }
 
 function selectKaraokeRoom(roomId) {
-  KaraokeSessions.setActiveRoom(roomId).catch((error) => {
-    console.error("Could not switch karaoke room:", error.message);
-    alert("Could not switch rooms. Check the Firebase connection.");
-  });
+  if (karaokeRooms.some((room) => room.id === roomId)) {
+    activateKaraokeRoom(roomId);
+  }
 }
 
 async function createKaraokeRoom() {
@@ -235,7 +243,8 @@ async function createKaraokeRoom() {
   const roomName = prompt("Name the new karaoke room:");
   if (!roomName?.trim()) return;
   try {
-    await KaraokeSessions.createRoom(roomName);
+    const room = await KaraokeSessions.createRoom(roomName);
+    activateKaraokeRoom(room.id);
   } catch (error) {
     console.error("Could not create karaoke room:", error.message);
     alert("Could not create a room. Check the Firebase connection.");
