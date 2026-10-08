@@ -252,33 +252,65 @@ function renderRoomRequests(requests) {
       const roomCell = document.createElement("td");
       const dateCell = document.createElement("td");
       const actionCell = document.createElement("td");
-      const resolveButton = document.createElement("button");
+      const approveButton = document.createElement("button");
+      const rejectButton = document.createElement("button");
       singerCell.textContent = request.username || "Singer";
       roomCell.textContent = request.roomId || "Unknown room";
       dateCell.textContent = request.createdAt
         ? new Date(request.createdAt).toLocaleString()
         : "-";
-      resolveButton.type = "button";
-      resolveButton.className = "btn btn-sm btn-outline-success";
-      resolveButton.textContent = "Mark handled";
-      resolveButton.addEventListener("click", () =>
-        handleRoomRequestResolved(request.roomId, request.id, resolveButton),
+      approveButton.type = "button";
+      approveButton.className = "btn btn-sm btn-success me-2";
+      approveButton.textContent = "Approve";
+      rejectButton.type = "button";
+      rejectButton.className = "btn btn-sm btn-outline-danger";
+      rejectButton.textContent = "Reject";
+      approveButton.addEventListener("click", () =>
+        handleRoomRequestDecision(request, "approve", [
+          approveButton,
+          rejectButton,
+        ]),
       );
-      actionCell.appendChild(resolveButton);
+      rejectButton.addEventListener("click", () =>
+        handleRoomRequestDecision(request, "reject", [
+          approveButton,
+          rejectButton,
+        ]),
+      );
+      actionCell.append(approveButton, rejectButton);
       row.append(singerCell, roomCell, dateCell, actionCell);
       return row;
     }),
   );
 }
 
-async function handleRoomRequestResolved(roomId, requestId, button) {
-  button.disabled = true;
+async function handleRoomRequestDecision(request, decision, buttons) {
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
   try {
-    await KaraokeSessions.resolveRoomRequest(roomId, requestId);
+    if (decision === "approve") {
+      await KaraokeSessions.approveRoomRequest(
+        request.roomId,
+        request.id,
+        `${request.username || "Singer"}'s Room`,
+      );
+      showNotification(`Room approved for ${request.username || "singer"}.`, "success");
+    } else {
+      await KaraokeSessions.rejectRoomRequest(request.roomId, request.id);
+      showNotification(`Room request from ${request.username || "singer"} rejected.`, "warning");
+    }
   } catch (error) {
-    console.error("Could not resolve room request:", error.message);
-    button.disabled = false;
-    alert("Could not update the room request. Check the Firebase connection.");
+    console.error(`Could not ${decision} room request:`, error);
+    buttons.forEach((button) => {
+      button.disabled = false;
+    });
+    showNotification(
+      error.message === "ROOM_REQUEST_ALREADY_RESOLVED"
+        ? "This room request has already been handled."
+        : "Could not update the room request. Check the Firebase connection.",
+      "danger",
+    );
   }
 }
 
@@ -404,6 +436,7 @@ function checkAuthentication() {
       if (isRoomRequestConfirmation) {
         document.getElementById("adminDashboard").hidden = true;
         document.getElementById("roomRequestConfirmation").hidden = false;
+        watchRoomRequestForSinger();
         return false;
       }
       window.location.href = "index.html";
@@ -425,6 +458,45 @@ function checkAuthentication() {
     window.location.href = "index.html";
     return false;
   }
+}
+
+function watchRoomRequestForSinger() {
+  const params = new URLSearchParams(window.location.search);
+  const roomId = params.get("room");
+  const requestId = params.get("request");
+  const status = document.getElementById("roomRequestConfirmationStatus");
+  if (!roomId || !requestId) {
+    status.textContent =
+      "Request details are missing. Return to karaoke and send the request again.";
+    return;
+  }
+
+  KaraokeSessions.listenRoomRequest(
+    roomId,
+    requestId,
+    (request) => {
+      if (!request) {
+        status.textContent =
+          "Could not find your room request. Return to karaoke and try again.";
+      } else if (request.status === "approved" && request.approvedRoomId) {
+        status.textContent = "Approved! Connecting you to your new room...";
+        const url = new URL("singer.html", window.location.href);
+        url.searchParams.set("room", request.approvedRoomId);
+        window.location.replace(url.toString());
+      } else if (request.status === "rejected") {
+        status.textContent =
+          "Your room request was rejected. You can return to karaoke and try again later.";
+      } else {
+        status.textContent =
+          "The User Management team has been notified. Waiting for approval...";
+      }
+    },
+    (error) => {
+      console.error("Could not listen to room request:", error.message);
+      status.textContent =
+        "Could not check your request status. Please refresh this page.";
+    },
+  );
 }
 
 // Validate Firebase session match for admin

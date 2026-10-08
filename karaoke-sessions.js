@@ -304,10 +304,61 @@
     return () => ref.off("value", handler);
   }
 
-  function resolveRoomRequest(roomId, requestId) {
-    return database()
-      .ref(`${ROOM_DATA_PATH}/${roomId}/roomRequests/${requestId}`)
-      .update({ status: "handled", handledAt: Date.now() });
+  function listenRoomRequest(roomId, requestId, callback, onError) {
+    const ref = roomRef(roomId, `roomRequests/${requestId}`);
+    const handler = (snapshot) => callback(snapshot.val());
+    ref.on("value", handler, onError);
+    return () => ref.off("value", handler);
+  }
+
+  async function approveRoomRequest(roomId, requestId, roomName) {
+    const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
+    const claim = await requestRef.transaction((request) =>
+      request?.status === "pending"
+        ? { ...request, status: "approving" }
+        : undefined,
+    );
+    if (!claim.committed) throw new Error("ROOM_REQUEST_ALREADY_RESOLVED");
+
+    let room = null;
+    try {
+      room = await createRoom(roomName);
+      await requestRef.update({
+        status: "approved",
+        approvedRoomId: room.id,
+        handledAt: Date.now(),
+      });
+      return room;
+    } catch (error) {
+      if (room) {
+        try {
+          await deleteRoom(room.id);
+        } catch (cleanupError) {
+          console.error("Could not clean up unassigned room:", cleanupError);
+        }
+      }
+      try {
+        await requestRef.transaction((request) =>
+          request?.status === "approving"
+            ? { ...request, status: "pending" }
+            : undefined,
+        );
+      } catch (rollbackError) {
+        console.error("Could not restore pending room request:", rollbackError);
+      }
+      throw error;
+    }
+  }
+
+  function rejectRoomRequest(roomId, requestId) {
+    const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
+    return requestRef.transaction((request) =>
+      request?.status === "pending"
+        ? { ...request, status: "rejected", handledAt: Date.now() }
+        : undefined,
+    ).then((result) => {
+      if (!result.committed) throw new Error("ROOM_REQUEST_ALREADY_RESOLVED");
+    });
   }
 
   function listenRoom(roomId, handlers, onError) {
@@ -590,11 +641,13 @@
     listenMuted,
     listenPlaybackState,
     listenRoom,
+    listenRoomRequest,
     listenRooms,
     listenRoomRequests,
     listenVolume,
     roomRef,
-    resolveRoomRequest,
+    approveRoomRequest,
+    rejectRoomRequest,
     setRoomVolume,
     setRoomMuted,
     setPlaybackState,

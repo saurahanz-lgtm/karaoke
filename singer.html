@@ -1132,11 +1132,17 @@
         button.disabled = true;
         status.textContent = "Sending request...";
         try {
-          await KaraokeSessions.createRoomRequest(
+          const request = await KaraokeSessions.createRoomRequest(
             loggedInUser.username,
             roomRequestRoomId,
           );
-          window.location.href = "admin.html?roomRequestSent=1";
+          const requestUrl = new URL("admin.html", window.location.href);
+          requestUrl.search = new URLSearchParams({
+            roomRequestSent: "1",
+            room: roomRequestRoomId,
+            request: request.id,
+          }).toString();
+          window.location.href = requestUrl.toString();
         } catch (error) {
           console.error("Could not send room request:", error.message);
           status.textContent =
