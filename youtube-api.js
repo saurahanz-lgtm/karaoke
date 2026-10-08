@@ -20,12 +20,63 @@ const YOUTUBE_CONFIG = {
   },
 };
 
-const YOUTUBE_RATE_LIMIT_COOLDOWN_MS = 30000;
+const YOUTUBE_RATE_LIMIT_COOLDOWN_MS = 60000;
+const YOUTUBE_RATE_LIMIT_STORAGE_KEY = "youtubeSearchRateLimitUntil";
+const YOUTUBE_SEARCH_CACHE_PREFIX = "youtubeSearchCache:";
+const YOUTUBE_SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
 let youtubeRateLimitUntil = 0;
 
-function createYouTubeRateLimitError() {
+function readYouTubeStorage(key) {
+  try {
+    return globalThis.localStorage?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function writeYouTubeStorage(key, value) {
+  try {
+    globalThis.localStorage?.setItem(key, value);
+  } catch {
+    // Search still works when browser storage is unavailable.
+  }
+}
+
+function getCachedYouTubeSearch(query) {
+  const cacheKey = `${YOUTUBE_SEARCH_CACHE_PREFIX}${encodeURIComponent(
+    query.toLowerCase(),
+  )}`;
+  try {
+    const cached = JSON.parse(readYouTubeStorage(cacheKey) || "null");
+    if (cached?.expiresAt > Date.now() && Array.isArray(cached.results)) {
+      return cached.results;
+    }
+    globalThis.localStorage?.removeItem(cacheKey);
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function cacheYouTubeSearch(query, results) {
+  const cacheKey = `${YOUTUBE_SEARCH_CACHE_PREFIX}${encodeURIComponent(
+    query.toLowerCase(),
+  )}`;
+  writeYouTubeStorage(
+    cacheKey,
+    JSON.stringify({
+      expiresAt: Date.now() + YOUTUBE_SEARCH_CACHE_TTL_MS,
+      results,
+    }),
+  );
+}
+
+function createYouTubeRateLimitError(
+  retryAfterMs = YOUTUBE_RATE_LIMIT_COOLDOWN_MS,
+) {
   const error = new Error("YouTube search is temporarily rate-limited");
   error.code = "YOUTUBE_RATE_LIMIT";
+  error.retryAfterMs = retryAfterMs;
   return error;
 }
 
@@ -40,9 +91,15 @@ async function searchYouTubeKaraoke(query) {
   }
 
   const searchQuery = `${query.trim()} karaoke`;
+  const cachedResults = getCachedYouTubeSearch(searchQuery);
+  if (cachedResults) return cachedResults;
 
+  youtubeRateLimitUntil = Math.max(
+    youtubeRateLimitUntil,
+    Number(readYouTubeStorage(YOUTUBE_RATE_LIMIT_STORAGE_KEY)) || 0,
+  );
   if (Date.now() < youtubeRateLimitUntil) {
-    throw createYouTubeRateLimitError();
+    throw createYouTubeRateLimitError(youtubeRateLimitUntil - Date.now());
   }
 
   try {
@@ -58,8 +115,24 @@ async function searchYouTubeKaraoke(query) {
 
     if (!response.ok) {
       if (response.status === 429) {
-        youtubeRateLimitUntil = Date.now() + YOUTUBE_RATE_LIMIT_COOLDOWN_MS;
-        throw createYouTubeRateLimitError();
+        const retryAfter = response.headers?.get("Retry-After");
+        const retryAfterSeconds = Number(retryAfter);
+        const retryAfterDate = Date.parse(retryAfter || "");
+        const headerDelay = Number.isFinite(retryAfterSeconds)
+          ? retryAfterSeconds * 1000
+          : Number.isFinite(retryAfterDate)
+            ? retryAfterDate - Date.now()
+            : 0;
+        const cooldownMs = Math.max(
+          YOUTUBE_RATE_LIMIT_COOLDOWN_MS,
+          headerDelay,
+        );
+        youtubeRateLimitUntil = Date.now() + cooldownMs;
+        writeYouTubeStorage(
+          YOUTUBE_RATE_LIMIT_STORAGE_KEY,
+          String(youtubeRateLimitUntil),
+        );
+        throw createYouTubeRateLimitError(cooldownMs);
       } else if (response.status === 403) {
         throw new Error("YouTube API quota exceeded or invalid key");
       } else if (response.status === 400) {
@@ -75,7 +148,7 @@ async function searchYouTubeKaraoke(query) {
       return [];
     }
 
-    return data.items.map((item) => ({
+    const results = data.items.map((item) => ({
       videoId: item.id.videoId,
       title: item.snippet.title,
       artist: item.snippet.channelTitle,
@@ -85,6 +158,8 @@ async function searchYouTubeKaraoke(query) {
       publishedAt: item.snippet.publishedAt,
       description: item.snippet.description,
     }));
+    cacheYouTubeSearch(searchQuery, results);
+    return results;
   } catch (error) {
     if (error.code === "YOUTUBE_RATE_LIMIT") {
       console.warn("YouTube Search Rate Limit:", error.message);
