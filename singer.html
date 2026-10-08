@@ -507,10 +507,7 @@
     <main id="roomUnavailablePage" class="container-main" hidden>
       <section class="card-ui" role="status">
         <h2>Room is full</h2>
-        <p>
-          This room already has 5 connected phones. Send a request to User
-          Management to open another room.
-        </p>
+        <p id="roomFullMessage"></p>
         <button
           class="searchbtn"
           id="requestAnotherRoomButton"
@@ -808,6 +805,8 @@
         } catch (error) {
           if (error.message === "ROOM_FULL") {
             roomRequestRoomId = requestedRoomId;
+            document.getElementById("roomFullMessage").textContent =
+              `This room already has ${KaraokeSessions.MAX_DEVICES} connected phones. Send a request to User Management to open another room.`;
             document.getElementById("singerApp").hidden = true;
             document.getElementById("roomUnavailablePage").hidden = false;
             return;

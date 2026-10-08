@@ -193,7 +193,9 @@ function activateKaraokeRoom(roomId) {
 
   stopListeningToMembers = KaraokeSessions.listenMembers(roomId, (count) => {
     const memberCount = document.getElementById("roomMemberCount");
-    if (memberCount) memberCount.textContent = `${count} / 5 phones`;
+    if (memberCount) {
+      memberCount.textContent = `${count} / ${KaraokeSessions.MAX_DEVICES} phones`;
+    }
   });
 }
 
