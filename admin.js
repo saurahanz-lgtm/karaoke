@@ -25,7 +25,7 @@ initializeDeviceSessionId();
 let users = [];
 let currentEditingUserId = null;
 let loggedInUser = null;
-let currentFilter = "total"; // Default filter is all users
+let currentFilter = null;
 let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
 const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
@@ -1645,6 +1645,7 @@ function isUserOnline(user) {
 // Filter singers by status
 function filterSingers(filter) {
   currentFilter = filter;
+  document.getElementById("singerListContainer").hidden = false;
   console.log("🔍 Filtering singers by:", filter);
   updateFilterButtons();
   displayUsers();
