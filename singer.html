@@ -829,6 +829,21 @@
       document.addEventListener("DOMContentLoaded", async function () {
         if (!checkSingerLogin()) return;
 
+        try {
+          const logoutChannel = new BroadcastChannel("karaoke_user_updates");
+          logoutChannel.addEventListener("message", (event) => {
+            if (
+              event.data?.type === "user_logout" &&
+              event.data?.username === loggedInUser.username
+            ) {
+              console.log("🚪 Received forced logout for current singer");
+              logoutFromSingerSession();
+            }
+          });
+        } catch (error) {
+          console.warn("BroadcastChannel not supported:", error.message);
+        }
+
         let requestedRoomId = null;
         try {
           const roomId =
@@ -1154,101 +1169,100 @@
       }
 
       // Disconnect singer
+      async function logoutFromSingerSession() {
+        const username = loggedInUser?.username;
+        let clearSessionPromise = Promise.resolve();
+        try {
+          stopListeningToRoomMembers?.();
+          stopListeningToRoomMembers = null;
+          stopListeningToRoomData?.();
+          stopListeningToRoomData = null;
+          stopListeningToPlaybackState?.();
+          stopListeningToPlaybackState = null;
+          stopListeningToRoomMuted?.();
+          stopListeningToRoomMuted = null;
+          stopListeningToRoomVolume?.();
+          stopListeningToRoomVolume = null;
+          if (activeKaraokeRoomId) {
+            await KaraokeSessions.leaveRoom(activeKaraokeRoomId);
+          }
+        } catch (error) {
+          console.warn("Could not leave karaoke room cleanly:", error.message);
+        }
+
+        // Broadcast logout event to all tabs
+        try {
+          const userUpdateChannel = new BroadcastChannel(
+            "karaoke_user_updates",
+          );
+          userUpdateChannel.postMessage({
+            type: "user_logout",
+            username: username,
+            timestamp: Date.now(),
+          });
+        } catch (error) {
+          console.warn("BroadcastChannel not supported:", error.message);
+        }
+
+        // Clear from Firebase first
+        if (username && typeof firebase !== "undefined" && firebase.database) {
+          try {
+            // 1. Mark user as Offline in users array (set lastActivity to 0)
+            firebase
+              .database()
+              .ref("users")
+              .once("value", (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                  const users = Array.isArray(data)
+                    ? data
+                    : Object.values(data);
+                  const userIndex = users.findIndex(
+                    (u) => u && u.username === username,
+                  );
+                  if (userIndex !== -1) {
+                    firebase
+                      .database()
+                      .ref("users/" + userIndex + "/lastActivity")
+                      .set(0)
+                      .catch((err) =>
+                        console.warn("Failed to mark offline:", err.message),
+                      );
+                  }
+                }
+              });
+
+            // 2. Clear from Firebase activeLogin
+            clearSessionPromise = firebase
+              .database()
+              .ref("activeLogin/" + username)
+              .remove()
+              .then(() =>
+                console.log("✅ Singer session cleared from Firebase"),
+              )
+              .catch((err) =>
+                console.warn("⚠️ Firebase logout failed:", err.message),
+              );
+          } catch (e) {
+            console.warn("⚠️ Firebase error:", e.message);
+          }
+        }
+
+        await clearSessionPromise;
+
+        // Clear from memory and storage
+        loggedInUser = null;
+        window.deviceSessionId = null;
+        sessionStorage.removeItem("deviceSessionId");
+        localStorage.removeItem("karaoke_logged_in_user");
+
+        console.log("✅ Singer disconnect complete");
+        window.location.href = "index.html";
+      }
+
       async function disconnectSinger() {
         if (confirm("Are you sure you want to disconnect?")) {
-          const username = loggedInUser?.username;
-          let clearSessionPromise = Promise.resolve();
-          try {
-            stopListeningToRoomMembers?.();
-            stopListeningToRoomMembers = null;
-            stopListeningToRoomData?.();
-            stopListeningToRoomData = null;
-            stopListeningToPlaybackState?.();
-            stopListeningToPlaybackState = null;
-            stopListeningToRoomMuted?.();
-            stopListeningToRoomMuted = null;
-            stopListeningToRoomVolume?.();
-            stopListeningToRoomVolume = null;
-            await KaraokeSessions.leaveRoom(activeKaraokeRoomId);
-          } catch (error) {
-            console.warn(
-              "Could not leave karaoke room cleanly:",
-              error.message,
-            );
-          }
-
-          // Broadcast logout event to all tabs
-          try {
-            const userUpdateChannel = new BroadcastChannel(
-              "karaoke_user_updates",
-            );
-            userUpdateChannel.postMessage({
-              type: "user_logout",
-              username: username,
-              timestamp: Date.now(),
-            });
-          } catch (error) {
-            console.warn("BroadcastChannel not supported:", error.message);
-          }
-
-          // Clear from Firebase first
-          if (
-            username &&
-            typeof firebase !== "undefined" &&
-            firebase.database
-          ) {
-            try {
-              // 1. Mark user as Offline in users array (set lastActivity to 0)
-              firebase
-                .database()
-                .ref("users")
-                .once("value", (snapshot) => {
-                  const data = snapshot.val();
-                  if (data) {
-                    const users = Array.isArray(data)
-                      ? data
-                      : Object.values(data);
-                    const userIndex = users.findIndex(
-                      (u) => u && u.username === username,
-                    );
-                    if (userIndex !== -1) {
-                      firebase
-                        .database()
-                        .ref("users/" + userIndex + "/lastActivity")
-                        .set(0)
-                        .catch((err) =>
-                          console.warn("Failed to mark offline:", err.message),
-                        );
-                    }
-                  }
-                });
-
-              // 2. Clear from Firebase activeLogin
-              clearSessionPromise = firebase
-                .database()
-                .ref("activeLogin/" + username)
-                .remove()
-                .then(() =>
-                  console.log("✅ Singer session cleared from Firebase"),
-                )
-                .catch((err) =>
-                  console.warn("⚠️ Firebase logout failed:", err.message),
-                );
-            } catch (e) {
-              console.warn("⚠️ Firebase error:", e.message);
-            }
-          }
-
-          await clearSessionPromise;
-
-          // Clear from memory and storage
-          loggedInUser = null;
-          window.deviceSessionId = null;
-          sessionStorage.removeItem("deviceSessionId");
-          localStorage.removeItem("karaoke_logged_in_user");
-
-          console.log("✅ Singer disconnect complete");
-          window.location.href = "index.html";
+          await logoutFromSingerSession();
         }
       }
 

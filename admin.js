@@ -54,7 +54,10 @@ document.addEventListener("DOMContentLoaded", function () {
   adminMenuClose.addEventListener("click", () => setAdminMenuOpen(false));
   adminMenuBackdrop.addEventListener("click", () => setAdminMenuOpen(false));
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !document.getElementById("adminMenu").hidden) {
+    if (
+      event.key === "Escape" &&
+      !document.getElementById("adminMenu").hidden
+    ) {
       setAdminMenuOpen(false);
     }
   });
@@ -295,10 +298,16 @@ async function handleRoomRequestDecision(request, decision, buttons) {
         request.id,
         `${request.username || "Singer"}'s Room`,
       );
-      showNotification(`Room approved for ${request.username || "singer"}.`, "success");
+      showNotification(
+        `Room approved for ${request.username || "singer"}.`,
+        "success",
+      );
     } else {
       await KaraokeSessions.rejectRoomRequest(request.roomId, request.id);
-      showNotification(`Room request from ${request.username || "singer"} rejected.`, "warning");
+      showNotification(
+        `Room request from ${request.username || "singer"} rejected.`,
+        "warning",
+      );
     }
   } catch (error) {
     console.error(`Could not ${decision} room request:`, error);
@@ -1548,6 +1557,9 @@ function displayUsers() {
                     <button class="btn btn-sm ${isDisabled ? "btn-success" : "btn-secondary"}" onclick="toggleUserDisabled(${user.id})" style="margin-right: 5px;">
                         ${isDisabled ? "🔓 Enable" : "🔒 Disable"}
                     </button>
+                    <button class="btn btn-sm btn-info" onclick="logoutUser(${user.id})" style="margin-right: 5px;" ${loggedInUser?.username === user.username ? 'disabled title="You cannot logout yourself from this panel"' : ""}>
+                        🚪 Logout
+                    </button>
                     <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
                         🗑️ Delete
                     </button>
@@ -1780,6 +1792,50 @@ function toggleUserDisabled(userId) {
       console.log(`🔓 User ${user.username} enabled`);
     }
   }
+}
+
+// Log out a specific user session
+function logoutUser(userId) {
+  const user = users.find((u) => u.id === userId);
+  if (!user) return;
+  if (loggedInUser?.username === user.username) {
+    showNotification("You cannot logout yourself from this panel.", "warning");
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to logout "${user.username}"?`)) {
+    return;
+  }
+
+  try {
+    const userUpdateChannel = new BroadcastChannel("karaoke_user_updates");
+    userUpdateChannel.postMessage({
+      type: "user_logout",
+      username: user.username,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.warn("BroadcastChannel not supported:", error.message);
+  }
+
+  if (typeof firebase !== "undefined" && firebase.database) {
+    firebase
+      .database()
+      .ref("activeLogin/" + user.username)
+      .remove()
+      .catch((error) =>
+        console.warn(`Could not logout "${user.username}":`, error.message),
+      );
+  }
+
+  if (user.lastActivity) {
+    user.lastActivity = 0;
+    saveUsers();
+  }
+
+  displayUsers();
+  updateStats();
+  showNotification(`User "${user.username}" has been logged out.`, "info");
 }
 
 // Open change password modal for a specific user
