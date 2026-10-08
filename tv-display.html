@@ -385,16 +385,29 @@
         #qrcode-container {
           right: 12px;
           bottom: 12px;
-          min-height: 202px;
-          justify-content: center;
+          width: 146px;
+          min-height: 182px;
+          justify-content: flex-start;
+        }
+
+        #qrcode {
+          width: 90px;
+          height: 90px;
+          flex-basis: 90px;
+        }
+
+        #qrcode canvas,
+        #qrcode img {
+          width: 90px !important;
+          height: 90px !important;
         }
 
         #connectionStatus {
-          right: calc(12px + 166px + 12px);
-          bottom: calc(12px + 101px);
+          right: calc(12px + 146px + 12px);
+          bottom: 139px;
           left: auto;
           width: max-content;
-          max-width: calc(100vw - 202px);
+          max-width: calc(100vw - 182px);
           min-width: 0;
           box-sizing: border-box;
           justify-content: center;
