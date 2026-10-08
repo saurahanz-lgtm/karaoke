@@ -50,6 +50,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // Validate admin session every 10 seconds to detect if logged in elsewhere
   setInterval(validateAdminSession, 10000);
 
+  // Re-evaluate presence as activity timestamps age out, without reloading stale local data.
+  setInterval(() => {
+    displayUsers();
+    updateStats();
+  }, 15000);
+
   // Also track clicks and key presses to update activity
   document.addEventListener("click", updateAdminActivity);
   document.addEventListener("keypress", updateAdminActivity);
@@ -496,111 +502,6 @@ function loadUsers() {
       }
     }
   }, 1000); // Increased delay to ensure new user is fully saved
-
-  // Set up activity tracking - refresh every 1 second (was 2) to show accurate real-time status
-  let lastDisplayHash = "";
-  let lastOnlineUserCount = -1;
-  setInterval(() => {
-    // Prioritize localStorage for user data (it's the immediate source of truth)
-    // Firebase is used for real-time updates from other admins
-    const stored = localStorage.getItem("karaoke_users");
-    if (!stored) {
-      console.log("⚠️ No users in localStorage");
-      return;
-    }
-
-    let localUsers = JSON.parse(stored);
-    const currentOnlineCount = localUsers.filter((u) => isUserOnline(u)).length;
-    const statusHash = localUsers.map((u) => ({
-      id: u.id,
-      username: u.username,
-      isOnline: isUserOnline(u),
-    }));
-    const currentHash = JSON.stringify(statusHash);
-
-    // Update display if status changed OR if online count changed
-    if (
-      currentHash !== lastDisplayHash ||
-      currentOnlineCount !== lastOnlineUserCount
-    ) {
-      users = localUsers;
-      lastDisplayHash = currentHash;
-      lastOnlineUserCount = currentOnlineCount;
-      displayUsers();
-      updateStats();
-      console.log(
-        "📊 Online status updated:",
-        currentOnlineCount,
-        "online,",
-        localUsers.length - currentOnlineCount,
-        "offline",
-      );
-    }
-  }, 1000);
-
-  // Periodic Firebase consistency check every 30 seconds
-  // This ensures if Firebase got out of sync, we catch it and fix it
-  setInterval(() => {
-    if (typeof firebase !== "undefined" && firebase.database) {
-      try {
-        firebase
-          .database()
-          .ref("users")
-          .once("value", (snapshot) => {
-            const data = snapshot.val();
-            if (data && Object.keys(data).length > 0) {
-              let firebaseUsers = Array.isArray(data)
-                ? data
-                : Object.values(data);
-              firebaseUsers = firebaseUsers.filter((u) => u && u.username);
-
-              // Check if Firebase user list matches local
-              const firebaseIds = firebaseUsers
-                .map((u) => u.id)
-                .sort((a, b) => a - b);
-              const localIds = users.map((u) => u.id).sort((a, b) => a - b);
-
-              if (JSON.stringify(firebaseIds) !== JSON.stringify(localIds)) {
-                console.warn(
-                  "⚠️ Firebase consistency issue detected!",
-                  "Firebase IDs:",
-                  firebaseIds,
-                  "Local IDs:",
-                  localIds,
-                );
-
-                // Firebase has different users - local is source of truth
-                if (users.length > firebaseUsers.length) {
-                  console.log(
-                    "✅ Local has more users - syncing deletion to Firebase",
-                  );
-                  firebase
-                    .database()
-                    .ref("users")
-                    .set(users)
-                    .then(() =>
-                      console.log("✅ Firebase corrected with local data"),
-                    )
-                    .catch((err) =>
-                      console.error("Could not correct Firebase:", err.message),
-                    );
-                }
-              } else {
-                console.log("✅ Firebase consistency check: Data is in sync");
-              }
-            }
-          })
-          .catch((err) =>
-            console.warn("Consistency check error:", err.message),
-          );
-      } catch (error) {
-        console.warn(
-          "Periodic Firebase consistency check error:",
-          error.message,
-        );
-      }
-    }
-  }, 30000); // Check every 30 seconds
 }
 function loadFromLocalStorage() {
   const stored = localStorage.getItem("karaoke_users");

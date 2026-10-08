@@ -797,32 +797,30 @@
                 firebase.database
               ) {
                 try {
-                  // Read entire users array, update the singer, and save back
+                  // Update only this singer's activity to avoid overwriting other users.
                   firebase
                     .database()
                     .ref("users")
                     .once("value", (snapshot) => {
                       const data = snapshot.val();
                       if (data) {
-                        const users = Array.isArray(data)
-                          ? data
-                          : Object.values(data);
-                        const userIndex = users.findIndex(
-                          (u) => u.username === loggedInUser.username,
-                        );
-                        if (userIndex !== -1) {
-                          users[userIndex].lastActivity = now;
-                          firebase
-                            .database()
-                            .ref("users")
-                            .set(users)
-                            .catch((err) =>
-                              console.warn(
-                                "Firebase user update failed:",
-                                err.message,
-                              ),
-                            );
-                        }
+                        snapshot.forEach((userSnapshot) => {
+                          if (
+                            userSnapshot.child("username").val() ===
+                            loggedInUser.username
+                          ) {
+                            userSnapshot.ref
+                              .child("lastActivity")
+                              .set(now)
+                              .catch((err) =>
+                                console.warn(
+                                  "Firebase user update failed:",
+                                  err.message,
+                                ),
+                              );
+                            return true;
+                          }
+                        });
                       }
                     });
 
