@@ -1066,6 +1066,10 @@ function generateQRCode() {
   const qrContainer = document.getElementById("qrcode");
   if (!qrContainer) return;
 
+  const roomIdLabel = document.getElementById("roomIdLabel");
+  if (roomIdLabel)
+    roomIdLabel.textContent = `Room ID: ${activeKaraokeRoomId || ""}`;
+
   // Clear previous QR code if exists
   qrContainer.innerHTML = "";
 

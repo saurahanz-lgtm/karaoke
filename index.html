@@ -249,6 +249,19 @@
           margin-bottom: 18px;
         }
 
+        .room-join-choices {
+          display: flex;
+          gap: 10px;
+        }
+
+        .room-join-choices .login-btn {
+          flex: 1;
+        }
+
+        #manualRoomEntry {
+          margin-top: 12px;
+        }
+
         #roomQrReader {
           margin-top: 12px;
           overflow: hidden;
@@ -340,17 +353,46 @@
     <div id="singerLoginModal" class="login-modal-custom">
       <div class="login-title">Singer Login</div>
       <div class="room-qr-scanner">
-        <button
-          type="button"
-          class="login-btn login-btn-submit"
-          id="scanRoomQrButton"
-          onclick="startRoomQrScanner()"
-        >
-          📷 Scan Room QR
-        </button>
+        <div class="room-join-choices" id="roomJoinChoices">
+          <button
+            type="button"
+            class="login-btn login-btn-submit"
+            id="scanRoomQrButton"
+            onclick="startRoomQrScanner()"
+          >
+            📷 Scan QR
+          </button>
+          <button
+            type="button"
+            class="login-btn login-btn-cancel"
+            id="enterRoomIdButton"
+            onclick="showManualRoomEntry()"
+          >
+            Enter Room ID
+          </button>
+        </div>
         <div id="roomQrReader" hidden></div>
+        <div id="manualRoomEntry" hidden>
+          <div class="login-form-group">
+            <label for="manualRoomId">Room ID</label>
+            <input
+              type="text"
+              id="manualRoomId"
+              placeholder="Enter the Room ID shown on the TV"
+              autocomplete="off"
+            />
+          </div>
+          <button
+            type="button"
+            class="login-btn login-btn-submit"
+            id="useRoomIdButton"
+            onclick="useSingerRoomId()"
+          >
+            Continue
+          </button>
+        </div>
         <p id="roomQrStatus" role="status" aria-live="polite">
-          Scan the room QR code before logging in.
+          Scan the room QR code or enter its Room ID.
         </p>
       </div>
       <form id="singerLoginForm" onsubmit="validateSingerLogin(event)" hidden>
@@ -923,7 +965,6 @@
         document
           .getElementById(roomId ? "singerUsername" : "scanRoomQrButton")
           .focus();
-        if (!roomId) startRoomQrScanner();
       }
 
       function updateSingerRoomLoginState(roomId) {
@@ -931,13 +972,63 @@
         const hasRoom = Boolean(selectedRoomId);
         document.getElementById("singerLoginForm").hidden = !hasRoom;
         document.getElementById("singerLoginSubmit").disabled = !hasRoom;
-        document.getElementById("scanRoomQrButton").textContent = hasRoom
-          ? "📷 Scan Another Room"
-          : "📷 Scan Room QR";
+        document.getElementById("roomJoinChoices").hidden = hasRoom;
+        document.getElementById("manualRoomEntry").hidden = true;
         document.getElementById("roomQrStatus").textContent = hasRoom
-          ? "Room selected. Log in to join."
-          : "Scan the room QR code before logging in.";
+          ? `Room ${selectedRoomId} selected. Log in to join.`
+          : "Scan the room QR code or enter its Room ID.";
         return selectedRoomId;
+      }
+
+      function showManualRoomEntry() {
+        stopRoomQrScanner();
+        document.getElementById("manualRoomEntry").hidden = false;
+        document.getElementById("roomQrStatus").textContent =
+          "Enter the Room ID shown on the TV.";
+        document.getElementById("manualRoomId").focus();
+      }
+
+      async function useSingerRoomId() {
+        const roomId = document.getElementById("manualRoomId").value.trim();
+        const status = document.getElementById("roomQrStatus");
+        const button = document.getElementById("useRoomIdButton");
+        if (!roomId) {
+          status.textContent = "Enter the Room ID shown on the TV.";
+          return;
+        }
+
+        button.disabled = true;
+        status.textContent = "Checking Room ID...";
+        try {
+          const snapshot = await firebase
+            .database()
+            .ref(`karaokeRooms/${roomId}`)
+            .once("value");
+          if (!snapshot.exists()) {
+            status.textContent =
+              "Room ID not found. Check the ID and try again.";
+            return;
+          }
+          selectSingerRoom(roomId);
+          if (localStorage.getItem("karaoke_logged_in_user")) {
+            window.location.href = `singer.html?room=${encodeURIComponent(roomId)}`;
+            return;
+          }
+          document.getElementById("singerUsername").focus();
+        } catch (error) {
+          console.warn("Could not check room ID:", error.message);
+          status.textContent =
+            "Could not check the Room ID. Check your connection.";
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      function selectSingerRoom(roomId) {
+        const loginUrl = new URL(window.location.href);
+        loginUrl.searchParams.set("room", roomId);
+        window.history.replaceState(null, "", loginUrl);
+        updateSingerRoomLoginState(roomId);
       }
 
       function getScannedRoomId(decodedText) {
@@ -954,6 +1045,7 @@
         const status = document.getElementById("roomQrStatus");
         const reader = document.getElementById("roomQrReader");
         const button = document.getElementById("scanRoomQrButton");
+        document.getElementById("manualRoomEntry").hidden = true;
 
         if (typeof Html5Qrcode === "undefined") {
           status.textContent =
@@ -982,10 +1074,7 @@
               }
 
               roomQrHandled = true;
-              const loginUrl = new URL(window.location.href);
-              loginUrl.searchParams.set("room", roomId);
-              window.history.replaceState(null, "", loginUrl);
-              updateSingerRoomLoginState(roomId);
+              selectSingerRoom(roomId);
               stopRoomQrScanner();
 
               if (localStorage.getItem("karaoke_logged_in_user")) {
