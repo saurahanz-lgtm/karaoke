@@ -1,12 +1,19 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SDkaraoke - Home</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🎤</text></svg>" type="image/svg+xml">
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🎤</text></svg>"
+      type="image/svg+xml"
+    />
     <!-- Firebase SDK (Compat Version for legacy API) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
@@ -15,242 +22,259 @@
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="youtube-api.js"></script>
-</head>
-<body class="home-page">
-    <div class="min-vh-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <style>
-            .home-container {
-                width: 100%;
-                max-width: 600px;
-                padding: clamp(20px, 5vw, 40px);
-                text-align: center;
-                color: white;
-            }
+  </head>
+  <body class="home-page">
+    <div
+      class="min-vh-100 d-flex align-items-center justify-content-center"
+      style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+    >
+      <style>
+        .home-container {
+          width: 100%;
+          max-width: 600px;
+          padding: clamp(20px, 5vw, 40px);
+          text-align: center;
+          color: white;
+        }
 
-            .title-glow {
-                font-size: clamp(2.5rem, 8vw, 4rem);
-                font-weight: 900;
-                text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
-                animation: gradient 3s ease infinite;
-                background-size: 200% 200%;
-                letter-spacing: 2px;
-                margin-bottom: clamp(20px, 5vw, 40px);
-            }
+        .title-glow {
+          font-size: clamp(2.5rem, 8vw, 4rem);
+          font-weight: 900;
+          text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+          animation: gradient 3s ease infinite;
+          background-size: 200% 200%;
+          letter-spacing: 2px;
+          margin-bottom: clamp(20px, 5vw, 40px);
+        }
 
-            .subtitle {
-                font-size: clamp(1rem, 3vw, 1.3rem);
-                font-weight: 500;
-                margin-bottom: clamp(30px, 8vw, 50px);
-            }
+        .subtitle {
+          font-size: clamp(1rem, 3vw, 1.3rem);
+          font-weight: 500;
+          margin-bottom: clamp(30px, 8vw, 50px);
+        }
 
-            .role-container {
-                display: flex;
-                gap: clamp(1.5rem, 4vw, 3rem);
-                justify-content: center;
-                flex-wrap: wrap;
-            }
+        .role-container {
+          display: flex;
+          gap: clamp(1.5rem, 4vw, 3rem);
+          justify-content: center;
+          flex-wrap: wrap;
+        }
 
-            .role-btn {
-                padding: clamp(20px, 4vw, 35px) clamp(15px, 4vw, 30px) !important;
-                border-radius: 20px;
-                transition: all 0.3s ease;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-                min-width: 160px;
-                font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-                border: none;
-                font-weight: 600;
-            }
+        .role-btn {
+          padding: clamp(20px, 4vw, 35px) clamp(15px, 4vw, 30px) !important;
+          border-radius: 20px;
+          transition: all 0.3s ease;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+          min-width: 160px;
+          font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+          border: none;
+          font-weight: 600;
+        }
 
-            .role-btn:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-            }
+        .role-btn:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
 
-            .role-icon {
-                font-size: clamp(2.5rem, 10vw, 3.5rem);
-                margin-bottom: clamp(8px, 2vw, 15px);
-                display: block;
-            }
+        .role-icon {
+          font-size: clamp(2.5rem, 10vw, 3.5rem);
+          margin-bottom: clamp(8px, 2vw, 15px);
+          display: block;
+        }
 
-            .role-label {
-                display: block;
-                margin-bottom: clamp(5px, 1.5vw, 10px);
-            }
+        .role-label {
+          display: block;
+          margin-bottom: clamp(5px, 1.5vw, 10px);
+        }
 
-            .role-desc {
-                font-size: clamp(0.7rem, 1.8vw, 0.85rem);
-                opacity: 0.9;
-                display: block;
-            }
-            
-            .login-modal-custom {
-                background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 100%);
-                border-radius: 20px;
-                padding: clamp(20px, 5vw, 40px);
-                color: white;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                max-width: 400px;
-                width: 90%;
-                display: none;
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                z-index: 1000;
-                max-height: 90vh;
-                overflow-y: auto;
-            }
+        .role-desc {
+          font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+          opacity: 0.9;
+          display: block;
+        }
 
-            .login-modal-custom.show {
-                display: block;
-            }
+        .login-modal-custom {
+          background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2e 100%);
+          border-radius: 20px;
+          padding: clamp(20px, 5vw, 40px);
+          color: white;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          max-width: 400px;
+          width: 90%;
+          display: none;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 1000;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
 
-            .login-modal-overlay {
-                background: rgba(0, 0, 0, 0.7);
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                display: none;
-                z-index: 999;
-            }
+        .login-modal-custom.show {
+          display: block;
+        }
 
-            .login-modal-overlay.show {
-                display: block;
-            }
+        .login-modal-overlay {
+          background: rgba(0, 0, 0, 0.7);
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: none;
+          z-index: 999;
+        }
 
-            /* Mobile responsive login modal */
-            @media (max-width: 480px) {
-                .login-modal-custom {
-                    width: 95%;
-                    max-width: 100%;
-                }
+        .login-modal-overlay.show {
+          display: block;
+        }
 
-                .login-title {
-                    font-size: 1.4rem;
-                }
+        /* Mobile responsive login modal */
+        @media (max-width: 480px) {
+          .login-modal-custom {
+            width: 95%;
+            max-width: 100%;
+          }
 
-                .login-form-group input {
-                    padding: 10px 12px;
-                    font-size: 16px; /* Prevent zoom on iOS */
-                }
+          .login-title {
+            font-size: 1.4rem;
+          }
 
-                .login-buttons {
-                    flex-direction: column;
-                    gap: 10px;
-                }
+          .login-form-group input {
+            padding: 10px 12px;
+            font-size: 16px; /* Prevent zoom on iOS */
+          }
 
-                .login-btn {
-                    padding: 12px 15px;
-                    font-size: 1rem;
-                }
+          .login-buttons {
+            flex-direction: column;
+            gap: 10px;
+          }
 
-                .role-container {
-                    flex-direction: column;
-                }
+          .login-btn {
+            padding: 12px 15px;
+            font-size: 1rem;
+          }
 
-                .role-btn {
-                    width: 100% !important;
-                }
-            }
+          .role-container {
+            flex-direction: column;
+          }
 
-            .login-modal-overlay.show {
-                display: block;
-            }
+          .role-btn {
+            width: 100% !important;
+          }
+        }
 
-            .login-title {
-                font-size: 1.8rem;
-                font-weight: 700;
-                margin-bottom: 30px;
-                text-align: center;
-            }
+        .login-modal-overlay.show {
+          display: block;
+        }
 
-            .login-form-group {
-                margin-bottom: 20px;
-            }
+        .login-title {
+          font-size: 1.8rem;
+          font-weight: 700;
+          margin-bottom: 30px;
+          text-align: center;
+        }
 
-            .login-form-group label {
-                display: block;
-                margin-bottom: 8px;
-                font-weight: 600;
-            }
+        .login-form-group {
+          margin-bottom: 20px;
+        }
 
-            .login-form-group input {
-                width: 100%;
-                padding: 12px 15px;
-                border: 2px solid rgba(102, 126, 234, 0.4);
-                border-radius: 10px;
-                background: rgba(102, 126, 234, 0.1);
-                color: white;
-                font-size: 1rem;
-                box-sizing: border-box;
-            }
+        .login-form-group label {
+          display: block;
+          margin-bottom: 8px;
+          font-weight: 600;
+        }
 
-            .login-form-group input::placeholder {
-                color: rgba(255, 255, 255, 0.5);
-            }
+        .login-form-group input {
+          width: 100%;
+          padding: 12px 15px;
+          border: 2px solid rgba(102, 126, 234, 0.4);
+          border-radius: 10px;
+          background: rgba(102, 126, 234, 0.1);
+          color: white;
+          font-size: 1rem;
+          box-sizing: border-box;
+        }
 
-            .login-form-group input:focus {
-                outline: none;
-                border-color: #667eea;
-                background: rgba(102, 126, 234, 0.2);
-            }
+        .login-form-group input::placeholder {
+          color: rgba(255, 255, 255, 0.5);
+        }
 
-            .login-buttons {
-                display: flex;
-                gap: 10px;
-                margin-top: 30px;
-            }
+        .login-form-group input:focus {
+          outline: none;
+          border-color: #667eea;
+          background: rgba(102, 126, 234, 0.2);
+        }
 
-            .login-btn {
-                flex: 1;
-                padding: 12px 20px;
-                border: none;
-                border-radius: 10px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
+        .login-buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 30px;
+        }
 
-            .login-btn-submit {
-                background: linear-gradient(135deg, #667eea, #764ba2);
-                color: white;
-            }
+        .login-btn {
+          flex: 1;
+          padding: 12px 20px;
+          border: none;
+          border-radius: 10px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
 
-            .login-btn-submit:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-            }
+        .login-btn-submit {
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          color: white;
+        }
 
-            .login-btn-cancel {
-                background: rgba(255, 255, 255, 0.1);
-                color: white;
-                border: 2px solid rgba(255, 255, 255, 0.3);
-            }
+        .login-btn-submit:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
 
-            .login-btn-cancel:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
-        </style>
-        
-        <div class="home-container">
-            <div class="title-glow">🎤 KANTAHAN NA</div>
-            
-            <p class="subtitle">Choose your role:</p>
-            <div class="role-container">
-                <button class="role-btn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;" onclick="openAdminLogin()">
-                    <span class="role-icon">👨‍💼</span>
-                    <span class="role-label">Admin</span>
-                    <span class="role-desc">View Queue & Control</span>
-                </button>
-                <button class="role-btn" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white;" onclick="openSingerLogin()">
-                    <span class="role-icon">🎤</span>
-                    <span class="role-label">Singer</span>
-                    <span class="role-desc">Remote Control</span>
-                </button>
-            </div>
+        .login-btn-cancel {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .login-btn-cancel:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      </style>
+
+      <div class="home-container">
+        <div class="title-glow">🎤 KANTAHAN NA</div>
+
+        <p class="subtitle">Choose your role:</p>
+        <div class="role-container">
+          <button
+            class="role-btn"
+            style="
+              background: linear-gradient(135deg, #667eea, #764ba2);
+              color: white;
+            "
+            onclick="openAdminLogin()"
+          >
+            <span class="role-icon">👨‍💼</span>
+            <span class="role-label">Admin</span>
+            <span class="role-desc">View Queue & Control</span>
+          </button>
+          <button
+            class="role-btn"
+            style="
+              background: linear-gradient(135deg, #f093fb, #f5576c);
+              color: white;
+            "
+            onclick="openSingerLogin()"
+          >
+            <span class="role-icon">🎤</span>
+            <span class="role-label">Singer</span>
+            <span class="role-desc">Remote Control</span>
+          </button>
         </div>
+      </div>
     </div>
 
     <!-- Login Modal Overlay -->
@@ -258,161 +282,241 @@
 
     <!-- Admin Login Modal -->
     <div id="adminLoginModal" class="login-modal-custom">
-        <div class="login-title">Admin Login</div>
-        <form onsubmit="validateAdminLogin(event)">
-            <div class="login-form-group">
-                <label>Admin Name</label>
-                <input type="text" id="adminName" placeholder="Enter admin name" required>
-            </div>
-            <div class="login-form-group">
-                <label>Password</label>
-                <input type="password" id="adminPassword" placeholder="Enter password" required>
-            </div>
-            <div class="login-buttons">
-                <button type="submit" class="login-btn login-btn-submit">Login</button>
-                <button type="button" class="login-btn login-btn-cancel" onclick="closeLoginModal()">Cancel</button>
-            </div>
-        </form>
+      <div class="login-title">Admin Login</div>
+      <form onsubmit="validateAdminLogin(event)">
+        <div class="login-form-group">
+          <label>Admin Name</label>
+          <input
+            type="text"
+            id="adminName"
+            placeholder="Enter admin name"
+            required
+          />
+        </div>
+        <div class="login-form-group">
+          <label>Password</label>
+          <input
+            type="password"
+            id="adminPassword"
+            placeholder="Enter password"
+            required
+          />
+        </div>
+        <div class="login-buttons">
+          <button type="submit" class="login-btn login-btn-submit">
+            Login
+          </button>
+          <button
+            type="button"
+            class="login-btn login-btn-cancel"
+            onclick="closeLoginModal()"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
 
     <!-- Singer Login Modal -->
     <div id="singerLoginModal" class="login-modal-custom">
-        <div class="login-title">Singer Login</div>
-        <form onsubmit="validateSingerLogin(event)">
-            <div class="login-form-group">
-                <label>Username</label>
-                <input type="text" id="singerUsername" placeholder="Enter your name" required>
-            </div>
-            <div class="login-form-group">
-                <label>Password</label>
-                <input type="password" id="singerPassword" placeholder="Enter password" required>
-            </div>
-            <div class="login-buttons">
-                <button type="submit" class="login-btn login-btn-submit">Login</button>
-                <button type="button" class="login-btn login-btn-cancel" onclick="closeLoginModal()">Cancel</button>
-            </div>
-        </form>
+      <div class="login-title">Singer Login</div>
+      <form onsubmit="validateSingerLogin(event)">
+        <div class="login-form-group">
+          <label>Username</label>
+          <input
+            type="text"
+            id="singerUsername"
+            placeholder="Enter your name"
+            required
+          />
+        </div>
+        <div class="login-form-group">
+          <label>Password</label>
+          <input
+            type="password"
+            id="singerPassword"
+            placeholder="Enter password"
+            required
+          />
+        </div>
+        <div class="login-buttons">
+          <button type="submit" class="login-btn login-btn-submit">
+            Login
+          </button>
+          <button
+            type="button"
+            class="login-btn login-btn-cancel"
+            onclick="closeLoginModal()"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
 
     <!-- Singer Page (Moved to separate singer.html file) -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ===== SINGER PAGE STATE =====
-        let searchResults = [];
-        let audioPlayer;
-        let allSongs = [];
-        let reservedSongs = [];
-        let useSingerFirebase = false;
+      // ===== SINGER PAGE STATE =====
+      let searchResults = [];
+      let audioPlayer;
+      let allSongs = [];
+      let reservedSongs = [];
+      let useSingerFirebase = false;
 
-        // Check if Firebase is properly configured
-        function isSingerFirebaseConfigured() {
-            try {
-                if (typeof firebase !== 'undefined' && firebase.database && firebase.app()) {
-                    const config = firebase.app().options;
-                    return config.databaseURL && !config.databaseURL.includes('YOUR_');
-                }
-            } catch (e) {
-                return false;
-            }
-            return false;
+      // Check if Firebase is properly configured
+      function isSingerFirebaseConfigured() {
+        try {
+          if (
+            typeof firebase !== "undefined" &&
+            firebase.database &&
+            firebase.app()
+          ) {
+            const config = firebase.app().options;
+            return config.databaseURL && !config.databaseURL.includes("YOUR_");
+          }
+        } catch (e) {
+          return false;
+        }
+        return false;
+      }
+
+      // Initialize Firebase check
+      useSingerFirebase = isSingerFirebaseConfigured();
+
+      // Show singer page and hide home - NOW REDIRECTS TO singer.html
+      // (See validateSingerLogin function)
+
+      // ===== SINGER PAGE FUNCTIONS (Now in singer.html) =====
+
+      // Handle search form submission
+      async function handleSearch(e) {
+        e.preventDefault();
+
+        const searchInput = document.getElementById("searchInput");
+        const userNameInput = document.getElementById("userName");
+        const searchQuery = searchInput ? searchInput.value.trim() : "";
+
+        if (!searchQuery) {
+          alert("Please enter a song name");
+          return;
         }
 
-        // Initialize Firebase check
-        useSingerFirebase = isSingerFirebaseConfigured();
-
-
-        // Show singer page and hide home - NOW REDIRECTS TO singer.html
-        // (See validateSingerLogin function)
-
-        // ===== SINGER PAGE FUNCTIONS (Now in singer.html) =====
-
-        // Handle search form submission
-        async function handleSearch(e) {
-            e.preventDefault();
-            
-            const searchInput = document.getElementById('searchInput');
-            const userNameInput = document.getElementById('userName');
-            const searchQuery = searchInput ? searchInput.value.trim() : '';
-            
-            if (!searchQuery) {
-                alert('Please enter a song name');
-                return;
-            }
-
-            const searchBtn = document.querySelector('#searchForm .searchbtn');
-            if (searchBtn) {
-                searchBtn.disabled = true;
-                searchBtn.textContent = '⏳ Searching...';
-            }
-
-            try {
-                searchResults = await performSearch(searchQuery);
-                const userName = userNameInput ? userNameInput.value : 'Guest';
-                displaySearchResults(searchResults, userName);
-            } catch (error) {
-                console.error('Search error:', error);
-                showAlert('Error searching for songs. Please try again.', 'danger');
-            } finally {
-                if (searchBtn) {
-                    searchBtn.disabled = false;
-                    searchBtn.textContent = '🔍 Search';
-                }
-            }
+        const searchBtn = document.querySelector("#searchForm .searchbtn");
+        if (searchBtn) {
+          searchBtn.disabled = true;
+          searchBtn.textContent = "⏳ Searching...";
         }
 
-        // YouTube API search function
-        async function performSearch(query) {
-            try {
-                const results = await searchYouTubeKaraoke(query);
-                return results.map(item => ({
-                    title: item.title,
-                    artist: item.artist,
-                    videoId: item.videoId,
-                    thumbnail: item.thumbnail
-                }));
-            } catch (error) {
-                console.error('YouTube API Error:', error);
-                return getFallbackSongs(query);
-            }
+        try {
+          searchResults = await performSearch(searchQuery);
+          const userName = userNameInput ? userNameInput.value : "Guest";
+          displaySearchResults(searchResults, userName);
+        } catch (error) {
+          console.error("Search error:", error);
+          showAlert("Error searching for songs. Please try again.", "danger");
+        } finally {
+          if (searchBtn) {
+            searchBtn.disabled = false;
+            searchBtn.textContent = "🔍 Search";
+          }
+        }
+      }
+
+      // YouTube API search function
+      async function performSearch(query) {
+        try {
+          const results = await searchYouTubeKaraoke(query);
+          return results.map((item) => ({
+            title: item.title,
+            artist: item.artist,
+            videoId: item.videoId,
+            thumbnail: item.thumbnail,
+          }));
+        } catch (error) {
+          console.error("YouTube API Error:", error);
+          return getFallbackSongs(query);
+        }
+      }
+
+      // Fallback demo data
+      function getFallbackSongs(query) {
+        const allSongs = [
+          {
+            title: "Bohemian Rhapsody - Karaoke",
+            artist: "Queen",
+            videoId: "fJ9rUzIMt7o",
+          },
+          {
+            title: "Hallelujah - Karaoke",
+            artist: "Leonard Cohen",
+            videoId: "YAHxj0k0WL0",
+          },
+          {
+            title: "Someone Like You - Karaoke",
+            artist: "Adele",
+            videoId: "hHUbLv4ThOk",
+          },
+          {
+            title: "Perfect - Karaoke",
+            artist: "Ed Sheeran",
+            videoId: "2takcwFERG0",
+          },
+          {
+            title: "Shape of You - Karaoke",
+            artist: "Ed Sheeran",
+            videoId: "JGwWNGJdvx8",
+          },
+          {
+            title: "Rolling in the Deep - Karaoke",
+            artist: "Adele",
+            videoId: "rYEDA3JcQqw",
+          },
+          {
+            title: "Imagine - Karaoke",
+            artist: "John Lennon",
+            videoId: "DVg2EJvvlF8",
+          },
+          {
+            title: "Wonderwall - Karaoke",
+            artist: "Oasis",
+            videoId: "6hzrDeceEKc",
+          },
+          {
+            title: "Piano Man - Karaoke",
+            artist: "Billy Joel",
+            videoId: "1vrEljMfXWc",
+          },
+          {
+            title: "Don't Stop Believin' - Karaoke",
+            artist: "Journey",
+            videoId: "1k8craCGpgs",
+          },
+        ];
+        return allSongs.filter(
+          (song) =>
+            song.title.toLowerCase().includes(query.toLowerCase()) ||
+            song.artist.toLowerCase().includes(query.toLowerCase()),
+        );
+      }
+
+      // Display search results
+      function displaySearchResults(results, userName) {
+        const container = document.getElementById("resultsContainer");
+
+        if (results.length === 0) {
+          const searchInput = document.getElementById("searchInput");
+          const query = searchInput ? searchInput.value : "";
+          container.innerHTML = `<div class="alert alert-custom">❌ No results found for "${query}"</div>`;
+          return;
         }
 
-        // Fallback demo data
-        function getFallbackSongs(query) {
-            const allSongs = [
-                { title: "Bohemian Rhapsody - Karaoke", artist: "Queen", videoId: "fJ9rUzIMt7o" },
-                { title: "Hallelujah - Karaoke", artist: "Leonard Cohen", videoId: "YAHxj0k0WL0" },
-                { title: "Someone Like You - Karaoke", artist: "Adele", videoId: "hHUbLv4ThOk" },
-                { title: "Perfect - Karaoke", artist: "Ed Sheeran", videoId: "2takcwFERG0" },
-                { title: "Shape of You - Karaoke", artist: "Ed Sheeran", videoId: "JGwWNGJdvx8" },
-                { title: "Rolling in the Deep - Karaoke", artist: "Adele", videoId: "rYEDA3JcQqw" },
-                { title: "Imagine - Karaoke", artist: "John Lennon", videoId: "DVg2EJvvlF8" },
-                { title: "Wonderwall - Karaoke", artist: "Oasis", videoId: "6hzrDeceEKc" },
-                { title: "Piano Man - Karaoke", artist: "Billy Joel", videoId: "1vrEljMfXWc" },
-                { title: "Don't Stop Believin' - Karaoke", artist: "Journey", videoId: "1k8craCGpgs" }
-            ];
-            return allSongs.filter(song => 
-                song.title.toLowerCase().includes(query.toLowerCase()) ||
-                song.artist.toLowerCase().includes(query.toLowerCase())
-            );
-        }
+        let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3>`;
 
-        // Display search results
-        function displaySearchResults(results, userName) {
-            const container = document.getElementById('resultsContainer');
-
-            if (results.length === 0) {
-                const searchInput = document.getElementById('searchInput');
-                const query = searchInput ? searchInput.value : '';
-                container.innerHTML = `<div class="alert alert-custom">❌ No results found for "${query}"</div>`;
-                return;
-            }
-
-            let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3>`;
-
-            results.forEach((song) => {
-                const thumbnailUrl = `https://i.ytimg.com/vi/${song.videoId}/maxresdefault.jpg`;
-                html += `
+        results.forEach((song) => {
+          const thumbnailUrl = `https://i.ytimg.com/vi/${song.videoId}/maxresdefault.jpg`;
+          html += `
                     <div class="song-item">
                         <div style="font-weight: 600; margin-bottom: 5px;">${song.title}</div>
                         <div style="font-size: 0.9rem; opacity: 0.8;">🎤 ${song.artist}</div>
@@ -421,715 +525,906 @@
                         </button>
                     </div>
                 `;
-            });
+        });
 
-            container.innerHTML = html;
+        container.innerHTML = html;
+      }
+
+      // Request song
+      function requestSong(title, artist, videoId, userName, btn) {
+        if (!userName.trim()) {
+          alert("Please enter your name first");
+          return;
         }
 
-        // Request song
-        function requestSong(title, artist, videoId, userName, btn) {
-            if (!userName.trim()) {
-                alert('Please enter your name first');
-                return;
-            }
+        btn.disabled = true;
+        btn.textContent = "⏳ Adding...";
 
-            btn.disabled = true;
-            btn.textContent = '⏳ Adding...';
+        try {
+          let queue = JSON.parse(localStorage.getItem("karaoke_queue") || "[]");
 
-            try {
-                let queue = JSON.parse(localStorage.getItem('karaoke_queue') || '[]');
-                
-                const newSong = {
-                    id: Math.max(...queue.map(s => s.id || 0), 0) + 1,
-                    title,
-                    artist,
-                    videoId,
-                    requestedBy: userName
-                };
-                queue.push(newSong);
-                
-                localStorage.setItem('karaoke_queue', JSON.stringify(queue));
+          const newSong = {
+            id: Math.max(...queue.map((s) => s.id || 0), 0) + 1,
+            title,
+            artist,
+            videoId,
+            requestedBy: userName,
+          };
+          queue.push(newSong);
 
-                const songExists = reservedSongs.some(s => s.videoId === videoId);
-                if (!songExists) {
-                    reservedSongs.push({ title, artist, videoId });
-                    localStorage.setItem('karaoke_reserved_songs', JSON.stringify(reservedSongs));
-                    displayReservedSongs();
-                }
+          localStorage.setItem("karaoke_queue", JSON.stringify(queue));
 
-                setTimeout(() => {
-                    showAlert(`✅ "${title}" added to Reserved Songs!`, 'success');
-                    document.getElementById('searchInput').value = '';
-                    document.getElementById('resultsContainer').innerHTML = '';
-                    btn.disabled = false;
-                    btn.textContent = '✓ Select';
-                }, 500);
+          const songExists = reservedSongs.some((s) => s.videoId === videoId);
+          if (!songExists) {
+            reservedSongs.push({ title, artist, videoId });
+            localStorage.setItem(
+              "karaoke_reserved_songs",
+              JSON.stringify(reservedSongs),
+            );
+            displayReservedSongs();
+          }
 
-            } catch (error) {
-                console.error('Error requesting song:', error);
-                showAlert('Error adding song', 'danger');
-                btn.disabled = false;
-                btn.textContent = '✓ Select';
-            }
+          setTimeout(() => {
+            showAlert(`✅ "${title}" added to Reserved Songs!`, "success");
+            document.getElementById("searchInput").value = "";
+            document.getElementById("resultsContainer").innerHTML = "";
+            btn.disabled = false;
+            btn.textContent = "✓ Select";
+          }, 500);
+        } catch (error) {
+          console.error("Error requesting song:", error);
+          showAlert("Error adding song", "danger");
+          btn.disabled = false;
+          btn.textContent = "✓ Select";
+        }
+      }
+
+      // Show alert
+      function showAlert(message, type = "info") {
+        const container = document.getElementById("resultsContainer");
+        let alertStyle = "";
+
+        if (type === "success") {
+          alertStyle =
+            "background: rgba(40, 167, 69, 0.1); border-color: rgba(40, 167, 69, 0.5); color: #28a745;";
+        } else if (type === "danger") {
+          alertStyle =
+            "background: rgba(220, 53, 69, 0.1); border-color: rgba(220, 53, 69, 0.5); color: #dc3545;";
         }
 
-        // Show alert
-        function showAlert(message, type = 'info') {
-            const container = document.getElementById('resultsContainer');
-            let alertStyle = '';
+        const alert = document.createElement("div");
+        alert.className = "alert alert-custom";
+        alert.style.cssText = alertStyle;
+        alert.innerHTML = message;
 
-            if (type === 'success') {
-                alertStyle = 'background: rgba(40, 167, 69, 0.1); border-color: rgba(40, 167, 69, 0.5); color: #28a745;';
-            } else if (type === 'danger') {
-                alertStyle = 'background: rgba(220, 53, 69, 0.1); border-color: rgba(220, 53, 69, 0.5); color: #dc3545;';
-            }
+        const existing = container.querySelector(".alert");
+        if (existing) existing.remove();
 
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-custom';
-            alert.style.cssText = alertStyle;
-            alert.innerHTML = message;
+        container.insertBefore(alert, container.firstChild);
 
-            const existing = container.querySelector('.alert');
-            if (existing) existing.remove();
+        setTimeout(() => {
+          alert.style.opacity = "0";
+          alert.style.transition = "opacity 0.3s ease";
+          setTimeout(() => alert.remove(), 300);
+        }, 3000);
+      }
 
-            container.insertBefore(alert, container.firstChild);
+      // Load reserved songs
+      function loadReservedSongs() {
+        const stored = localStorage.getItem("karaoke_reserved_songs");
+        if (stored) {
+          try {
+            reservedSongs = JSON.parse(stored);
+          } catch (e) {
+            reservedSongs = [];
+          }
+        } else {
+          reservedSongs = [];
+        }
+      }
 
-            setTimeout(() => {
-                alert.style.opacity = '0';
-                alert.style.transition = 'opacity 0.3s ease';
-                setTimeout(() => alert.remove(), 300);
-            }, 3000);
+      // Display reserved songs
+      function displayReservedSongs() {
+        const container = document.getElementById("reservedSongs");
+        if (!container) return;
+
+        if (reservedSongs.length === 0) {
+          container.innerHTML =
+            '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem; font-style: italic;">No reserved songs yet. Search and request songs!</div>';
+          return;
         }
 
-        // Load reserved songs
-        function loadReservedSongs() {
-            const stored = localStorage.getItem('karaoke_reserved_songs');
-            if (stored) {
-                try {
-                    reservedSongs = JSON.parse(stored);
-                } catch (e) {
-                    reservedSongs = [];
-                }
-            } else {
-                reservedSongs = [];
-            }
-        }
-
-        // Display reserved songs
-        function displayReservedSongs() {
-            const container = document.getElementById('reservedSongs');
-            if (!container) return;
-
-            if (reservedSongs.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem; font-style: italic;">No reserved songs yet. Search and request songs!</div>';
-                return;
-            }
-
-            let html = '';
-            reservedSongs.forEach(song => {
-                html += `
+        let html = "";
+        reservedSongs.forEach((song) => {
+          html += `
                     <div class="song-item">
                         <div style="font-weight: 600; margin-bottom: 5px;">${song.title}</div>
                         <div style="font-size: 0.9rem; opacity: 0.8;">🎤 ${song.artist}</div>
                     </div>
                 `;
-            });
-
-            container.innerHTML = html;
-        }
-
-        // Load all songs
-        function loadAllSongs() {
-            allSongs = [
-                { title: "Bohemian Rhapsody - Karaoke", artist: "Queen", videoId: "fJ9rUzIMt7o" },
-                { title: "Hallelujah - Karaoke", artist: "Leonard Cohen", videoId: "YAHxj0k0WL0" },
-                { title: "Someone Like You - Karaoke", artist: "Adele", videoId: "hHUbLv4ThOk" }
-            ];
-        }
-
-        // Display song book
-        function displaySongBook() {
-            // Optional: add song book display
-        }
-
-        // Update user display
-        function updateUserDisplay() {
-            const userNameInput = document.getElementById('userName');
-            const userDisplayName = document.getElementById('userDisplayName');
-            
-            if (userNameInput && userDisplayName) {
-                const userName = userNameInput.value.trim() || 'Enter your name:';
-                
-                if (userName === 'Enter your name:') {
-                    userDisplayName.textContent = 'Enter your name:';
-                    userDisplayName.style.color = 'rgba(255, 255, 255, 0.6)';
-                } else {
-                    userDisplayName.textContent = `🎤 Welcome, ${userName}!`;
-                    userDisplayName.style.color = '#f093fb';
-                    localStorage.setItem('karaoke_user_name', userName);
-                }
-            }
-        }
-
-        // Reload player
-        function reloadPlayer() {
-            if (audioPlayer) {
-                audioPlayer.currentTime = 0;
-                audioPlayer.play().catch(e => console.log('Play failed:', e));
-            }
-        }
-
-        // Toggle play/pause
-        function togglePlayPause() {
-            const btn = document.getElementById('playPauseBtn');
-            if (!audioPlayer.src) {
-                alert('No song loaded. Please search for a song first.');
-                return;
-            }
-
-            if (audioPlayer.paused) {
-                audioPlayer.play().catch(e => console.log('Play failed:', e));
-                btn.textContent = '⏸';
-                btn.classList.remove('pause');
-                btn.classList.add('play');
-            } else {
-                audioPlayer.pause();
-                btn.textContent = '▶';
-                btn.classList.remove('play');
-                btn.classList.add('pause');
-            }
-        }
-
-        // Stop player
-        function stopPlayer() {
-            if (audioPlayer) {
-                audioPlayer.pause();
-                audioPlayer.currentTime = 0;
-                document.getElementById('playPauseBtn').textContent = '▶ Play';
-            }
-        }
-
-        // Toggle mute
-        function toggleMute() {
-            const btn = document.getElementById('muteBtn');
-            if (audioPlayer) {
-                audioPlayer.muted = !audioPlayer.muted;
-                btn.textContent = audioPlayer.muted ? '🔇' : '🔊';
-            }
-        }
-
-        // Update singer activity
-        function updateSingerActivity() {
-            const singerName = localStorage.getItem('karaoke_user_name');
-            if (!singerName) return;
-            
-            let users = [];
-            const stored = localStorage.getItem('karaoke_users');
-            if (stored) {
-                users = JSON.parse(stored);
-            }
-            
-            let user = users.find(u => u.username === singerName);
-            if (!user) {
-                user = {
-                    id: users.length + 1,
-                    username: singerName,
-                    password: 'singer',
-                    role: 'admin',
-                    joined: new Date().toISOString().split('T')[0],
-                    lastActivity: new Date().getTime()
-                };
-                users.push(user);
-            } else {
-                user.lastActivity = new Date().getTime();
-            }
-            
-            localStorage.setItem('karaoke_users', JSON.stringify(users));
-        }
-
-        // ===== HOME PAGE FUNCTIONS =====
-
-        // Initialize demo data if not exists - Run immediately
-        function initializeDemoData() {
-            const stored = localStorage.getItem('karaoke_users');
-            if (!stored) {
-                const demoUsers = [
-                    { id: 1, username: "john_doe", password: "pass123", role: "user", joined: "2024-01-01", disabled: false },
-                    { id: 2, username: "maria_santos", password: "pass123", role: "user", joined: "2024-01-02", disabled: false },
-                    { id: 3, username: "sarah_johnson", password: "pass123", role: "user", joined: "2024-01-03", disabled: false },
-                    { id: 4, username: "admin_user", password: "admin123", role: "admin", joined: "2024-01-01", disabled: false }
-                ];
-                localStorage.setItem('karaoke_users', JSON.stringify(demoUsers));
-                
-                // Also save to Firebase
-                if (typeof firebase !== 'undefined' && firebase.database) {
-                    try {
-                        firebase.database().ref('users').set(demoUsers)
-                            .then(() => console.log('✅ Demo users saved to Firebase'))
-                            .catch(err => console.warn('⚠️ Could not save to Firebase:', err.message));
-                    } catch (e) {
-                        console.warn('Firebase not available for demo data');
-                    }
-                }
-            }
-        }
-
-        // Initialize immediately on page load
-        initializeDemoData();
-        // Also initialize when DOMContentLoaded
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeDemoData();
-            
-            // Periodically sync demo users to Firebase to ensure they're always available
-            setInterval(function() {
-                const stored = localStorage.getItem('karaoke_users');
-                if (stored && typeof firebase !== 'undefined' && firebase.database) {
-                    try {
-                        const users = JSON.parse(stored);
-                        firebase.database().ref('users').set(users)
-                            .catch(err => console.warn('⚠️ Firebase demo data sync failed:', err.message));
-                    } catch (e) {
-                        console.warn('⚠️ Error syncing demo data:', e.message);
-                    }
-                }
-            }, 120000); // Sync every 2 minutes
         });
-        // Open Admin Login Modal
-        function openAdminLogin() {
-            document.getElementById('loginOverlay').classList.add('show');
-            document.getElementById('adminLoginModal').classList.add('show');
-            document.getElementById('adminName').focus();
+
+        container.innerHTML = html;
+      }
+
+      // Load all songs
+      function loadAllSongs() {
+        allSongs = [
+          {
+            title: "Bohemian Rhapsody - Karaoke",
+            artist: "Queen",
+            videoId: "fJ9rUzIMt7o",
+          },
+          {
+            title: "Hallelujah - Karaoke",
+            artist: "Leonard Cohen",
+            videoId: "YAHxj0k0WL0",
+          },
+          {
+            title: "Someone Like You - Karaoke",
+            artist: "Adele",
+            videoId: "hHUbLv4ThOk",
+          },
+        ];
+      }
+
+      // Display song book
+      function displaySongBook() {
+        // Optional: add song book display
+      }
+
+      // Update user display
+      function updateUserDisplay() {
+        const userNameInput = document.getElementById("userName");
+        const userDisplayName = document.getElementById("userDisplayName");
+
+        if (userNameInput && userDisplayName) {
+          const userName = userNameInput.value.trim() || "Enter your name:";
+
+          if (userName === "Enter your name:") {
+            userDisplayName.textContent = "Enter your name:";
+            userDisplayName.style.color = "rgba(255, 255, 255, 0.6)";
+          } else {
+            userDisplayName.textContent = `🎤 Welcome, ${userName}!`;
+            userDisplayName.style.color = "#f093fb";
+            localStorage.setItem("karaoke_user_name", userName);
+          }
+        }
+      }
+
+      // Reload player
+      function reloadPlayer() {
+        if (audioPlayer) {
+          audioPlayer.currentTime = 0;
+          audioPlayer.play().catch((e) => console.log("Play failed:", e));
+        }
+      }
+
+      // Toggle play/pause
+      function togglePlayPause() {
+        const btn = document.getElementById("playPauseBtn");
+        if (!audioPlayer.src) {
+          alert("No song loaded. Please search for a song first.");
+          return;
         }
 
-        // Open Singer Login Modal
-        function openSingerLogin() {
-            document.getElementById('loginOverlay').classList.add('show');
-            document.getElementById('singerLoginModal').classList.add('show');
-            document.getElementById('singerUsername').focus();
+        if (audioPlayer.paused) {
+          audioPlayer.play().catch((e) => console.log("Play failed:", e));
+          btn.textContent = "⏸";
+          btn.classList.remove("pause");
+          btn.classList.add("play");
+        } else {
+          audioPlayer.pause();
+          btn.textContent = "▶";
+          btn.classList.remove("play");
+          btn.classList.add("pause");
+        }
+      }
+
+      // Stop player
+      function stopPlayer() {
+        if (audioPlayer) {
+          audioPlayer.pause();
+          audioPlayer.currentTime = 0;
+          document.getElementById("playPauseBtn").textContent = "▶ Play";
+        }
+      }
+
+      // Toggle mute
+      function toggleMute() {
+        const btn = document.getElementById("muteBtn");
+        if (audioPlayer) {
+          audioPlayer.muted = !audioPlayer.muted;
+          btn.textContent = audioPlayer.muted ? "🔇" : "🔊";
+        }
+      }
+
+      // Update singer activity
+      function updateSingerActivity() {
+        const singerName = localStorage.getItem("karaoke_user_name");
+        if (!singerName) return;
+
+        let users = [];
+        const stored = localStorage.getItem("karaoke_users");
+        if (stored) {
+          users = JSON.parse(stored);
         }
 
-        // Close Login Modal
-        function closeLoginModal() {
-            document.getElementById('loginOverlay').classList.remove('show');
-            document.getElementById('adminLoginModal').classList.remove('show');
-            document.getElementById('singerLoginModal').classList.remove('show');
+        let user = users.find((u) => u.username === singerName);
+        if (!user) {
+          user = {
+            id: users.length + 1,
+            username: singerName,
+            password: "singer",
+            role: "admin",
+            joined: new Date().toISOString().split("T")[0],
+            lastActivity: new Date().getTime(),
+          };
+          users.push(user);
+        } else {
+          user.lastActivity = new Date().getTime();
         }
 
-        // Validate Admin Login
-        // ===== SESSION MANAGEMENT (Single Device per User) =====
-        // Generate unique session ID for this device
-        function generateSessionId() {
-            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("karaoke_users", JSON.stringify(users));
+      }
+
+      // ===== HOME PAGE FUNCTIONS =====
+
+      // Seed the user list only when Firebase has no user data.
+      function initializeDemoData() {
+        const demoUsers = [
+          {
+            id: 1,
+            username: "john_doe",
+            password: "pass123",
+            role: "user",
+            joined: "2024-01-01",
+            disabled: false,
+          },
+          {
+            id: 2,
+            username: "maria_santos",
+            password: "pass123",
+            role: "user",
+            joined: "2024-01-02",
+            disabled: false,
+          },
+          {
+            id: 3,
+            username: "sarah_johnson",
+            password: "pass123",
+            role: "user",
+            joined: "2024-01-03",
+            disabled: false,
+          },
+          {
+            id: 4,
+            username: "admin_user",
+            password: "admin123",
+            role: "admin",
+            joined: "2024-01-01",
+            disabled: false,
+          },
+        ];
+        let seedUsers = demoUsers;
+
+        try {
+          const stored = JSON.parse(
+            localStorage.getItem("karaoke_users") || "null",
+          );
+          if (Array.isArray(stored) && stored.length > 0) seedUsers = stored;
+        } catch (error) {
+          console.warn("Could not read cached users:", error.message);
         }
 
-        // Get or create session ID for this device (store in sessionStorage to persist across pages)
-        function getDeviceSessionId() {
-            let sessionId = sessionStorage.getItem('deviceSessionId');
-            if (!sessionId) {
-                sessionId = generateSessionId();
-                sessionStorage.setItem('deviceSessionId', sessionId);
-                console.log('🆔 Generated device session ID:', sessionId);
+        if (typeof firebase !== "undefined" && firebase.database) {
+          try {
+            firebase
+              .database()
+              .ref("users")
+              .transaction(
+                (currentUsers) =>
+                  currentUsers === null ? seedUsers : undefined,
+                (error, committed, snapshot) => {
+                  if (error) {
+                    console.warn(
+                      "Could not initialize Firebase users:",
+                      error.message,
+                    );
+                    return;
+                  }
+                  const data = snapshot.val();
+                  const remoteUsers = Array.isArray(data)
+                    ? data
+                    : Object.values(data || {});
+                  if (remoteUsers.length > 0) {
+                    localStorage.setItem(
+                      "karaoke_users",
+                      JSON.stringify(remoteUsers),
+                    );
+                    console.log(
+                      committed
+                        ? "✅ Initial users saved to Firebase"
+                        : "✅ Users refreshed from Firebase",
+                    );
+                  }
+                },
+              );
+          } catch (error) {
+            console.warn(
+              "Firebase not available for user initialization:",
+              error.message,
+            );
+          }
+        } else if (!localStorage.getItem("karaoke_users")) {
+          localStorage.setItem("karaoke_users", JSON.stringify(seedUsers));
+        }
+      }
+
+      // Initialize immediately on page load
+      initializeDemoData();
+      // Also initialize when DOMContentLoaded
+      document.addEventListener("DOMContentLoaded", function () {
+        initializeDemoData();
+      });
+      // Open Admin Login Modal
+      function openAdminLogin() {
+        document.getElementById("loginOverlay").classList.add("show");
+        document.getElementById("adminLoginModal").classList.add("show");
+        document.getElementById("adminName").focus();
+      }
+
+      // Open Singer Login Modal
+      function openSingerLogin() {
+        document.getElementById("loginOverlay").classList.add("show");
+        document.getElementById("singerLoginModal").classList.add("show");
+        document.getElementById("singerUsername").focus();
+      }
+
+      // Close Login Modal
+      function closeLoginModal() {
+        document.getElementById("loginOverlay").classList.remove("show");
+        document.getElementById("adminLoginModal").classList.remove("show");
+        document.getElementById("singerLoginModal").classList.remove("show");
+      }
+
+      // Validate Admin Login
+      // ===== SESSION MANAGEMENT (Single Device per User) =====
+      // Generate unique session ID for this device
+      function generateSessionId() {
+        return (
+          "session_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).substr(2, 9)
+        );
+      }
+
+      // Get or create session ID for this device (store in sessionStorage to persist across pages)
+      function getDeviceSessionId() {
+        let sessionId = sessionStorage.getItem("deviceSessionId");
+        if (!sessionId) {
+          sessionId = generateSessionId();
+          sessionStorage.setItem("deviceSessionId", sessionId);
+          console.log("🆔 Generated device session ID:", sessionId);
+        }
+        // Also keep in memory for quick access
+        window.deviceSessionId = sessionId;
+        return sessionId;
+      }
+
+      // Check if user is already logged in from another device (using Firebase)
+      function checkIfLoggedInElsewhere(username, callback) {
+        console.log("🔍 Checking if", username, "is logged in elsewhere...");
+
+        let callbackCalled = false;
+        let isFirebaseAvailable = false;
+
+        const timeoutId = setTimeout(() => {
+          if (!callbackCalled) {
+            callbackCalled = true;
+            console.warn("⏱️ Firebase check timeout");
+            // If Firebase is not available within timeout, allow login (fail-open)
+            if (!isFirebaseAvailable) {
+              console.log("✅ Allowing login - Firebase not responding");
+              callback(false);
             }
-            // Also keep in memory for quick access
-            window.deviceSessionId = sessionId;
-            return sessionId;
-        }
+          }
+        }, 3000); // 3 second timeout
 
-        // Check if user is already logged in from another device (using Firebase)
-        function checkIfLoggedInElsewhere(username, callback) {
-            console.log('🔍 Checking if', username, 'is logged in elsewhere...');
-            
-            let callbackCalled = false;
-            let isFirebaseAvailable = false;
-            
-            const timeoutId = setTimeout(() => {
-                if (!callbackCalled) {
-                    callbackCalled = true;
-                    console.warn('⏱️ Firebase check timeout');
-                    // If Firebase is not available within timeout, allow login (fail-open)
-                    if (!isFirebaseAvailable) {
-                        console.log('✅ Allowing login - Firebase not responding');
-                        callback(false);
-                    }
-                }
-            }, 3000); // 3 second timeout
-            
-            // Try to check from Firebase first
-            if (typeof firebase !== 'undefined' && firebase.database) {
-                try {
-                    isFirebaseAvailable = true;
-                    const loginRef = firebase.database().ref('activeLogin/' + username);
-                    
-                    loginRef.once('value', (snapshot) => {
-                        if (callbackCalled) return; // Already handled by timeout
-                        callbackCalled = true;
-                        clearTimeout(timeoutId);
-                        
-                        const data = snapshot.val();
-                        const currentSessionId = getDeviceSessionId();
-                        const now = Date.now();
-                        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
-                        
-                        console.log('📊 Firebase data for', username, ':', data);
-                        console.log('🎫 Current session ID:', currentSessionId);
-                        
-                        // If there's an active login
-                        if (data && data.sessionId) {
-                            const lastActivity = data.timestamp;
-                            
-                            // If timestamp is missing, invalid, or 0, treat as stale
-                            if (!lastActivity || typeof lastActivity !== 'number' || lastActivity === 0) {
-                                console.log('⚠️ Invalid or missing timestamp in Firebase session, treating as stale');
-                                // Clear the corrupted/invalid session immediately and asynchronously
-                                firebase.database().ref('activeLogin/' + username).remove()
-                                    .then(() => console.log('✅ Cleared corrupted session'))
-                                    .catch(err => console.warn('⚠️ Error clearing invalid session:', err.message));
-                                // Allow login regardless of clearing result
-                                callback(false);
-                                return;
-                            }
-                            
-                            const sessionAge = now - lastActivity;
-                            console.log('⏱️ Session age:', Math.round(sessionAge / 1000), 'seconds');
-                            
-                            // Check if the session is from a different device
-                            if (data.sessionId !== currentSessionId) {
-                                // Check if the old session is stale (older than 30 minutes)
-                                if (sessionAge > SESSION_TIMEOUT) {
-                                    console.log('⏱️ Old session is stale (' + Math.round(sessionAge / 60000) + ' min), clearing and allowing login');
-                                    // Clear the stale session but allow login immediately
-                                    firebase.database().ref('activeLogin/' + username).remove()
-                                        .then(() => console.log('✅ Cleared stale session'))
-                                        .catch(err => console.warn('⚠️ Error clearing stale session:', err.message));
-                                    callback(false);
-                                } else {
-                                    // Active session from different device - BLOCK login (single device only)
-                                    console.log('❌ User already logged in with different session:', data.sessionId);
-                                    callback(true); // Block the login - only one device at a time
-                                }
-                            } else {
-                                console.log('✅ Safe to login - same session ID');
-                                callback(false); // Safe to login
-                            }
-                        } else {
-                            console.log('✅ Safe to login - no other session found');
-                            callback(false); // Safe to login
-                        }
-                    }).catch(err => {
-                        if (callbackCalled) return;
-                        callbackCalled = true;
-                        clearTimeout(timeoutId);
-                        console.warn('⚠️ Firebase read error:', err.message);
-                        console.log('✅ Allowing login - Firebase error');
-                        callback(false); // Allow login on error (fail-open)
-                    });
-                } catch (e) {
-                    if (callbackCalled) return;
-                    callbackCalled = true;
-                    clearTimeout(timeoutId);
-                    console.warn('⚠️ Firebase exception:', e.message);
-                    console.log('✅ Allowing login - Firebase exception');
-                    callback(false); // Allow login on exception (fail-open)
-                }
-            } else {
-                clearTimeout(timeoutId);
-                console.warn('⚠️ Firebase not available');
-                console.log('✅ Allowing login - Firebase not configured');
-                callback(false); // Firebase not available, allow login (can't verify)
-            }
-        }
+        // Try to check from Firebase first
+        if (typeof firebase !== "undefined" && firebase.database) {
+          try {
+            isFirebaseAvailable = true;
+            const loginRef = firebase.database().ref("activeLogin/" + username);
 
-        // Register login session in Firebase ONLY
-        function registerLoginSession(username) {
-            const sessionId = getDeviceSessionId();
-            console.log('📝 Registering login session for', username);
-            console.log('🎫 Session ID:', sessionId);
-            
-            // Broadcast login event to all tabs
-            try {
-                const userUpdateChannel = new BroadcastChannel('karaoke_user_updates');
-                userUpdateChannel.postMessage({
-                    type: 'user_login',
-                    username: username,
-                    timestamp: Date.now()
-                });
-            } catch (error) {
-                console.warn('BroadcastChannel not supported:', error.message);
-            }
-            
-            // Store ONLY in Firebase (no localStorage for sessions)
-            if (typeof firebase !== 'undefined' && firebase.database) {
-                try {
-                    // 1. Register session in activeLogin ONLY - don't modify users array
-                    firebase.database().ref('activeLogin/' + username).set({
-                        sessionId: sessionId,
-                        timestamp: Date.now(),
-                        loginTime: new Date().toISOString()
-                    }).then(() => {
-                        console.log('✅ Session registered in Firebase');
-                    }).catch(err => {
-                        console.warn('⚠️ Firebase registration failed:', err.message);
-                    });
-                    
-                    // Note: User status updates are handled by admin.js, not here
-                    // Avoid modifying users array from login page to prevent data loss
-                } catch (e) {
-                    console.warn('⚠️ Firebase error:', e.message);
-                }
-            } else {
-                console.warn('⚠️ Firebase not available for session registration');
-            }
-        }
-
-        // Clear login session (Firebase only)
-        function clearLoginSession() {
-            const username = window.loggedInUsername; // Get from memory
-            
-            // Broadcast logout event to all tabs
-            try {
-                const userUpdateChannel = new BroadcastChannel('karaoke_user_updates');
-                userUpdateChannel.postMessage({
-                    type: 'user_logout',
-                    username: username,
-                    timestamp: Date.now()
-                });
-            } catch (error) {
-                console.warn('BroadcastChannel not supported:', error.message);
-            }
-            
-            // Clear from Firebase activeLogin ONLY - don't modify users array
-            if (username && typeof firebase !== 'undefined' && firebase.database) {
-                try {
-                    // Clear from Firebase activeLogin
-                    firebase.database().ref('activeLogin/' + username).remove()
-                        .catch(err => console.warn('Firebase logout failed:', err.message));
-                    
-                    // Note: User status updates are handled by admin.js
-                    // Avoid modifying users array from login page to prevent data loss
-                } catch (e) {
-                    console.warn('Firebase error:', e.message);
-                }
-            }
-            
-            // Clear from memory
-            window.deviceSessionId = null;
-            window.loggedInUsername = null;
-            
-            console.log('✅ Login session cleared');
-        }
-
-        function validateAdminLogin(event) {
-            event.preventDefault();
-            const adminName = document.getElementById('adminName').value.trim();
-            const adminPassword = document.getElementById('adminPassword').value;
-
-            console.log('👤 Admin login attempt:', adminName);
-
-            // Try to get users from Firebase first with a fresh load
-            forceReloadUsersForLogin(function(users) {
-                const adminUser = users.find(u => u.username === adminName && u.password === adminPassword && u.role === 'admin');
-
-                if (adminUser) {
-                    // Check if user is disabled
-                    if (adminUser.disabled) {
-                        console.log('❌ Admin user is disabled:', adminUser.username);
-                        alert('❌ This admin account has been disabled.\n\nPlease contact another administrator.');
-                        document.getElementById('adminName').focus();
-                        return;
-                    }
-                    
-                    console.log('✅ Admin user found:', adminUser.username);
-                    
-                    // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
-                    checkIfLoggedInElsewhere(adminName, function(isLoggedInElsewhere) {
-                        if (isLoggedInElsewhere) {
-                            console.log('❌ Login blocked - user already logged in elsewhere');
-                            alert('❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.');
-                            return; // BLOCK the login
-                        }
-
-                        console.log('✅ Proceeding with login...');
-                        // Store logged-in user
-                        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(adminUser));
-                        registerLoginSession(adminName);
-                        window.location.href = 'admin.html';
-                    });
-                } else {
-                    console.log('❌ Admin user not found or password incorrect');
-                    alert('❌ Invalid admin credentials. Please check your username and password.');
-                    document.getElementById('adminName').focus();
-                }
-            });
-        }
-
-        // Validate Singer Login
-        function validateSingerLogin(event) {
-            event.preventDefault();
-            const singerUsername = document.getElementById('singerUsername').value.trim();
-            const singerPassword = document.getElementById('singerPassword').value;
-
-            console.log('👤 Singer login attempt:', singerUsername);
-
-            // Try to get users from Firebase first with a fresh load
-            forceReloadUsersForLogin(function(users) {
-                const singerUser = users.find(u => u.username === singerUsername && u.password === singerPassword);
-
-                if (singerUser) {
-                    // Check if user is disabled
-                    if (singerUser.disabled) {
-                        console.log('❌ Singer user is disabled:', singerUser.username);
-                        alert('❌ Your account has been disabled.\n\nPlease contact an administrator.');
-                        document.getElementById('singerUsername').focus();
-                        return;
-                    }
-                    
-                    console.log('✅ Singer user found:', singerUser.username);
-                    
-                    // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
-                    checkIfLoggedInElsewhere(singerUsername, function(isLoggedInElsewhere) {
-                        if (isLoggedInElsewhere) {
-                            console.log('❌ Login blocked - user already logged in elsewhere');
-                            alert('❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.');
-                            return; // BLOCK the login
-                        }
-
-                        console.log('✅ Proceeding with login...');
-                        // Store logged-in user
-                        localStorage.setItem('karaoke_logged_in_user', JSON.stringify(singerUser));
-                        registerLoginSession(singerUsername);
-                        closeLoginModal();
-                        // Redirect to singer.html instead of showing page
-                        setTimeout(() => {
-                            window.location.href = 'singer.html';
-                        }, 300);
-                    });
-                } else {
-                    console.log('❌ Singer user not found or password incorrect');
-                    alert('❌ Invalid credentials. Please check your username and password.');
-                    document.getElementById('singerUsername').focus();
-                }
-            });
-        }
-        
-        // Force reload users from Firebase - gets latest data from Firebase
-        function forceReloadUsersForLogin(callback) {
-            let callbackCalled = false;
-            
-            // Set a timeout to ensure callback is called even if Firebase hangs
-            const timeoutId = setTimeout(() => {
-                if (!callbackCalled) {
-                    callbackCalled = true;
-                    console.warn('⏱️ Firebase timeout - falling back to localStorage');
-                    const stored = localStorage.getItem('karaoke_users');
-                    const users = stored ? JSON.parse(stored) : [];
-                    callback(users);
-                }
-            }, 5000); // 5 second timeout
-            
-            if (typeof firebase !== 'undefined' && firebase.database) {
-                try {
-                    const usersRef = firebase.database().ref('users');
-                    // Force refresh - bypass cache
-                    usersRef.once('value', (snapshot) => {
-                        if (callbackCalled) return; // Already handled by timeout
-                        callbackCalled = true;
-                        clearTimeout(timeoutId);
-                        
-                        const data = snapshot.val();
-                        if (data) {
-                            const users = Array.isArray(data) ? data : Object.values(data);
-                            console.log('✅ Users forcefully loaded from Firebase:', users.length, users);
-                            callback(users);
-                        } else {
-                            // Firebase is empty, use localStorage
-                            console.log('Firebase empty, using localStorage');
-                            const stored = localStorage.getItem('karaoke_users');
-                            const users = stored ? JSON.parse(stored) : [];
-                            callback(users);
-                        }
-                    }).catch((error) => {
-                        if (callbackCalled) return; // Already handled by timeout
-                        callbackCalled = true;
-                        clearTimeout(timeoutId);
-                        console.warn('Firebase error, falling back to localStorage:', error.message);
-                        const stored = localStorage.getItem('karaoke_users');
-                        const users = stored ? JSON.parse(stored) : [];
-                        callback(users);
-                    });
-                } catch (error) {
-                    if (callbackCalled) return; // Already handled by timeout
-                    callbackCalled = true;
-                    clearTimeout(timeoutId);
-                    console.warn('Firebase not configured, using localStorage:', error.message);
-                    const stored = localStorage.getItem('karaoke_users');
-                    const users = stored ? JSON.parse(stored) : [];
-                    callback(users);
-                }
-            } else {
+            loginRef
+              .once("value", (snapshot) => {
                 if (callbackCalled) return; // Already handled by timeout
                 callbackCalled = true;
                 clearTimeout(timeoutId);
-                // Firebase not available, use localStorage
-                const stored = localStorage.getItem('karaoke_users');
-                const users = stored ? JSON.parse(stored) : [];
-                callback(users);
-            }
-        }
-        
-        // Load users from Firebase or localStorage
-        function loadUsersForLogin(callback) {
-            if (typeof firebase !== 'undefined' && firebase.database) {
-                try {
-                    const usersRef = firebase.database().ref('users');
-                    usersRef.once('value', (snapshot) => {
-                        const data = snapshot.val();
-                        if (data) {
-                            const users = Object.values(data);
-                            callback(users);
-                        } else {
-                            // Firebase is empty, use localStorage
-                            const stored = localStorage.getItem('karaoke_users');
-                            const users = stored ? JSON.parse(stored) : [];
-                            callback(users);
-                        }
-                    }).catch((error) => {
-                        console.warn('Firebase error, using localStorage:', error.message);
-                        const stored = localStorage.getItem('karaoke_users');
-                        const users = stored ? JSON.parse(stored) : [];
-                        callback(users);
-                    });
-                } catch (error) {
-                    console.warn('Firebase not configured, using localStorage:', error.message);
-                    const stored = localStorage.getItem('karaoke_users');
-                    const users = stored ? JSON.parse(stored) : [];
-                    callback(users);
+
+                const data = snapshot.val();
+                const currentSessionId = getDeviceSessionId();
+                const now = Date.now();
+                const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+                console.log("📊 Firebase data for", username, ":", data);
+                console.log("🎫 Current session ID:", currentSessionId);
+
+                // If there's an active login
+                if (data && data.sessionId) {
+                  const lastActivity = data.timestamp;
+
+                  // If timestamp is missing, invalid, or 0, treat as stale
+                  if (
+                    !lastActivity ||
+                    typeof lastActivity !== "number" ||
+                    lastActivity === 0
+                  ) {
+                    console.log(
+                      "⚠️ Invalid or missing timestamp in Firebase session, treating as stale",
+                    );
+                    // Clear the corrupted/invalid session immediately and asynchronously
+                    firebase
+                      .database()
+                      .ref("activeLogin/" + username)
+                      .remove()
+                      .then(() => console.log("✅ Cleared corrupted session"))
+                      .catch((err) =>
+                        console.warn(
+                          "⚠️ Error clearing invalid session:",
+                          err.message,
+                        ),
+                      );
+                    // Allow login regardless of clearing result
+                    callback(false);
+                    return;
+                  }
+
+                  const sessionAge = now - lastActivity;
+                  console.log(
+                    "⏱️ Session age:",
+                    Math.round(sessionAge / 1000),
+                    "seconds",
+                  );
+
+                  // Check if the session is from a different device
+                  if (data.sessionId !== currentSessionId) {
+                    // Check if the old session is stale (older than 30 minutes)
+                    if (sessionAge > SESSION_TIMEOUT) {
+                      console.log(
+                        "⏱️ Old session is stale (" +
+                          Math.round(sessionAge / 60000) +
+                          " min), clearing and allowing login",
+                      );
+                      // Clear the stale session but allow login immediately
+                      firebase
+                        .database()
+                        .ref("activeLogin/" + username)
+                        .remove()
+                        .then(() => console.log("✅ Cleared stale session"))
+                        .catch((err) =>
+                          console.warn(
+                            "⚠️ Error clearing stale session:",
+                            err.message,
+                          ),
+                        );
+                      callback(false);
+                    } else {
+                      // Active session from different device - BLOCK login (single device only)
+                      console.log(
+                        "❌ User already logged in with different session:",
+                        data.sessionId,
+                      );
+                      callback(true); // Block the login - only one device at a time
+                    }
+                  } else {
+                    console.log("✅ Safe to login - same session ID");
+                    callback(false); // Safe to login
+                  }
+                } else {
+                  console.log("✅ Safe to login - no other session found");
+                  callback(false); // Safe to login
                 }
-            } else {
-                // Firebase not available, use localStorage
-                const stored = localStorage.getItem('karaoke_users');
-                const users = stored ? JSON.parse(stored) : [];
-                callback(users);
-            }
+              })
+              .catch((err) => {
+                if (callbackCalled) return;
+                callbackCalled = true;
+                clearTimeout(timeoutId);
+                console.warn("⚠️ Firebase read error:", err.message);
+                console.log("✅ Allowing login - Firebase error");
+                callback(false); // Allow login on error (fail-open)
+              });
+          } catch (e) {
+            if (callbackCalled) return;
+            callbackCalled = true;
+            clearTimeout(timeoutId);
+            console.warn("⚠️ Firebase exception:", e.message);
+            console.log("✅ Allowing login - Firebase exception");
+            callback(false); // Allow login on exception (fail-open)
+          }
+        } else {
+          clearTimeout(timeoutId);
+          console.warn("⚠️ Firebase not available");
+          console.log("✅ Allowing login - Firebase not configured");
+          callback(false); // Firebase not available, allow login (can't verify)
+        }
+      }
+
+      // Register login session in Firebase ONLY
+      function registerLoginSession(username) {
+        const sessionId = getDeviceSessionId();
+        window.loggedInUsername = username;
+        console.log("📝 Registering login session for", username);
+        console.log("🎫 Session ID:", sessionId);
+
+        // Broadcast login event to all tabs
+        try {
+          const userUpdateChannel = new BroadcastChannel(
+            "karaoke_user_updates",
+          );
+          userUpdateChannel.postMessage({
+            type: "user_login",
+            username: username,
+            timestamp: Date.now(),
+          });
+        } catch (error) {
+          console.warn("BroadcastChannel not supported:", error.message);
         }
 
-        // Close modal when clicking overlay
-        document.getElementById('loginOverlay').addEventListener('click', closeLoginModal);
-        
-        // Listen for user database updates from admin dashboard
-        window.addEventListener('karaoke-users-updated', function(e) {
-            console.log('🔄 User database updated, reloading...');
-            initializeDemoData(); // Refresh the user list
-        });
-        
-        // Also listen for storage changes for cross-tab sync
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'karaoke_users') {
-                console.log('📡 User database changed in another tab');
-                initializeDemoData(); // Refresh the user list
+        // Store ONLY in Firebase (no localStorage for sessions)
+        if (typeof firebase !== "undefined" && firebase.database) {
+          try {
+            // Register the session before redirecting to the protected page.
+            return firebase
+              .database()
+              .ref("activeLogin/" + username)
+              .set({
+                sessionId: sessionId,
+                timestamp: Date.now(),
+                loginTime: new Date().toISOString(),
+              })
+              .then(() => {
+                console.log("✅ Session registered in Firebase");
+                return true;
+              })
+              .catch((err) => {
+                console.warn("⚠️ Firebase registration failed:", err.message);
+                return false;
+              });
+          } catch (e) {
+            console.warn("⚠️ Firebase error:", e.message);
+            return Promise.resolve(false);
+          }
+        } else {
+          console.warn("⚠️ Firebase not available for session registration");
+          return Promise.resolve(true);
+        }
+      }
+
+      // Clear login session (Firebase only)
+      function clearLoginSession() {
+        const username = window.loggedInUsername; // Get from memory
+
+        // Broadcast logout event to all tabs
+        try {
+          const userUpdateChannel = new BroadcastChannel(
+            "karaoke_user_updates",
+          );
+          userUpdateChannel.postMessage({
+            type: "user_logout",
+            username: username,
+            timestamp: Date.now(),
+          });
+        } catch (error) {
+          console.warn("BroadcastChannel not supported:", error.message);
+        }
+
+        // Clear from Firebase activeLogin ONLY - don't modify users array
+        if (username && typeof firebase !== "undefined" && firebase.database) {
+          try {
+            // Clear from Firebase activeLogin
+            firebase
+              .database()
+              .ref("activeLogin/" + username)
+              .remove()
+              .catch((err) =>
+                console.warn("Firebase logout failed:", err.message),
+              );
+
+            // Note: User status updates are handled by admin.js
+            // Avoid modifying users array from login page to prevent data loss
+          } catch (e) {
+            console.warn("Firebase error:", e.message);
+          }
+        }
+
+        // Clear from memory
+        window.deviceSessionId = null;
+        window.loggedInUsername = null;
+
+        console.log("✅ Login session cleared");
+      }
+
+      function validateAdminLogin(event) {
+        event.preventDefault();
+        const adminName = document.getElementById("adminName").value.trim();
+        const adminPassword = document.getElementById("adminPassword").value;
+
+        console.log("👤 Admin login attempt:", adminName);
+
+        // Try to get users from Firebase first with a fresh load
+        forceReloadUsersForLogin(function (users, loadError) {
+          if (loadError) {
+            alert(
+              "Unable to verify your account with Firebase. Check your connection and try again.",
+            );
+            return;
+          }
+          const adminUser = users.find(
+            (u) =>
+              u.username === adminName &&
+              u.password === adminPassword &&
+              u.role === "admin",
+          );
+
+          if (adminUser) {
+            // Check if user is disabled
+            if (adminUser.disabled) {
+              console.log("❌ Admin user is disabled:", adminUser.username);
+              alert(
+                "❌ This admin account has been disabled.\n\nPlease contact another administrator.",
+              );
+              document.getElementById("adminName").focus();
+              return;
             }
+
+            console.log("✅ Admin user found:", adminUser.username);
+
+            // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
+            checkIfLoggedInElsewhere(adminName, function (isLoggedInElsewhere) {
+              if (isLoggedInElsewhere) {
+                console.log(
+                  "❌ Login blocked - user already logged in elsewhere",
+                );
+                alert(
+                  "❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.",
+                );
+                return; // BLOCK the login
+              }
+
+              console.log("✅ Proceeding with login...");
+              // Store logged-in user
+              registerLoginSession(adminName).then((registered) => {
+                if (!registered) {
+                  alert(
+                    "Login could not sync with Firebase. Please try again.",
+                  );
+                  return;
+                }
+                localStorage.setItem(
+                  "karaoke_logged_in_user",
+                  JSON.stringify(adminUser),
+                );
+                window.location.href = "admin.html";
+              });
+            });
+          } else {
+            console.log("❌ Admin user not found or password incorrect");
+            alert(
+              "❌ Invalid admin credentials. Please check your username and password.",
+            );
+            document.getElementById("adminName").focus();
+          }
         });
+      }
+
+      // Validate Singer Login
+      function validateSingerLogin(event) {
+        event.preventDefault();
+        const singerUsername = document
+          .getElementById("singerUsername")
+          .value.trim();
+        const singerPassword = document.getElementById("singerPassword").value;
+
+        console.log("👤 Singer login attempt:", singerUsername);
+
+        // Try to get users from Firebase first with a fresh load
+        forceReloadUsersForLogin(function (users, loadError) {
+          if (loadError) {
+            alert(
+              "Unable to verify your account with Firebase. Check your connection and try again.",
+            );
+            return;
+          }
+          const singerUser = users.find(
+            (u) =>
+              u.username === singerUsername && u.password === singerPassword,
+          );
+
+          if (singerUser) {
+            // Check if user is disabled
+            if (singerUser.disabled) {
+              console.log("❌ Singer user is disabled:", singerUser.username);
+              alert(
+                "❌ Your account has been disabled.\n\nPlease contact an administrator.",
+              );
+              document.getElementById("singerUsername").focus();
+              return;
+            }
+
+            console.log("✅ Singer user found:", singerUser.username);
+
+            // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
+            checkIfLoggedInElsewhere(
+              singerUsername,
+              function (isLoggedInElsewhere) {
+                if (isLoggedInElsewhere) {
+                  console.log(
+                    "❌ Login blocked - user already logged in elsewhere",
+                  );
+                  alert(
+                    "❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.",
+                  );
+                  return; // BLOCK the login
+                }
+
+                console.log("✅ Proceeding with login...");
+                // Store logged-in user
+                registerLoginSession(singerUsername).then((registered) => {
+                  if (!registered) {
+                    alert(
+                      "Login could not sync with Firebase. Please try again.",
+                    );
+                    return;
+                  }
+                  localStorage.setItem(
+                    "karaoke_logged_in_user",
+                    JSON.stringify(singerUser),
+                  );
+                  closeLoginModal();
+                  window.location.href = "singer.html";
+                });
+              },
+            );
+          } else {
+            console.log("❌ Singer user not found or password incorrect");
+            alert(
+              "❌ Invalid credentials. Please check your username and password.",
+            );
+            document.getElementById("singerUsername").focus();
+          }
+        });
+      }
+
+      // Force reload users from Firebase - gets latest data from Firebase
+      function forceReloadUsersForLogin(callback) {
+        let callbackCalled = false;
+        const cachedUsers = () => {
+          try {
+            const stored = JSON.parse(
+              localStorage.getItem("karaoke_users") || "[]",
+            );
+            return Array.isArray(stored) ? stored : [];
+          } catch (error) {
+            console.warn("Could not read cached users:", error.message);
+            return [];
+          }
+        };
+
+        if (typeof firebase === "undefined" || !firebase.database) {
+          callback(cachedUsers(), null);
+          return;
+        }
+
+        // Do not authenticate against stale local data when Firebase is unavailable.
+        const timeoutId = setTimeout(() => {
+          if (!callbackCalled) {
+            callbackCalled = true;
+            console.warn("⏱️ Firebase login verification timed out");
+            callback([], new Error("Firebase verification timed out"));
+          }
+        }, 5000); // 5 second timeout
+
+        try {
+          firebase
+            .database()
+            .ref("users")
+            .once("value")
+            .then((snapshot) => {
+              if (callbackCalled) return;
+              callbackCalled = true;
+              clearTimeout(timeoutId);
+              const data = snapshot.val();
+              const users = (
+                Array.isArray(data) ? data : Object.values(data || {})
+              ).filter((user) => user && user.username);
+              if (users.length > 0) {
+                localStorage.setItem("karaoke_users", JSON.stringify(users));
+              }
+              callback(users, null);
+            })
+            .catch((error) => {
+              if (callbackCalled) return;
+              callbackCalled = true;
+              clearTimeout(timeoutId);
+              console.warn(
+                "Firebase login verification failed:",
+                error.message,
+              );
+              callback([], error);
+            });
+        } catch (error) {
+          if (callbackCalled) return;
+          callbackCalled = true;
+          clearTimeout(timeoutId);
+          callback([], error);
+        }
+      }
+
+      // Load users from Firebase or localStorage
+      function loadUsersForLogin(callback) {
+        if (typeof firebase !== "undefined" && firebase.database) {
+          try {
+            const usersRef = firebase.database().ref("users");
+            usersRef
+              .once("value", (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                  const users = Object.values(data);
+                  callback(users);
+                } else {
+                  // Firebase is empty, use localStorage
+                  const stored = localStorage.getItem("karaoke_users");
+                  const users = stored ? JSON.parse(stored) : [];
+                  callback(users);
+                }
+              })
+              .catch((error) => {
+                console.warn(
+                  "Firebase error, using localStorage:",
+                  error.message,
+                );
+                const stored = localStorage.getItem("karaoke_users");
+                const users = stored ? JSON.parse(stored) : [];
+                callback(users);
+              });
+          } catch (error) {
+            console.warn(
+              "Firebase not configured, using localStorage:",
+              error.message,
+            );
+            const stored = localStorage.getItem("karaoke_users");
+            const users = stored ? JSON.parse(stored) : [];
+            callback(users);
+          }
+        } else {
+          // Firebase not available, use localStorage
+          const stored = localStorage.getItem("karaoke_users");
+          const users = stored ? JSON.parse(stored) : [];
+          callback(users);
+        }
+      }
+
+      // Close modal when clicking overlay
+      document
+        .getElementById("loginOverlay")
+        .addEventListener("click", closeLoginModal);
+
+      // Listen for user database updates from admin dashboard
+      window.addEventListener("karaoke-users-updated", function (e) {
+        console.log("🔄 User database updated, reloading...");
+        initializeDemoData(); // Refresh the user list
+      });
+
+      // Also listen for storage changes for cross-tab sync
+      window.addEventListener("storage", function (e) {
+        if (e.key === "karaoke_users") {
+          console.log("📡 User database changed in another tab");
+          initializeDemoData(); // Refresh the user list
+        }
+      });
     </script>
-
-
-</body>
+  </body>
 </html>

@@ -44,20 +44,11 @@ document.addEventListener("DOMContentLoaded", function () {
   displayUsers();
   updateStats();
 
-  // Sync users to Firebase immediately on load
-  syncUsersToFirebase();
-
   // Update admin activity every 30 seconds to keep them as Online
   setInterval(updateAdminActivity, 30000);
 
   // Validate admin session every 10 seconds to detect if logged in elsewhere
   setInterval(validateAdminSession, 10000);
-
-  // Sync users to Firebase every 60 seconds to keep data fresh
-  setInterval(syncUsersToFirebase, 60000);
-
-  // Full Firebase sync every 30 seconds to ensure data consistency
-  setInterval(fullFirebaseSync, 30000);
 
   // Also track clicks and key presses to update activity
   document.addEventListener("click", updateAdminActivity);
@@ -110,9 +101,6 @@ function checkAuthentication() {
 
     // Validate session immediately
     validateAdminSession();
-
-    // Update admin user's lastActivity to show as Online
-    updateAdminActivity();
   } else {
     // Not logged in, redirect to home
     alert("Please login first");
@@ -261,8 +249,8 @@ function updateAdminActivity() {
         // Save entire users array to Firebase with updated activity
         firebase
           .database()
-          .ref("users")
-          .set(users)
+          .ref(`users/${userIndex}/lastActivity`)
+          .set(now)
           .catch((err) =>
             console.warn("Firebase admin activity update failed:", err.message),
           );
@@ -291,8 +279,8 @@ function updateAdminActivity() {
         try {
           firebase
             .database()
-            .ref("users")
-            .set(users)
+            .ref(`users/${users.length - 1}`)
+            .set(newAdminUser)
             .catch((err) =>
               console.warn(
                 "Firebase admin activity update failed:",
@@ -337,9 +325,10 @@ function updateAdminActivity() {
 // Handle password change
 
 // Logout function
-function logout() {
+async function logout() {
   if (confirm("Are you sure you want to logout?")) {
     const username = loggedInUser?.username;
+    let clearSessionPromise = Promise.resolve();
 
     // Broadcast logout event to all tabs
     try {
@@ -363,14 +352,17 @@ function logout() {
           .once("value", (snapshot) => {
             const data = snapshot.val();
             if (data) {
-              users = Array.isArray(data) ? data : Object.values(data);
-              const userIndex = users.findIndex((u) => u.username === username);
+              const firebaseUsers = Array.isArray(data)
+                ? data
+                : Object.values(data);
+              const userIndex = firebaseUsers.findIndex(
+                (u) => u.username === username,
+              );
               if (userIndex !== -1) {
-                users[userIndex].lastActivity = 0;
                 firebase
                   .database()
-                  .ref("users")
-                  .set(users)
+                  .ref(`users/${userIndex}/lastActivity`)
+                  .set(0)
                   .catch((err) =>
                     console.warn("Failed to mark offline:", err.message),
                   );
@@ -379,7 +371,7 @@ function logout() {
           });
 
         // 2. Clear from Firebase activeLogin
-        firebase
+        clearSessionPromise = firebase
           .database()
           .ref("activeLogin/" + username)
           .remove()
@@ -391,6 +383,8 @@ function logout() {
         console.warn("⚠️ Firebase error:", e.message);
       }
     }
+
+    await clearSessionPromise;
 
     // Clear from memory and storage
     loggedInUser = null;
@@ -413,69 +407,56 @@ function loadUsers() {
   displayUsers();
   updateStats();
 
-  // Then try to sync from Firebase if available (update in background)
-  // BUT: Only sync if we have NO data locally (initial setup)
-  // Otherwise, always trust localStorage as source of truth
+  // Firebase is authoritative when available; localStorage is only an immediate display fallback.
   if (typeof firebase !== "undefined" && firebase.database) {
     try {
       const usersRef = firebase.database().ref("users");
-
-      // Only load from Firebase if localStorage is empty
-      if (users.length === 0) {
-        console.log(
-          "📡 localStorage is empty, checking Firebase for initial data...",
-        );
-        usersRef
-          .once("value", (snapshot) => {
-            const data = snapshot.val();
-            if (data && Object.keys(data).length > 0) {
-              // Handle both array and object formats from Firebase
-              let firebaseUsers = Array.isArray(data)
-                ? data
-                : Object.values(data);
-              // Filter out invalid entries (must have username)
-              firebaseUsers = firebaseUsers.filter((u) => u && u.username);
-              // Ensure all users have correct lastActivity format (default to 0 if missing)
-              firebaseUsers = firebaseUsers.map((u) => ({
-                ...u,
-                lastActivity:
-                  u.lastActivity === undefined || u.lastActivity === null
-                    ? 0
-                    : u.lastActivity,
+      usersRef
+        .once("value")
+        .then((snapshot) => {
+          const data = snapshot.val();
+          if (data && Object.keys(data).length > 0) {
+            users = (Array.isArray(data) ? data : Object.values(data))
+              .filter((user) => user && user.username)
+              .map((user) => ({
+                ...user,
+                lastActivity: user.lastActivity ?? 0,
               }));
+            localStorage.setItem("karaoke_users", JSON.stringify(users));
+            displayUsers();
+            updateStats();
+            updateAdminActivity();
+            return;
+          }
 
-              console.log(
-                "📡 Firebase initial load:",
-                firebaseUsers.length,
-                "users",
+          if (users.length > 0) {
+            usersRef
+              .transaction((currentUsers) =>
+                currentUsers === null ? users : undefined,
+              )
+              .then((result) => {
+                const currentData = result.snapshot.val();
+                if (currentData) {
+                  users = Array.isArray(currentData)
+                    ? currentData
+                    : Object.values(currentData);
+                  localStorage.setItem("karaoke_users", JSON.stringify(users));
+                  displayUsers();
+                  updateStats();
+                  updateAdminActivity();
+                }
+              })
+              .catch((error) =>
+                console.warn("Initial user sync failed:", error.message),
               );
-              users = firebaseUsers;
-              localStorage.setItem("karaoke_users", JSON.stringify(users));
-              displayUsers();
-              updateStats();
-            } else {
-              console.log("ℹ️ Firebase is also empty - using demo data");
-            }
-          })
-          .catch((error) => {
-            console.warn(
-              "Firebase read error (keeping localStorage):",
-              error.message,
-            );
-          });
-      } else {
-        console.log(
-          "✅ localStorage has",
-          users.length,
-          "users - using as source of truth",
-        );
-        // Ensure Firebase is synced with localStorage (in case of sync delay)
-        usersRef
-          .set(users)
-          .catch((err) =>
-            console.warn("Initial Firebase sync failed:", err.message),
+          }
+        })
+        .catch((error) => {
+          console.warn(
+            "Firebase user load failed; keeping local cache:",
+            error.message,
           );
-      }
+        });
     } catch (error) {
       console.warn(
         "Firebase not configured, using localStorage:",
@@ -486,91 +467,26 @@ function loadUsers() {
     console.log("ℹ️ Firebase not available, using localStorage only");
   }
 
-  // Set up real-time listener ONLY for real-time updates from other admin windows (with safety checks)
-  // BUT: Only listen for user add/remove, not activity changes
+  // Keep the local cache aligned with Firebase updates from other clients.
   setTimeout(() => {
     if (typeof firebase !== "undefined" && firebase.database) {
       try {
         const usersRef = firebase.database().ref("users");
-        // Track the list of user IDs to detect actual additions/deletions
-        let lastKnownIds = users.map((u) => u.id).sort((a, b) => a - b);
-
         usersRef.on("value", (snapshot) => {
           const data = snapshot.val();
-          if (data && Object.keys(data).length > 0) {
-            let firebaseUsers = Array.isArray(data)
-              ? data
-              : Object.values(data);
-            firebaseUsers = firebaseUsers.filter((u) => u && u.username);
-            firebaseUsers = firebaseUsers.map((u) => ({
-              ...u,
-              lastActivity:
-                u.lastActivity === undefined || u.lastActivity === null
-                  ? 0
-                  : u.lastActivity,
+          const firebaseUsers = (
+            Array.isArray(data) ? data : Object.values(data || {})
+          )
+            .filter((user) => user && user.username)
+            .map((user) => ({
+              ...user,
+              lastActivity: user.lastActivity ?? 0,
             }));
 
-            // CRITICAL: ONLY sync if Firebase has NEW USERS from another admin
-            // NEVER sync if Firebase has fewer users (that's a deletion we made locally)
-            // NEVER sync if same count (could be stale activity updates)
-            const currentIds = firebaseUsers
-              .map((u) => u.id)
-              .sort((a, b) => a - b);
-            const localIds = users.map((u) => u.id).sort((a, b) => a - b);
-
-            if (firebaseUsers.length > users.length) {
-              // Firebase has MORE users - another admin added users
-              console.log(
-                "🔄 Real-time update: Another admin added users! Firebase:",
-                currentIds,
-                "Local:",
-                localIds,
-              );
-
-              // Find which users are new in Firebase
-              const newUserIds = currentIds.filter(
-                (id) => !localIds.includes(id),
-              );
-              console.log("➕ New users from another admin:", newUserIds);
-
-              // Only add the new users, keep existing local ones
-              const newUsers = firebaseUsers.filter((u) =>
-                newUserIds.includes(u.id),
-              );
-              users = [...users, ...newUsers];
-
-              lastKnownIds = JSON.stringify(currentIds);
-              localStorage.setItem("karaoke_users", JSON.stringify(users));
-              displayUsers();
-              updateStats();
-            } else if (firebaseUsers.length < users.length) {
-              // Firebase has FEWER users - we deleted locally
-              console.log(
-                "🔄 Real-time update: We have more users than Firebase (local deletion pending)",
-                "Local:",
-                localIds,
-                "Firebase:",
-                currentIds,
-              );
-              // DO NOT SYNC - keep local version (we deleted someone)
-              // Just re-confirm the deletion to Firebase
-              lastKnownIds = JSON.stringify(currentIds);
-              usersRef
-                .set(users)
-                .catch((err) =>
-                  console.warn(
-                    "Could not re-sync deletion to Firebase:",
-                    err.message,
-                  ),
-                );
-            } else {
-              // Same count - only activity changed, ignore
-              lastKnownIds = JSON.stringify(currentIds);
-              console.log(
-                "📊 Real-time update: Only activity changed (no user add/remove), skipping",
-              );
-            }
-          }
+          users = firebaseUsers;
+          localStorage.setItem("karaoke_users", JSON.stringify(users));
+          displayUsers();
+          updateStats();
         });
       } catch (error) {
         console.warn(
