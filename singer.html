@@ -77,6 +77,14 @@
         font-size: 0.9rem;
       }
 
+      .room-capacity-notice {
+        padding: 14px;
+        margin-bottom: 16px;
+        border: 1px solid rgba(240, 173, 78, 0.6);
+        border-radius: 8px;
+        background: rgba(183, 121, 31, 0.2);
+      }
+
       .controls button {
         flex: 1;
         border: none;
@@ -545,6 +553,28 @@
           🎤 Welcome, mel!
         </div>
         <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
+        <div
+          id="roomCapacityNotice"
+          class="room-capacity-notice"
+          role="status"
+          hidden
+        >
+          <p id="roomCapacityMessage"></p>
+          <button
+            class="searchbtn"
+            type="button"
+            onclick="
+              submitRoomRequest(
+                'roomCapacityRequestButton',
+                'roomCapacityRequestStatus',
+              )
+            "
+            id="roomCapacityRequestButton"
+          >
+            Request another room
+          </button>
+          <p id="roomCapacityRequestStatus" aria-live="polite"></p>
+        </div>
 
         <div class="refresh" onclick="reloadPlayer()">
           <span class="refresh-icon">🔄</span>
@@ -645,6 +675,7 @@
       let useSingerFirebase = false;
       let activeKaraokeRoomId = null;
       let roomRequestRoomId = null;
+      let stopListeningToRoomMembers = null;
       let stopListeningToRoomVolume = null;
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
@@ -795,6 +826,18 @@
             loggedInUser.username,
           );
           activeKaraokeRoomId = roomId;
+          stopListeningToRoomMembers?.();
+          stopListeningToRoomMembers = KaraokeSessions.listenMembers(
+            roomId,
+            (count) => {
+              const roomIsFull = count >= KaraokeSessions.MAX_DEVICES;
+              document.getElementById("roomCapacityNotice").hidden =
+                !roomIsFull;
+              document.getElementById("roomCapacityMessage").textContent =
+                `This room has reached its ${KaraokeSessions.MAX_DEVICES}-device limit.`;
+              if (roomIsFull) roomRequestRoomId = roomId;
+            },
+          );
           stopListeningToRoomVolume?.();
           stopListeningToRoomVolume = KaraokeSessions.listenVolume(
             roomId,
@@ -1132,9 +1175,12 @@
         console.log("✅ Singer page initialized successfully");
       });
 
-      async function submitRoomRequest() {
-        const button = document.getElementById("requestAnotherRoomButton");
-        const status = document.getElementById("roomRequestStatus");
+      async function submitRoomRequest(
+        buttonId = "requestAnotherRoomButton",
+        statusId = "roomRequestStatus",
+      ) {
+        const button = document.getElementById(buttonId);
+        const status = document.getElementById(statusId);
         if (!roomRequestRoomId || !loggedInUser?.username) {
           status.textContent =
             "Could not identify your room. Scan its QR code again.";
@@ -1165,6 +1211,8 @@
           const username = loggedInUser?.username;
           let clearSessionPromise = Promise.resolve();
           try {
+            stopListeningToRoomMembers?.();
+            stopListeningToRoomMembers = null;
             stopListeningToRoomVolume?.();
             stopListeningToRoomVolume = null;
             await KaraokeSessions.leaveRoom(activeKaraokeRoomId);
