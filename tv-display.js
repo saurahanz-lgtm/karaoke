@@ -147,6 +147,8 @@ function activateKaraokeRoom(roomId) {
   const label = document.getElementById("roomCodeLabel");
   if (label)
     label.textContent = `${room?.name || "Karaoke Room"} · Scan to Join`;
+  const roomIdLabel = document.getElementById("roomIdLabel");
+  if (roomIdLabel) roomIdLabel.textContent = `Room ID: ${roomId}`;
   generateQRCode();
 
   stopListeningToRoomVolume = KaraokeSessions.listenVolume(roomId, (volume) => {
