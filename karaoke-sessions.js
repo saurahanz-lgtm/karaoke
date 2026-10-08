@@ -214,13 +214,23 @@
       handlers.onQueue(normalizeQueue(snapshot.val()));
     const songHandler = (snapshot) => handlers.onCurrentSong(snapshot.val());
     let isInitialControlSnapshot = true;
+    let lastControlEventId = null;
     const controlHandler = (snapshot) => {
       const control = snapshot.val();
+      const eventId = getControlEventId(control);
       if (isInitialControlSnapshot) {
         isInitialControlSnapshot = false;
+        lastControlEventId = eventId;
         return;
       }
-      if (control && handlers.onControl) handlers.onControl(control);
+      if (
+        control?.command &&
+        handlers.onControl &&
+        eventId !== lastControlEventId
+      ) {
+        lastControlEventId = eventId;
+        handlers.onControl(control);
+      }
     };
 
     queueRef.on("value", queueHandler, onError);
@@ -277,6 +287,17 @@
     const handler = (snapshot) => callback(Boolean(snapshot.val()?.muted));
     ref.on("value", handler);
     return () => ref.off("value", handler);
+  }
+
+  function listenPlaybackState(roomId, callback) {
+    const ref = roomRef(roomId, "control");
+    const handler = (snapshot) => callback(Boolean(snapshot.val()?.playing));
+    ref.on("value", handler);
+    return () => ref.off("value", handler);
+  }
+
+  function setPlaybackState(roomId, playing) {
+    return roomRef(roomId, "control").update({ playing: Boolean(playing) });
   }
 
   function setRoomVolume(roomId, volume) {
@@ -431,7 +452,13 @@
       ...payload,
       command,
       timestamp: Date.now(),
+      eventId: `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
     });
+  }
+
+  function getControlEventId(control) {
+    if (!control?.command) return null;
+    return control.eventId || `${control.timestamp || ""}:${control.command}`;
   }
 
   function roomRef(roomId, child) {
@@ -456,6 +483,7 @@
     leaveRoom,
     listenMembers,
     listenMuted,
+    listenPlaybackState,
     listenRoom,
     listenRooms,
     listenRoomRequests,
@@ -464,6 +492,7 @@
     resolveRoomRequest,
     setRoomVolume,
     setRoomMuted,
+    setPlaybackState,
     sendControl,
   };
 })(window);

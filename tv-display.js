@@ -1258,6 +1258,22 @@ function onPlayerStateChange(e) {
 
   console.log(`📊 Player state changed to: ${states[e.data]}`);
 
+  if (
+    activeKaraokeRoomId &&
+    [
+      YT.PlayerState.PLAYING,
+      YT.PlayerState.PAUSED,
+      YT.PlayerState.ENDED,
+    ].includes(e.data)
+  ) {
+    KaraokeSessions.setPlaybackState(
+      activeKaraokeRoomId,
+      e.data === YT.PlayerState.PLAYING,
+    ).catch((error) =>
+      console.warn("Could not sync room playback state:", error.message),
+    );
+  }
+
   if (e.data === YT.PlayerState.ENDED) {
     // Check if boot-up video just finished
     if (isPlayingBootUpVideo) {

@@ -676,9 +676,13 @@
       let activeKaraokeRoomId = null;
       let roomRequestRoomId = null;
       let stopListeningToRoomMembers = null;
+      let stopListeningToRoomData = null;
+      let stopListeningToPlaybackState = null;
       let stopListeningToRoomMuted = null;
       let stopListeningToRoomVolume = null;
       let roomMuted = false;
+      let roomCurrentSong = null;
+      let roomQueue = [];
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
 
@@ -850,6 +854,33 @@
             roomId,
             updateMuteDisplay,
           );
+          stopListeningToPlaybackState?.();
+          stopListeningToPlaybackState = KaraokeSessions.listenPlaybackState(
+            roomId,
+            updatePlaybackDisplay,
+          );
+          stopListeningToRoomData?.();
+          stopListeningToRoomData = KaraokeSessions.listenRoom(
+            roomId,
+            {
+              onQueue: (queue) => {
+                roomQueue = queue;
+                localStorage.setItem(
+                  `karaoke_queue_${roomId}`,
+                  JSON.stringify(queue),
+                );
+                updateReservedSongsFromRoom();
+              },
+              onCurrentSong: (song) => {
+                roomCurrentSong = song;
+                updateReservedSongsFromRoom();
+              },
+              onControl: (control) => {
+                if (control.command === "restart") animateRefreshButton();
+              },
+            },
+            (error) => console.warn("Room sync failed:", error.message),
+          );
           document.getElementById("karaokeRoomStatus").textContent =
             `${membership.room.name} · connected`;
         } catch (error) {
@@ -1019,16 +1050,6 @@
           console.error("❌ Audio player element not found!");
         } else {
           console.log("✅ Audio player initialized");
-          // Set up audio event listeners
-          audioPlayer.addEventListener("ended", function () {
-            console.log("🔚 Song ended");
-            const btn = document.getElementById("playPauseBtn");
-            if (btn) {
-              btn.textContent = "▶";
-              btn.classList.remove("play");
-              btn.classList.add("pause");
-            }
-          });
           audioPlayer.addEventListener("error", function (e) {
             // Suppress errors when we intentionally remove the audio source
             if (suppressAudioErrors) {
@@ -1080,102 +1101,6 @@
         updateUserDisplay();
         updateSingerActivity();
 
-        // Listen for Firebase queue updates if available
-        if (
-          useSingerFirebase &&
-          typeof firebase !== "undefined" &&
-          firebase.database
-        ) {
-          try {
-            KaraokeSessions.roomRef(activeKaraokeRoomId, "queue").on(
-              "value",
-              (snapshot) => {
-                const data = snapshot.val();
-                console.log("🔥 Firebase queue snapshot:", data);
-                if (data) {
-                  // Convert Firebase object to array if needed
-                  let queueArray = Array.isArray(data)
-                    ? data
-                    : Object.values(data);
-                  console.log(
-                    "📊 Converted queue array length:",
-                    queueArray.length,
-                    queueArray,
-                  );
-                  localStorage.setItem(
-                    `karaoke_queue_${activeKaraokeRoomId}`,
-                    JSON.stringify(queueArray),
-                  );
-
-                  // Update reserved songs display from Firebase data
-                  const reservedArray = queueArray.map((song) => ({
-                    title: song.title,
-                    artist: song.artist,
-                    videoId: song.videoId,
-                    requestedBy: song.requestedBy,
-                  }));
-                  console.log(
-                    "📋 Reserved array length:",
-                    reservedArray.length,
-                    reservedArray,
-                  );
-                  reservedSongs = reservedArray;
-                  localStorage.setItem(
-                    `karaoke_reserved_songs_${activeKaraokeRoomId}`,
-                    JSON.stringify(reservedArray),
-                  );
-                  displayReservedSongs();
-
-                  console.log(
-                    "📡 Queue synced from Firebase:",
-                    queueArray.length,
-                    "songs",
-                  );
-                } else {
-                  // Queue is empty - clear all reserved songs
-                  console.log(
-                    "⚪ Firebase queue is empty - clearing reserved songs",
-                  );
-                  reservedSongs = [];
-                  localStorage.setItem(
-                    `karaoke_queue_${activeKaraokeRoomId}`,
-                    JSON.stringify([]),
-                  );
-                  localStorage.setItem(
-                    `karaoke_reserved_songs_${activeKaraokeRoomId}`,
-                    JSON.stringify([]),
-                  );
-                  displayReservedSongs();
-
-                  // Clear search results too
-                  const searchResultsDiv =
-                    document.getElementById("searchResults");
-                  if (searchResultsDiv) {
-                    searchResultsDiv.innerHTML = "";
-                  }
-                  console.log(
-                    "🗑️ All reserved songs and search results cleared",
-                  );
-                }
-              },
-            );
-          } catch (fbError) {
-            console.warn(
-              "⚠️ Could not set Firebase listener:",
-              fbError.message,
-            );
-          }
-        }
-
-        // Listen for localStorage changes from TV display
-        window.addEventListener("storage", function (e) {
-          if (e.key === `karaoke_queue_${activeKaraokeRoomId}`) {
-            console.log("📡 Queue updated from TV display");
-            loadReservedSongs();
-            displayReservedSongs();
-          }
-        });
-
         // Auto-refresh activity every 30 seconds
         setInterval(updateSingerActivity, 30000);
 
@@ -1220,6 +1145,10 @@
           try {
             stopListeningToRoomMembers?.();
             stopListeningToRoomMembers = null;
+            stopListeningToRoomData?.();
+            stopListeningToRoomData = null;
+            stopListeningToPlaybackState?.();
+            stopListeningToPlaybackState = null;
             stopListeningToRoomMuted?.();
             stopListeningToRoomMuted = null;
             stopListeningToRoomVolume?.();
@@ -1652,6 +1581,30 @@
         container.innerHTML = html;
       }
 
+      function updateReservedSongsFromRoom() {
+        const seenSongs = new Set();
+        reservedSongs = [roomCurrentSong, ...roomQueue]
+          .filter((song) => song?.videoId)
+          .filter((song) => {
+            const key = song.id || `${song.videoId}:${song.requestedBy || ""}`;
+            if (seenSongs.has(key)) return false;
+            seenSongs.add(key);
+            return true;
+          })
+          .map((song) => ({
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            videoId: song.videoId,
+            requestedBy: song.requestedBy || song.singer,
+          }));
+        localStorage.setItem(
+          `karaoke_reserved_songs_${activeKaraokeRoomId}`,
+          JSON.stringify(reservedSongs),
+        );
+        displayReservedSongs();
+      }
+
       // Load all songs
       function loadAllSongs() {
         allSongs = [
@@ -1686,16 +1639,7 @@
 
       // Reload player - restart current song on TV display
       function reloadPlayer() {
-        const refreshBtn = document.querySelector(".refresh");
-
-        // Add rotating animation
-        if (refreshBtn) {
-          refreshBtn.classList.add("rotating");
-          // Remove animation after 2 seconds
-          setTimeout(() => {
-            refreshBtn.classList.remove("rotating");
-          }, 2000);
-        }
+        animateRefreshButton();
 
         console.log("🔄 Reload requested");
         if (
@@ -1716,9 +1660,17 @@
         }
       }
 
+      function animateRefreshButton() {
+        const refreshBtn = document.querySelector(".refresh");
+        if (!refreshBtn) return;
+        refreshBtn.classList.remove("rotating");
+        void refreshBtn.offsetWidth;
+        refreshBtn.classList.add("rotating");
+        setTimeout(() => refreshBtn.classList.remove("rotating"), 2000);
+      }
+
       // Toggle play/pause on TV display
       function togglePlayPause() {
-        const btn = document.getElementById("playPauseBtn");
         console.log("⏯️ Play/Pause toggled");
 
         if (
@@ -1729,9 +1681,6 @@
           try {
             firebase.database();
             KaraokeSessions.sendControl(activeKaraokeRoomId, "togglePlay");
-            if (btn) {
-              btn.textContent = btn.textContent === "▶" ? "⏸" : "▶";
-            }
             showAlert("Sent play/pause command to TV display", "info");
           } catch (err) {
             console.warn("Firebase control error:", err.message);
@@ -1754,10 +1703,6 @@
           try {
             firebase.database();
             KaraokeSessions.sendControl(activeKaraokeRoomId, "skip");
-            const btn = document.getElementById("playPauseBtn");
-            if (btn) {
-              btn.textContent = "▶";
-            }
             showAlert("Skipping to next song on TV display", "info");
           } catch (err) {
             console.warn("Firebase control error:", err.message);
@@ -1811,6 +1756,13 @@
           muteBtn.textContent = roomMuted ? "🔇" : "🔊";
           muteBtn.setAttribute("aria-pressed", String(roomMuted));
         }
+      }
+
+      function updatePlaybackDisplay(playing) {
+        const button = document.getElementById("playPauseBtn");
+        if (!button) return;
+        button.textContent = playing ? "⏸" : "▶";
+        button.setAttribute("aria-pressed", String(Boolean(playing)));
       }
 
       // Update singer activity
