@@ -353,7 +353,7 @@
           Scan the room QR code before logging in.
         </p>
       </div>
-      <form onsubmit="validateSingerLogin(event)">
+      <form id="singerLoginForm" onsubmit="validateSingerLogin(event)" hidden>
         <div class="login-form-group">
           <label>Username</label>
           <input
@@ -923,12 +923,17 @@
         document
           .getElementById(roomId ? "singerUsername" : "scanRoomQrButton")
           .focus();
+        if (!roomId) startRoomQrScanner();
       }
 
       function updateSingerRoomLoginState(roomId) {
         const selectedRoomId = roomId ?? KaraokeSessions.getRoomIdFromUrl();
         const hasRoom = Boolean(selectedRoomId);
+        document.getElementById("singerLoginForm").hidden = !hasRoom;
         document.getElementById("singerLoginSubmit").disabled = !hasRoom;
+        document.getElementById("scanRoomQrButton").textContent = hasRoom
+          ? "📷 Scan Another Room"
+          : "📷 Scan Room QR";
         document.getElementById("roomQrStatus").textContent = hasRoom
           ? "Room selected. Log in to join."
           : "Scan the room QR code before logging in.";
