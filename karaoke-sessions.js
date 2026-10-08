@@ -38,6 +38,23 @@
     return url.toString();
   }
 
+  function generateRoomId() {
+    const alphabet =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    const randomValues = new Uint8Array(6);
+    if (global.crypto?.getRandomValues) {
+      global.crypto.getRandomValues(randomValues);
+    } else {
+      for (let index = 0; index < randomValues.length; index += 1) {
+        randomValues[index] = Math.floor(Math.random() * 256);
+      }
+    }
+    return Array.from(
+      randomValues,
+      (value) => alphabet[value % alphabet.length],
+    ).join("");
+  }
+
   function normalizeQueue(value) {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (value && typeof value === "object")
@@ -113,22 +130,34 @@
 
   async function createRoom(name) {
     const db = database();
-    const roomRef = db.ref(ROOM_LIST_PATH).push();
-    const room = {
-      id: roomRef.key,
-      name: name.trim().slice(0, 40),
-      createdAt: Date.now(),
-    };
+    const roomName = name.trim().slice(0, 40);
 
-    await db.ref().update({
-      [`${ROOM_LIST_PATH}/${room.id}`]: room,
-      [`${ROOM_DATA_PATH}/${room.id}`]: {
-        queue: null,
-        currentSong: null,
-        members: null,
-      },
-    });
-    return room;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const room = {
+        id: generateRoomId(),
+        name: roomName,
+        createdAt: Date.now(),
+      };
+      const roomRef = db.ref(`${ROOM_LIST_PATH}/${room.id}`);
+      const reservation = await roomRef.transaction((current) =>
+        current ? undefined : room,
+      );
+      if (!reservation.committed) continue;
+
+      try {
+        await db.ref(`${ROOM_DATA_PATH}/${room.id}`).set({
+          queue: null,
+          currentSong: null,
+          members: null,
+        });
+        return room;
+      } catch (error) {
+        await roomRef.remove();
+        throw error;
+      }
+    }
+
+    throw new Error("ROOM_ID_GENERATION_FAILED");
   }
 
   async function deleteRoom(roomId) {
