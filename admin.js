@@ -233,7 +233,7 @@ function renderKaraokeRooms() {
 
   if (karaokeRooms.length === 0) {
     tableBody.innerHTML =
-      '<tr><td colspan="3" class="text-center text-white-50">No rooms created yet.</td></tr>';
+      '<tr><td colspan="4" class="text-center text-white-50">No rooms created yet.</td></tr>';
     return;
   }
 
@@ -243,13 +243,55 @@ function renderKaraokeRooms() {
       const nameCell = document.createElement("td");
       const codeCell = document.createElement("td");
       const devicesCell = document.createElement("td");
+      const actionCell = document.createElement("td");
       nameCell.textContent = room.name;
       codeCell.textContent = room.id;
-      devicesCell.textContent = `${roomDeviceCounts.get(room.id) || 0} / ${KaraokeSessions.MAX_DEVICES}`;
-      row.append(nameCell, codeCell, devicesCell);
+      const deviceCount = roomDeviceCounts.get(room.id) || 0;
+      devicesCell.textContent = `${deviceCount} / ${KaraokeSessions.MAX_DEVICES}`;
+      if (room.id === "main") {
+        actionCell.textContent = "Default room";
+      } else {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "btn btn-sm btn-outline-danger";
+        deleteButton.textContent = "Delete";
+        deleteButton.disabled = deviceCount > 0;
+        deleteButton.title =
+          deviceCount > 0
+            ? "Disconnect all phones before deleting this room"
+            : `Delete ${room.name}`;
+        deleteButton.addEventListener("click", () =>
+          handleDeleteRoom(room, deleteButton),
+        );
+        actionCell.appendChild(deleteButton);
+      }
+      row.append(nameCell, codeCell, devicesCell, actionCell);
       return row;
     }),
   );
+}
+
+async function handleDeleteRoom(room, button) {
+  if (
+    !window.confirm(
+      `Delete room "${room.name}" and its queue, requests, and saved data?`,
+    )
+  ) {
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    await KaraokeSessions.deleteRoom(room.id);
+  } catch (error) {
+    console.error("Could not delete karaoke room:", error.message);
+    button.disabled = false;
+    const message =
+      error.message === "ROOM_HAS_ACTIVE_DEVICES"
+        ? "Disconnect all phones from this room before deleting it."
+        : "Could not delete room. Check the Firebase connection.";
+    alert(message);
+  }
 }
 
 async function handleCreateRoom(event) {

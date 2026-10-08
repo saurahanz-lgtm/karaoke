@@ -131,6 +131,43 @@
     return room;
   }
 
+  async function deleteRoom(roomId) {
+    if (!roomId || roomId === "main") {
+      throw new Error("DEFAULT_ROOM_PROTECTED");
+    }
+
+    const db = database();
+    const [roomSnapshot, roomsSnapshot, activeSnapshot, membersSnapshot] =
+      await Promise.all([
+        db.ref(`${ROOM_LIST_PATH}/${roomId}`).once("value"),
+        db.ref(ROOM_LIST_PATH).once("value"),
+        db.ref(ACTIVE_ROOM_PATH).once("value"),
+        db.ref(`${ROOM_DATA_PATH}/${roomId}/members`).once("value"),
+      ]);
+
+    if (!roomSnapshot.exists()) throw new Error("ROOM_NOT_FOUND");
+
+    const activeCutoff = Date.now() - MEMBER_TIMEOUT_MS;
+    const hasActiveMembers = Object.values(membersSnapshot.val() || {}).some(
+      (member) => member && Number(member.lastSeen) >= activeCutoff,
+    );
+    if (hasActiveMembers) throw new Error("ROOM_HAS_ACTIVE_DEVICES");
+
+    const remainingRooms = roomsSnapshot.val() || {};
+    delete remainingRooms[roomId];
+    const nextRoomId = Object.keys(remainingRooms)[0] || "main";
+    const updates = {
+      [`${ROOM_LIST_PATH}/${roomId}`]: null,
+      [`${ROOM_DATA_PATH}/${roomId}`]: null,
+    };
+    if (activeSnapshot.val() === roomId) {
+      updates[ACTIVE_ROOM_PATH] = nextRoomId;
+    }
+
+    await db.ref().update(updates);
+    return roomId;
+  }
+
   async function createRoomRequest(username, roomId) {
     if (!roomId) throw new Error("ROOM_REQUIRED");
     const requestRef = roomRef(roomId, "roomRequests").push();
@@ -401,6 +438,7 @@
     claimNextSong,
     createRoom,
     createRoomRequest,
+    deleteRoom,
     ensureDefaultRoom,
     getActiveRoomId,
     getJoinUrl,
