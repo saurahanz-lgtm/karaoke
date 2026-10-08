@@ -381,6 +381,28 @@
         color: #ef4444;
       }
 
+      @media (max-width: 768px) and (orientation: portrait) {
+        #qrcode-container {
+          right: 12px;
+          bottom: 12px;
+        }
+
+        #connectionStatus {
+          right: auto;
+          bottom: 226px;
+          left: 50%;
+          width: max-content;
+          max-width: calc(100vw - 24px);
+          min-width: 0;
+          box-sizing: border-box;
+          justify-content: center;
+          padding: 8px 12px;
+          font-size: 0.8rem;
+          white-space: nowrap;
+          transform: translateX(-50%);
+        }
+      }
+
       #connectionStatus .status-indicator {
         width: 10px;
         height: 10px;
@@ -609,11 +631,7 @@
       </div>
 
       <!-- Footer Text -->
-      <div
-        id="connectionStatus"
-        class="disconnected"
-        style="bottom: 20px; left: 20px; position: fixed"
-      >
+      <div id="connectionStatus" class="disconnected">
         <span id="connectionText">Maintained by Shan Denver</span>
       </div>
 
