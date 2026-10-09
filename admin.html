@@ -844,15 +844,39 @@
                 </div>
               </div>
               <div class="account-list-footer">
-                <button
-                  id="toggleUsersVisibility"
-                  class="account-list-toggle"
-                  type="button"
-                  aria-expanded="false"
+                <nav
+                  id="accountPagination"
+                  class="account-pagination"
+                  aria-label="Account pages"
                   hidden
                 >
-                  Show more accounts
-                </button>
+                  <button
+                    id="previousUsersPage"
+                    class="account-page-arrow"
+                    type="button"
+                    aria-label="Previous account page"
+                    title="Previous page"
+                  >
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                  </button>
+                  <span class="account-page-indicator" aria-live="polite">
+                    <span class="visually-hidden">Account page </span>
+                    <span id="currentAccountPage">1</span>
+                    <span class="account-page-divider" aria-hidden="true"
+                      >/</span
+                    >
+                    <span id="totalAccountPages">1</span>
+                  </span>
+                  <button
+                    id="nextUsersPage"
+                    class="account-page-arrow"
+                    type="button"
+                    aria-label="Next account page"
+                    title="Next page"
+                  >
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                  </button>
+                </nav>
               </div>
             </div>
           </section>

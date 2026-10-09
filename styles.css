@@ -1812,28 +1812,59 @@ body.admin-page {
   justify-content: center;
   padding: 12px 0 5px;
 }
-.account-list-toggle {
-  min-height: 34px;
-  padding: 0 14px;
+.account-pagination {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  min-height: 36px;
+  padding: 0 7px;
+  border: 1px solid rgba(112, 130, 231, 0.25);
+  border-radius: 8px;
+  background: rgba(24, 35, 84, 0.36);
+}
+.account-pagination[hidden] {
+  display: none;
+}
+.account-page-arrow {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   border: 1px solid rgba(112, 130, 231, 0.38);
-  border-radius: 7px;
+  border-radius: 6px;
   color: #c3ccff;
   background: rgba(75, 71, 167, 0.2);
-  font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
-.account-list-toggle:hover {
+.account-page-arrow:hover:not(:disabled) {
   border-color: rgba(146, 132, 255, 0.68);
   color: #fff;
   background: rgba(89, 79, 197, 0.32);
 }
-.account-list-toggle:focus-visible {
+.account-page-arrow:disabled {
+  color: #606d94;
+  background: rgba(29, 39, 75, 0.3);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.account-page-arrow:focus-visible {
   outline: 2px solid #b5a5ff;
   outline-offset: 2px;
 }
-.account-list-toggle[hidden] {
-  display: none;
+.account-page-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 48px;
+  color: #d4dcff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.account-page-divider {
+  color: #7685b1;
 }
 
 .account-form {

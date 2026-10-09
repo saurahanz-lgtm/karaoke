@@ -26,7 +26,8 @@ let users = [];
 let currentEditingUserId = null;
 let loggedInUser = null;
 let currentFilter = null;
-let showAllUsers = false;
+let currentUserPage = 1;
+const USERS_PER_PAGE = 5;
 let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
 const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
@@ -129,15 +130,17 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("addUserForm")
     .addEventListener("submit", handleAddUser);
   document.getElementById("userSearch").addEventListener("input", () => {
-    showAllUsers = false;
+    currentUserPage = 1;
     displayUsers();
   });
-  document
-    .getElementById("toggleUsersVisibility")
-    .addEventListener("click", () => {
-      showAllUsers = !showAllUsers;
-      displayUsers();
-    });
+  document.getElementById("previousUsersPage").addEventListener("click", () => {
+    currentUserPage = Math.max(1, currentUserPage - 1);
+    displayUsers();
+  });
+  document.getElementById("nextUsersPage").addEventListener("click", () => {
+    currentUserPage += 1;
+    displayUsers();
+  });
   document
     .getElementById("createRoomForm")
     .addEventListener("submit", handleCreateRoom);
@@ -1562,7 +1565,11 @@ function handleAddUser(e) {
 function displayUsers() {
   const tbody = document.getElementById("usersTableBody");
   const emptyMessage = document.getElementById("emptyMessage");
-  const showMoreButton = document.getElementById("toggleUsersVisibility");
+  const pagination = document.getElementById("accountPagination");
+  const previousButton = document.getElementById("previousUsersPage");
+  const nextButton = document.getElementById("nextUsersPage");
+  const pageCountElement = document.getElementById("totalAccountPages");
+  const currentPageElement = document.getElementById("currentAccountPage");
 
   // Filter users based on current filter and validity
   let filteredUsers = users.filter((u) => u && u.username); // Ensure valid users only
@@ -1581,13 +1588,9 @@ function displayUsers() {
     filteredUsers = filteredUsers.filter((u) => !isUserOnline(u));
   }
 
-  if (filteredUsers.length <= 5) {
-    showAllUsers = false;
-    showMoreButton.hidden = true;
-    showMoreButton.setAttribute("aria-expanded", "false");
-  }
-
   if (filteredUsers.length === 0) {
+    currentUserPage = 1;
+    pagination.hidden = true;
     tbody.innerHTML = "";
     emptyMessage.style.display = "block";
     emptyMessage.innerHTML = `<p style="font-size: clamp(1rem, 2.5vw, 1.2rem); color: #999; opacity: 0.7;">No ${currentFilter === "online" ? "online" : currentFilter === "offline" ? "offline" : ""} singers found...</p>`;
@@ -1595,12 +1598,18 @@ function displayUsers() {
   }
 
   emptyMessage.style.display = "none";
-  showMoreButton.hidden = filteredUsers.length <= 5;
-  showMoreButton.setAttribute("aria-expanded", String(showAllUsers));
-  showMoreButton.textContent = showAllUsers
-    ? "Show fewer accounts"
-    : `Show ${filteredUsers.length - 5} more accounts`;
-  const visibleUsers = showAllUsers ? filteredUsers : filteredUsers.slice(0, 5);
+  const pageCount = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
+  currentUserPage = Math.min(Math.max(1, currentUserPage), pageCount);
+  pagination.hidden = pageCount <= 1;
+  previousButton.disabled = currentUserPage === 1;
+  nextButton.disabled = currentUserPage === pageCount;
+  currentPageElement.textContent = String(currentUserPage);
+  pageCountElement.textContent = String(pageCount);
+  const firstUserIndex = (currentUserPage - 1) * USERS_PER_PAGE;
+  const visibleUsers = filteredUsers.slice(
+    firstUserIndex,
+    firstUserIndex + USERS_PER_PAGE,
+  );
 
   let html = "";
   visibleUsers.forEach((user, index) => {
@@ -1627,7 +1636,7 @@ function displayUsers() {
 
     html += `
         <tr class="${isDisabled ? "account-disabled" : ""}">
-          <td>${index + 1}</td>
+          <td>${firstUserIndex + index + 1}</td>
           <td>
             <strong>${safeUsername}</strong>
                     ${disabledBadge}
@@ -1835,7 +1844,7 @@ function isUserOnline(user) {
 // Filter singers by status
 function filterSingers(filter) {
   currentFilter = filter;
-  showAllUsers = false;
+  currentUserPage = 1;
   document.getElementById("singerListContainer").hidden = false;
   console.log("🔍 Filtering singers by:", filter);
   updateFilterButtons();
