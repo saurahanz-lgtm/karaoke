@@ -917,9 +917,13 @@
           const connectedRoomId = membership.room.id;
           activeKaraokeRoomId = connectedRoomId;
           if (membership.autoAssigned) {
-            const updatedUrl = new URL(window.location.href);
-            updatedUrl.searchParams.set("room", connectedRoomId);
-            window.history.replaceState(null, "", updatedUrl);
+            const assignedRoomUrl = new URL(
+              "singer.html",
+              window.location.href,
+            );
+            assignedRoomUrl.searchParams.set("room", connectedRoomId);
+            window.location.replace(assignedRoomUrl.toString());
+            return;
           }
           stopListeningToRoomMembers?.();
           stopListeningToRoomMembers = KaraokeSessions.listenMembers(
@@ -971,9 +975,7 @@
             (error) => console.warn("Room sync failed:", error.message),
           );
           document.getElementById("karaokeRoomStatus").textContent =
-            membership.autoAssigned
-              ? `${membership.requestedRoomId} was full · connected to ${membership.room.name}`
-              : `${membership.room.name} · connected`;
+            `${membership.room.name} · connected`;
         } catch (error) {
           if (
             error.message === "ROOM_FULL" ||

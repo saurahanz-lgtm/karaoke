@@ -571,9 +571,7 @@
       );
     const requestedCount = requestedMembers.length;
     const routeToOtherRoom =
-      requestedCount > 0 &&
-      availableCandidates.length > 0 &&
-      availableCandidates[0].activeCount <= requestedCount;
+      requestedCount > 0 && availableCandidates.length > 0;
     const orderedRooms = routeToOtherRoom
       ? [...availableCandidates, { id: roomId }]
       : [{ id: roomId }, ...availableCandidates];
