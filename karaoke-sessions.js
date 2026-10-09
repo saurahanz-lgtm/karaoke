@@ -429,6 +429,16 @@
     };
   }
 
+  async function getActiveMemberCount(roomId) {
+    const snapshot = await database()
+      .ref(`${ROOM_DATA_PATH}/${roomId}/members`)
+      .once("value");
+    const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
+    return Object.values(snapshot.val() || {}).filter(
+      (member) => member && Number(member.lastSeen) >= cutoff,
+    ).length;
+  }
+
   function normalizeVolume(value) {
     const volume = Number(value);
     if (!Number.isFinite(volume)) return DEFAULT_ROOM_VOLUME;
@@ -700,6 +710,7 @@
     deleteRoom,
     ensureDefaultRoom,
     getActiveRoomId,
+    getActiveMemberCount,
     getJoinUrl,
     getRoomIdFromUrl,
     joinRoom,

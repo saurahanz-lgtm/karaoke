@@ -42,6 +42,7 @@ let bootupHidden = false;
 let qrCodeGenerated = false;
 let activeKaraokeRoomId = null;
 let karaokeRooms = [];
+let initialRoomSelectionInProgress = false;
 let stopListeningToRoom = null;
 let stopListeningToMembers = null;
 let stopListeningToRooms = null;
@@ -212,6 +213,53 @@ function activateKaraokeRoom(roomId) {
   });
 }
 
+async function chooseInitialTVRoomId(rooms, globalActiveRoomId) {
+  const requestedRoomId = KaraokeSessions.getRoomIdFromUrl();
+  if (rooms.some((room) => room.id === requestedRoomId)) {
+    return requestedRoomId;
+  }
+
+  const roomCounts = new Map(
+    await Promise.all(
+      rooms.map(async (room) => [
+        room.id,
+        await KaraokeSessions.getActiveMemberCount(room.id),
+      ]),
+    ),
+  );
+  const savedRoomId = sessionStorage.getItem("karaokeTvRoomId");
+  const globalRoomCount = roomCounts.get(globalActiveRoomId) || 0;
+
+  if (globalRoomCount > 0) {
+    const alternativeRoom = rooms
+      .filter(
+        (room) =>
+          room.id !== globalActiveRoomId &&
+          (roomCounts.get(room.id) || 0) < KaraokeSessions.MAX_DEVICES,
+      )
+      .sort(
+        (first, second) =>
+          (roomCounts.get(first.id) || 0) - (roomCounts.get(second.id) || 0) ||
+          (first.createdAt || 0) - (second.createdAt || 0),
+      )[0];
+    if (alternativeRoom) return alternativeRoom.id;
+  }
+
+  const preferredAvailableRoomId = [savedRoomId, globalActiveRoomId].find(
+    (roomId) =>
+      rooms.some((room) => room.id === roomId) &&
+      (roomCounts.get(roomId) || 0) < KaraokeSessions.MAX_DEVICES,
+  );
+  if (preferredAvailableRoomId) return preferredAvailableRoomId;
+
+  const leastOccupiedRoom = [...rooms].sort(
+    (first, second) =>
+      (roomCounts.get(first.id) || 0) - (roomCounts.get(second.id) || 0) ||
+      (first.createdAt || 0) - (second.createdAt || 0),
+  )[0];
+  return leastOccupiedRoom?.id || globalActiveRoomId || savedRoomId || null;
+}
+
 function initializeKaraokeRooms() {
   KaraokeSessions.ensureDefaultRoom()
     .then(async () => {
@@ -221,13 +269,24 @@ function initializeKaraokeRooms() {
         renderKaraokeRooms();
 
         if (!rooms.some((room) => room.id === activeKaraokeRoomId)) {
-          const requestedRoomId = KaraokeSessions.getRoomIdFromUrl();
-          const savedRoomId = sessionStorage.getItem("karaokeTvRoomId");
-          const roomId =
-            [requestedRoomId, activeRoomId, savedRoomId].find((candidate) =>
-              rooms.some((room) => room.id === candidate),
-            ) || rooms[0]?.id;
-          if (roomId) activateKaraokeRoom(roomId);
+          if (!initialRoomSelectionInProgress) {
+            initialRoomSelectionInProgress = true;
+            chooseInitialTVRoomId(rooms, activeRoomId)
+              .then((roomId) => {
+                if (
+                  roomId &&
+                  !rooms.some((room) => room.id === activeKaraokeRoomId)
+                ) {
+                  activateKaraokeRoom(roomId);
+                }
+              })
+              .catch((error) =>
+                console.warn("Could not select the TV room:", error.message),
+              )
+              .finally(() => {
+                initialRoomSelectionInProgress = false;
+              });
+          }
         }
 
         const activeRoom = rooms.find(
