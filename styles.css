@@ -2266,6 +2266,14 @@ body.admin-page {
   .admin-topbar {
     padding: 0 12px;
   }
+  .admin-notifications {
+    position: static;
+  }
+  .admin-notification-panel {
+    top: calc(100% + 6px);
+    right: 12px;
+    width: min(360px, calc(100% - 24px));
+  }
   .topbar-status {
     display: none;
   }
