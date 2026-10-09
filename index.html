@@ -1427,16 +1427,138 @@
         console.log("✅ Login session cleared");
       }
 
+      const LOGIN_FAILURE_LIMIT = 3;
+      const LOGIN_LOCKOUT_DURATIONS = [60000, 180000, 300000];
+      const LOGIN_FAILURE_WINDOW_MS = 24 * 60 * 60 * 1000;
+      const loginAttemptFallback = new Map();
+      let adminLoginInProgress = false;
+      let singerLoginInProgress = false;
+
+      function getLoginAttemptKey(role, username) {
+        const normalizedUsername = String(username || "")
+          .trim()
+          .toLowerCase()
+          .slice(0, 64);
+        return `karaoke_login_attempts_v1_${role}_${normalizedUsername}`;
+      }
+
+      function saveLoginAttemptState(key, state) {
+        loginAttemptFallback.set(key, state);
+        try {
+          localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+          console.warn("Could not persist login attempt limit:", error.message);
+        }
+      }
+
+      function getLoginAttemptState(role, username) {
+        const key = getLoginAttemptKey(role, username);
+        let state = null;
+        try {
+          state = JSON.parse(localStorage.getItem(key) || "null");
+        } catch (error) {
+          state = loginAttemptFallback.get(key) || null;
+        }
+        if (!state || typeof state !== "object") {
+          state = {
+            failures: 0,
+            lockouts: 0,
+            lockedUntil: 0,
+            windowStartedAt: 0,
+          };
+        }
+
+        const now = Date.now();
+        if (
+          state.windowStartedAt &&
+          now - state.windowStartedAt >= LOGIN_FAILURE_WINDOW_MS
+        ) {
+          state = {
+            failures: 0,
+            lockouts: 0,
+            lockedUntil: 0,
+            windowStartedAt: 0,
+          };
+          saveLoginAttemptState(key, state);
+        } else if (state.lockedUntil && state.lockedUntil <= now) {
+          state = { ...state, failures: 0, lockedUntil: 0 };
+          saveLoginAttemptState(key, state);
+        }
+        return state;
+      }
+
+      function formatLoginWait(remainingMs) {
+        const minutes = Math.max(1, Math.ceil(remainingMs / 60000));
+        return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+      }
+
+      function getLoginLockoutMessage(role, username) {
+        const state = getLoginAttemptState(role, username);
+        const remainingMs = state.lockedUntil - Date.now();
+        return remainingMs > 0
+          ? `Too many failed sign-in attempts. Please wait ${formatLoginWait(remainingMs)} before trying again.`
+          : "";
+      }
+
+      function recordFailedLogin(role, username) {
+        const key = getLoginAttemptKey(role, username);
+        const state = getLoginAttemptState(role, username);
+        const now = Date.now();
+        state.windowStartedAt ||= now;
+        state.failures += 1;
+
+        if (state.failures >= LOGIN_FAILURE_LIMIT) {
+          const lockoutIndex = Math.min(
+            state.lockouts,
+            LOGIN_LOCKOUT_DURATIONS.length - 1,
+          );
+          const lockoutMs = LOGIN_LOCKOUT_DURATIONS[lockoutIndex];
+          state.failures = 0;
+          state.lockouts = Math.min(
+            state.lockouts + 1,
+            LOGIN_LOCKOUT_DURATIONS.length,
+          );
+          state.lockedUntil = now + lockoutMs;
+          saveLoginAttemptState(key, state);
+          return { lockedUntil: state.lockedUntil, attemptsRemaining: 0 };
+        }
+
+        saveLoginAttemptState(key, state);
+        return {
+          lockedUntil: 0,
+          attemptsRemaining: LOGIN_FAILURE_LIMIT - state.failures,
+        };
+      }
+
+      function clearLoginFailures(role, username) {
+        const key = getLoginAttemptKey(role, username);
+        loginAttemptFallback.delete(key);
+        try {
+          localStorage.removeItem(key);
+        } catch (error) {
+          console.warn("Could not clear login attempt limit:", error.message);
+        }
+      }
+
       function validateAdminLogin(event) {
         event.preventDefault();
         const adminName = document.getElementById("adminName").value.trim();
         const adminPassword = document.getElementById("adminPassword").value;
+
+        const lockoutMessage = getLoginLockoutMessage("admin", adminName);
+        if (lockoutMessage) {
+          alert(lockoutMessage);
+          return;
+        }
+        if (adminLoginInProgress) return;
+        adminLoginInProgress = true;
 
         console.log("👤 Admin login attempt:", adminName);
 
         // Try to get users from Firebase first with a fresh load
         forceReloadUsersForLogin(function (users, loadError) {
           if (loadError) {
+            adminLoginInProgress = false;
             alert(
               "Unable to verify your account with Firebase. Check your connection and try again.",
             );
@@ -1450,8 +1572,10 @@
           );
 
           if (adminUser) {
+            clearLoginFailures("admin", adminName);
             // Check if user is disabled
             if (adminUser.disabled) {
+              adminLoginInProgress = false;
               console.log("❌ Admin user is disabled:", adminUser.username);
               alert(
                 "❌ This admin account has been disabled.\n\nPlease contact another administrator.",
@@ -1465,6 +1589,7 @@
             // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
             checkIfLoggedInElsewhere(adminName, function (isLoggedInElsewhere) {
               if (isLoggedInElsewhere) {
+                adminLoginInProgress = false;
                 console.log(
                   "❌ Login blocked - user already logged in elsewhere",
                 );
@@ -1478,6 +1603,7 @@
               // Store logged-in user
               registerLoginSession(adminName).then((registered) => {
                 if (!registered) {
+                  adminLoginInProgress = false;
                   alert(
                     "Login could not sync with Firebase. Please try again.",
                   );
@@ -1491,9 +1617,13 @@
               });
             });
           } else {
+            adminLoginInProgress = false;
             console.log("❌ Admin user not found or password incorrect");
+            const failure = recordFailedLogin("admin", adminName);
             alert(
-              "❌ Invalid admin credentials. Please check your username and password.",
+              failure.lockedUntil
+                ? `Too many failed sign-in attempts. Please wait ${formatLoginWait(failure.lockedUntil - Date.now())} before trying again.`
+                : `Invalid admin credentials. Please check your username and password. ${failure.attemptsRemaining} attempts remaining before temporary lockout.`,
             );
             document.getElementById("adminName").focus();
           }
@@ -1515,11 +1645,20 @@
           .value.trim();
         const singerPassword = document.getElementById("singerPassword").value;
 
+        const lockoutMessage = getLoginLockoutMessage("singer", singerUsername);
+        if (lockoutMessage) {
+          alert(lockoutMessage);
+          return;
+        }
+        if (singerLoginInProgress) return;
+        singerLoginInProgress = true;
+
         console.log("👤 Singer login attempt:", singerUsername);
 
         // Try to get users from Firebase first with a fresh load
         forceReloadUsersForLogin(function (users, loadError) {
           if (loadError) {
+            singerLoginInProgress = false;
             alert(
               "Unable to verify your account with Firebase. Check your connection and try again.",
             );
@@ -1531,8 +1670,10 @@
           );
 
           if (singerUser) {
+            clearLoginFailures("singer", singerUsername);
             // Check if user is disabled
             if (singerUser.disabled) {
+              singerLoginInProgress = false;
               console.log("❌ Singer user is disabled:", singerUser.username);
               alert(
                 "❌ Your account has been disabled.\n\nPlease contact an administrator.",
@@ -1548,6 +1689,7 @@
               singerUsername,
               function (isLoggedInElsewhere) {
                 if (isLoggedInElsewhere) {
+                  singerLoginInProgress = false;
                   console.log(
                     "❌ Login blocked - user already logged in elsewhere",
                   );
@@ -1561,6 +1703,7 @@
                 // Store logged-in user
                 registerLoginSession(singerUsername).then((registered) => {
                   if (!registered) {
+                    singerLoginInProgress = false;
                     alert(
                       "Login could not sync with Firebase. Please try again.",
                     );
@@ -1576,9 +1719,13 @@
               },
             );
           } else {
+            singerLoginInProgress = false;
             console.log("❌ Singer user not found or password incorrect");
+            const failure = recordFailedLogin("singer", singerUsername);
             alert(
-              "❌ Invalid credentials. Please check your username and password.",
+              failure.lockedUntil
+                ? `Too many failed sign-in attempts. Please wait ${formatLoginWait(failure.lockedUntil - Date.now())} before trying again.`
+                : `Invalid credentials. Please check your username and password. ${failure.attemptsRemaining} attempts remaining before temporary lockout.`,
             );
             document.getElementById("singerUsername").focus();
           }

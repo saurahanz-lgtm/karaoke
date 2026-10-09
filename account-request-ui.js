@@ -12,6 +12,88 @@ document.addEventListener("DOMContentLoaded", () => {
   let stopWatchingRequest = null;
   let currentRequestStatus = null;
   let requestApprovalAudioContext = null;
+  let requestCooldownTimeout = null;
+  const requestLimitStorageKey = "karaoke_account_request_limit_v1";
+  const maxAccountRequestsPerDevice = 3;
+  const accountRequestCooldownMs = 24 * 60 * 60 * 1000;
+
+  function getAccountRequestLimit() {
+    const now = Date.now();
+    try {
+      const state = JSON.parse(
+        localStorage.getItem(requestLimitStorageKey) || "null",
+      );
+      if (!state || typeof state !== "object") {
+        return { count: 0, blockedUntil: 0, windowStartedAt: 0 };
+      }
+      if (state.blockedUntil > now) {
+        return { ...state, blocked: true };
+      }
+      if (
+        (state.blockedUntil && state.blockedUntil <= now) ||
+        (state.windowStartedAt &&
+          now - state.windowStartedAt >= accountRequestCooldownMs)
+      ) {
+        localStorage.removeItem(requestLimitStorageKey);
+        return { count: 0, blockedUntil: 0, windowStartedAt: 0 };
+      }
+      return { ...state, blocked: false };
+    } catch (error) {
+      console.warn("Could not read account request limit:", error.message);
+      return { count: 0, blockedUntil: 0, windowStartedAt: 0 };
+    }
+  }
+
+  function formatCooldown(remainingMs) {
+    const totalMinutes = Math.ceil(remainingMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours ? `${hours}h ${minutes}m` : `${minutes} min`;
+  }
+
+  function updateAnotherRequestButton() {
+    const limit = getAccountRequestLimit();
+    anotherRequestButton.disabled = Boolean(limit.blocked);
+    anotherRequestButton.textContent = limit.blocked
+      ? `Try again in ${formatCooldown(limit.blockedUntil - Date.now())}`
+      : "Submit another request";
+    if (requestCooldownTimeout) {
+      clearTimeout(requestCooldownTimeout);
+      requestCooldownTimeout = null;
+    }
+    if (limit.blocked) {
+      const remainingMs = limit.blockedUntil - Date.now();
+      showFeedback(
+        `This device has reached 3 account requests. Try again in ${formatCooldown(remainingMs)}.`,
+        "error",
+      );
+      requestCooldownTimeout = setTimeout(
+        updateAnotherRequestButton,
+        remainingMs + 50,
+      );
+    }
+    return Boolean(limit.blocked);
+  }
+
+  function recordSuccessfulAccountRequest() {
+    const now = Date.now();
+    const current = getAccountRequestLimit();
+    if (current.blocked) return;
+    const count = (current.count || 0) + 1;
+    const state = {
+      count,
+      windowStartedAt: current.windowStartedAt || now,
+      blockedUntil:
+        count >= maxAccountRequestsPerDevice
+          ? now + accountRequestCooldownMs
+          : 0,
+    };
+    try {
+      localStorage.setItem(requestLimitStorageKey, JSON.stringify(state));
+    } catch (error) {
+      console.warn("Could not save account request limit:", error.message);
+    }
+  }
 
   function enableRequestApprovalSound() {
     const AudioContextConstructor =
@@ -67,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (currentRequestStatus === "approved") {
       openRequestButton.textContent = "Account approved. View your credentials";
     } else if (currentRequestStatus === "rejected") {
-      openRequestButton.textContent = "Request update. View status";
+      openRequestButton.textContent = "Submit another request";
     } else if (sessionStorage.getItem("karaoke_account_request_id")) {
       openRequestButton.textContent = "Check account request status";
     } else {
@@ -116,6 +198,14 @@ document.addEventListener("DOMContentLoaded", () => {
         usernameInput.disabled = true;
         submitButton.disabled = true;
         anotherRequestButton.hidden = request.status !== "rejected";
+        if (request.status !== "rejected") {
+          anotherRequestButton.disabled = false;
+          anotherRequestButton.textContent = "Submit another request";
+          if (requestCooldownTimeout) {
+            clearTimeout(requestCooldownTimeout);
+            requestCooldownTimeout = null;
+          }
+        }
         credentials.hidden = request.status !== "approved";
 
         if (request.status === "pending") {
@@ -132,18 +222,21 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("approvedAccountPassword").textContent =
             request.password || "Password unavailable";
         } else if (request.status === "rejected") {
-          showFeedback(
-            request.resolutionMessage ||
-              "Your account request was not approved. Please contact an administrator.",
-            "error",
-          );
+          const requestLimitReached = updateAnotherRequestButton();
+          if (!requestLimitReached) {
+            showFeedback(
+              request.resolutionMessage ||
+                "Your account request was not approved. Please contact an administrator.",
+              "error",
+            );
+          }
         }
 
         if (requestForm.hidden && request.status === "approved") {
           openRequestButton.textContent =
             "Account approved. View your credentials";
         } else if (requestForm.hidden && request.status === "rejected") {
-          openRequestButton.textContent = "Request update. View status";
+          openRequestButton.textContent = "Submit another request";
         }
       },
       (error) => {
@@ -171,6 +264,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   requestForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const requestLimit = getAccountRequestLimit();
+    if (requestLimit.blocked) {
+      showFeedback(
+        `This device has reached 3 account requests. Try again in ${formatCooldown(requestLimit.blockedUntil - Date.now())}.`,
+        "error",
+      );
+      return;
+    }
+
     const requestedUsername = usernameInput.value.trim();
     if (!/^[A-Za-z0-9_.-]{3,30}$/.test(requestedUsername)) {
       showFeedback(
@@ -184,6 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showFeedback("Submitting your account request...", "pending");
     try {
       const request = await KaraokeAccountRequests.create(requestedUsername);
+      recordSuccessfulAccountRequest();
       sessionStorage.setItem("karaoke_account_request_id", request.id);
       watchRequest(request.id);
     } catch (error) {
@@ -216,6 +319,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
   anotherRequestButton.addEventListener("click", () => {
+    const requestLimit = getAccountRequestLimit();
+    if (requestLimit.blocked) {
+      updateAnotherRequestButton();
+      return;
+    }
     stopWatchingRequest?.();
     stopWatchingRequest = null;
     sessionStorage.removeItem("karaoke_account_request_id");
@@ -224,6 +332,8 @@ document.addEventListener("DOMContentLoaded", () => {
     usernameInput.disabled = false;
     submitButton.disabled = false;
     resetRequestDetails();
+    anotherRequestButton.disabled = false;
+    anotherRequestButton.textContent = "Submit another request";
     showFeedback("", "info");
     setDefaultRequestButtonText();
     usernameInput.focus();
