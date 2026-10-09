@@ -2651,7 +2651,10 @@ function getTVAnnouncementFromControls() {
       TV_ANNOUNCEMENT_TEMPLATES.maintenance
     );
   }
-  return TV_ANNOUNCEMENT_TEMPLATES[selectedTemplate];
+  return (
+    TV_ANNOUNCEMENT_TEMPLATES[selectedTemplate] ||
+    TV_ANNOUNCEMENT_TEMPLATES.maintenance
+  );
 }
 
 function updateTVAnnouncementPreview() {
@@ -2665,8 +2668,17 @@ function updateTVAnnouncementPreview() {
 function initializeTVAnnouncementControls() {
   const template = document.getElementById("tvAnnouncementTemplate");
   const customMessage = document.getElementById("tvAnnouncementCustom");
-  template.addEventListener("change", updateTVAnnouncementPreview);
+  template.addEventListener("change", () => {
+    updateTVAnnouncementPreview();
+    if (template.value !== "custom") disableTVDisplay();
+  });
   customMessage.addEventListener("input", updateTVAnnouncementPreview);
+  customMessage.addEventListener("change", () => {
+    updateTVAnnouncementPreview();
+    if (template.value === "custom" && customMessage.value.trim()) {
+      disableTVDisplay();
+    }
+  });
   updateTVAnnouncementPreview();
 }
 
@@ -2680,7 +2692,7 @@ function setTVAnnouncementControls(announcement) {
     template.value = "custom";
     customMessage.value = announcement;
   } else {
-    template.value = matchingTemplate?.[0] || "maintenance";
+    template.value = matchingTemplate?.[0] || "";
     customMessage.value = "";
   }
   updateTVAnnouncementPreview();
