@@ -47,6 +47,7 @@ let roomRequestApprovalAudioContext = null;
 let pendingRoomRequestApprovalId = null;
 let knownPendingAccountRequestIds = null;
 let requestNotificationAudioContext = null;
+let pendingRequestNotificationSounds = 0;
 
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", function () {
@@ -111,12 +112,8 @@ document.addEventListener("DOMContentLoaded", function () {
     requestNotificationPanel.hidden = !isOpen;
     requestNotificationToggle.setAttribute("aria-expanded", String(isOpen));
   });
-  document.addEventListener("pointerdown", enableRequestNotificationSound, {
-    once: true,
-  });
-  document.addEventListener("keydown", enableRequestNotificationSound, {
-    once: true,
-  });
+  document.addEventListener("pointerdown", enableRequestNotificationSound);
+  document.addEventListener("keydown", enableRequestNotificationSound);
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".admin-profile")) {
       profileMenu.hidden = true;
@@ -577,10 +574,30 @@ function enableRequestNotificationSound() {
   if (!AudioContextConstructor) return;
 
   try {
-    requestNotificationAudioContext ??= new AudioContextConstructor();
-    if (requestNotificationAudioContext.state === "suspended") {
-      requestNotificationAudioContext.resume().catch(() => {});
+    if (
+      !requestNotificationAudioContext ||
+      requestNotificationAudioContext.state === "closed"
+    ) {
+      requestNotificationAudioContext = new AudioContextConstructor();
     }
+    const resumePromise =
+      requestNotificationAudioContext.state === "suspended"
+        ? requestNotificationAudioContext.resume()
+        : Promise.resolve();
+    resumePromise
+      .then(() => {
+        if (requestNotificationAudioContext.state !== "running") return;
+        while (pendingRequestNotificationSounds > 0) {
+          pendingRequestNotificationSounds -= 1;
+          playRequestNotificationSoundNow(requestNotificationAudioContext);
+        }
+        document.removeEventListener(
+          "pointerdown",
+          enableRequestNotificationSound,
+        );
+        document.removeEventListener("keydown", enableRequestNotificationSound);
+      })
+      .catch(() => {});
   } catch (error) {
     console.warn("Could not enable request notification sound:", error.message);
   }
@@ -588,8 +605,16 @@ function enableRequestNotificationSound() {
 
 function playRequestNotificationSound() {
   const audioContext = requestNotificationAudioContext;
-  if (!audioContext || audioContext.state !== "running") return;
+  if (!audioContext || audioContext.state !== "running") {
+    pendingRequestNotificationSounds += 1;
+    enableRequestNotificationSound();
+    return;
+  }
 
+  playRequestNotificationSoundNow(audioContext);
+}
+
+function playRequestNotificationSoundNow(audioContext) {
   const startAt = audioContext.currentTime;
   [880, 1174].forEach((frequency, index) => {
     const oscillator = audioContext.createOscillator();
@@ -598,7 +623,7 @@ function playRequestNotificationSound() {
     oscillator.type = "sine";
     oscillator.frequency.setValueAtTime(frequency, toneStart);
     volume.gain.setValueAtTime(0.0001, toneStart);
-    volume.gain.exponentialRampToValueAtTime(0.12, toneStart + 0.015);
+    volume.gain.exponentialRampToValueAtTime(0.3, toneStart + 0.015);
     volume.gain.exponentialRampToValueAtTime(0.0001, toneStart + 0.18);
     oscillator.connect(volume);
     volume.connect(audioContext.destination);
@@ -714,12 +739,14 @@ async function handleAccountRequestDecision(request, decision, buttons) {
   try {
     if (decision === "approve") {
       await KaraokeAccountRequests.approve(request.id);
+      playRequestNotificationSound();
       showNotification(
         "Account approved. The requester can now view their temporary password.",
         "success",
       );
     } else {
       await KaraokeAccountRequests.reject(request.id);
+      playRequestNotificationSound();
       showNotification("Account request rejected.", "warning");
     }
   } catch (error) {
@@ -815,12 +842,14 @@ async function handleRoomRequestDecision(request, decision, buttons) {
         request.id,
         `${request.username || "Singer"}'s Room`,
       );
+      playRequestNotificationSound();
       showNotification(
         `Room approved for ${request.username || "singer"}.`,
         "success",
       );
     } else {
       await KaraokeSessions.rejectRoomRequest(request.roomId, request.id);
+      playRequestNotificationSound();
       showNotification(
         `Room request from ${request.username || "singer"} rejected.`,
         "warning",

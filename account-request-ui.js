@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let stopWatchingRequest = null;
   let currentRequestStatus = null;
   let requestApprovalAudioContext = null;
+  let pendingRequestApprovalSoundId = null;
   let requestCooldownTimeout = null;
   const requestLimitStorageKey = "karaoke_account_request_limit_v1";
   const maxAccountRequestsPerDevice = 3;
@@ -102,9 +103,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       requestApprovalAudioContext ??= new AudioContextConstructor();
-      if (requestApprovalAudioContext.state === "suspended") {
-        requestApprovalAudioContext.resume().catch(() => {});
-      }
+      const resumePromise =
+        requestApprovalAudioContext.state === "suspended"
+          ? requestApprovalAudioContext.resume()
+          : Promise.resolve();
+      resumePromise
+        .then(() => {
+          if (
+            pendingRequestApprovalSoundId &&
+            requestApprovalAudioContext.state === "running"
+          ) {
+            const requestId = pendingRequestApprovalSoundId;
+            pendingRequestApprovalSoundId = null;
+            playRequestApprovalSound(requestId);
+          }
+          if (requestApprovalAudioContext.state === "running") {
+            document.removeEventListener(
+              "pointerdown",
+              enableRequestApprovalSound,
+            );
+            document.removeEventListener("keydown", enableRequestApprovalSound);
+          }
+        })
+        .catch(() => {});
     } catch (error) {
       console.warn("Could not enable account approval sound:", error.message);
     }
@@ -112,11 +133,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function playRequestApprovalSound(requestId) {
     const playedKey = `karaoke_account_approval_sound_${requestId}`;
+    if (sessionStorage.getItem(playedKey)) return;
     if (
-      sessionStorage.getItem(playedKey) ||
       !requestApprovalAudioContext ||
       requestApprovalAudioContext.state !== "running"
     ) {
+      pendingRequestApprovalSoundId = requestId;
+      enableRequestApprovalSound();
       return;
     }
 
@@ -129,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
       oscillator.type = "sine";
       oscillator.frequency.setValueAtTime(frequency, toneStart);
       volume.gain.setValueAtTime(0.0001, toneStart);
-      volume.gain.exponentialRampToValueAtTime(0.12, toneStart + 0.015);
+      volume.gain.exponentialRampToValueAtTime(0.3, toneStart + 0.015);
       volume.gain.exponentialRampToValueAtTime(0.0001, toneStart + 0.2);
       oscillator.connect(volume);
       volume.connect(requestApprovalAudioContext.destination);
@@ -138,12 +161,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  document.addEventListener("pointerdown", enableRequestApprovalSound, {
-    once: true,
-  });
-  document.addEventListener("keydown", enableRequestApprovalSound, {
-    once: true,
-  });
+  document.addEventListener("pointerdown", enableRequestApprovalSound);
+  document.addEventListener("keydown", enableRequestApprovalSound);
 
   function setDefaultRequestButtonText() {
     if (currentRequestStatus === "approved") {
