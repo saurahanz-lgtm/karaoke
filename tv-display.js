@@ -115,17 +115,13 @@ function isFirebaseConfigured() {
 }
 
 function renderKaraokeRooms() {
-  const select = document.getElementById("activeRoomSelect");
-  if (!select) return;
-
-  select.replaceChildren();
-  karaokeRooms.forEach((room) => {
-    const option = document.createElement("option");
-    option.value = room.id;
-    option.textContent = room.name;
-    select.appendChild(option);
-  });
-  if (activeKaraokeRoomId) select.value = activeKaraokeRoomId;
+  const activeRoom = karaokeRooms.find(
+    (room) => room.id === activeKaraokeRoomId,
+  );
+  const name = document.getElementById("activeRoomName");
+  const code = document.getElementById("activeRoomCode");
+  if (name) name.textContent = activeRoom?.name || "Room unavailable";
+  if (code) code.textContent = activeRoom ? `Room ID: ${activeRoom.id}` : "";
 }
 
 function activateKaraokeRoom(roomId) {
@@ -228,13 +224,9 @@ function initializeKaraokeRooms() {
           const requestedRoomId = KaraokeSessions.getRoomIdFromUrl();
           const savedRoomId = sessionStorage.getItem("karaokeTvRoomId");
           const roomId =
-            [requestedRoomId, savedRoomId].find((candidate) =>
+            [requestedRoomId, activeRoomId, savedRoomId].find((candidate) =>
               rooms.some((room) => room.id === candidate),
-            ) ||
-            (rooms.some((room) => room.id === activeRoomId)
-              ? activeRoomId
-              : null) ||
-            rooms[0]?.id;
+            ) || rooms[0]?.id;
           if (roomId) activateKaraokeRoom(roomId);
         }
 
@@ -250,12 +242,6 @@ function initializeKaraokeRooms() {
     .catch((error) => {
       console.error("Could not initialize karaoke rooms:", error.message);
     });
-}
-
-function selectKaraokeRoom(roomId) {
-  if (karaokeRooms.some((room) => room.id === roomId)) {
-    activateKaraokeRoom(roomId);
-  }
 }
 
 function handleRoomControl(control) {

@@ -2761,11 +2761,11 @@ body.tv-page {
   color: var(--karaoke-text);
 }
 
-.tv-page #activeRoomSelect {
-  border-color: rgba(111, 137, 225, 0.4) !important;
-  border-radius: 7px;
-  background: #101d42 !important;
-  color: var(--karaoke-text) !important;
+.tv-page .active-room-display {
+  border: 1px solid rgba(111, 137, 225, 0.34);
+  border-radius: 8px;
+  background: rgba(8, 20, 49, 0.92);
+  color: var(--karaoke-text);
 }
 
 .tv-page #fullscreenBtn {

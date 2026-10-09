@@ -533,6 +533,36 @@
     };
   }
 
+  async function joinRoomWithFallback(roomId, username) {
+    try {
+      return await joinRoom(roomId, username);
+    } catch (error) {
+      if (error.message !== "ROOM_FULL") throw error;
+    }
+
+    const roomsSnapshot = await database().ref(ROOM_LIST_PATH).once("value");
+    const availableRoomCandidates = Object.entries(roomsSnapshot.val() || {})
+      .map(([id, room]) => ({ ...room, id }))
+      .filter((room) => room.id !== roomId)
+      .sort(
+        (first, second) => (first.createdAt || 0) - (second.createdAt || 0),
+      );
+
+    for (const room of availableRoomCandidates) {
+      try {
+        return {
+          ...(await joinRoom(room.id, username)),
+          requestedRoomId: roomId,
+          autoAssigned: true,
+        };
+      } catch (error) {
+        if (error.message !== "ROOM_FULL") throw error;
+      }
+    }
+
+    throw new Error("NO_AVAILABLE_ROOMS");
+  }
+
   async function leaveRoom(roomId) {
     const targetRoomId = roomId || joinedRoomId;
     const deviceId = global.sessionStorage.getItem("karaokeRoomDeviceId");
@@ -646,6 +676,7 @@
     getJoinUrl,
     getRoomIdFromUrl,
     joinRoom,
+    joinRoomWithFallback,
     leaveRoom,
     listenMembers,
     listenMuted,

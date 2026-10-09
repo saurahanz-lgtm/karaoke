@@ -910,46 +910,52 @@
             (await KaraokeSessions.getActiveRoomId());
           requestedRoomId = roomId;
           if (!roomId) throw new Error("NO_ACTIVE_ROOM");
-          const membership = await KaraokeSessions.joinRoom(
+          const membership = await KaraokeSessions.joinRoomWithFallback(
             roomId,
             loggedInUser.username,
           );
-          activeKaraokeRoomId = roomId;
+          const connectedRoomId = membership.room.id;
+          activeKaraokeRoomId = connectedRoomId;
+          if (membership.autoAssigned) {
+            const updatedUrl = new URL(window.location.href);
+            updatedUrl.searchParams.set("room", connectedRoomId);
+            window.history.replaceState(null, "", updatedUrl);
+          }
           stopListeningToRoomMembers?.();
           stopListeningToRoomMembers = KaraokeSessions.listenMembers(
-            roomId,
+            connectedRoomId,
             (count) => {
               const roomIsFull = count >= KaraokeSessions.MAX_DEVICES;
               document.getElementById("roomCapacityNotice").hidden =
                 !roomIsFull;
               document.getElementById("roomCapacityMessage").textContent =
                 `This room has reached its ${KaraokeSessions.MAX_DEVICES}-device limit.`;
-              if (roomIsFull) roomRequestRoomId = roomId;
+              if (roomIsFull) roomRequestRoomId = connectedRoomId;
             },
           );
           stopListeningToRoomVolume?.();
           stopListeningToRoomVolume = KaraokeSessions.listenVolume(
-            roomId,
+            connectedRoomId,
             updateVolumeDisplay,
           );
           stopListeningToRoomMuted?.();
           stopListeningToRoomMuted = KaraokeSessions.listenMuted(
-            roomId,
+            connectedRoomId,
             updateMuteDisplay,
           );
           stopListeningToPlaybackState?.();
           stopListeningToPlaybackState = KaraokeSessions.listenPlaybackState(
-            roomId,
+            connectedRoomId,
             updatePlaybackDisplay,
           );
           stopListeningToRoomData?.();
           stopListeningToRoomData = KaraokeSessions.listenRoom(
-            roomId,
+            connectedRoomId,
             {
               onQueue: (queue) => {
                 roomQueue = queue;
                 localStorage.setItem(
-                  `karaoke_queue_${roomId}`,
+                  `karaoke_queue_${connectedRoomId}`,
                   JSON.stringify(queue),
                 );
                 updateReservedSongsFromRoom();
@@ -965,12 +971,19 @@
             (error) => console.warn("Room sync failed:", error.message),
           );
           document.getElementById("karaokeRoomStatus").textContent =
-            `${membership.room.name} · connected`;
+            membership.autoAssigned
+              ? `${membership.requestedRoomId} was full · connected to ${membership.room.name}`
+              : `${membership.room.name} · connected`;
         } catch (error) {
-          if (error.message === "ROOM_FULL") {
+          if (
+            error.message === "ROOM_FULL" ||
+            error.message === "NO_AVAILABLE_ROOMS"
+          ) {
             roomRequestRoomId = requestedRoomId;
             document.getElementById("roomFullMessage").textContent =
-              `This room already has ${KaraokeSessions.MAX_DEVICES} connected phones. Send a request to User Management to open another room.`;
+              error.message === "NO_AVAILABLE_ROOMS"
+                ? `All rooms already have ${KaraokeSessions.MAX_DEVICES} connected phones. Send a request to User Management to open another room.`
+                : `This room already has ${KaraokeSessions.MAX_DEVICES} connected phones. Send a request to User Management to open another room.`;
             document.getElementById("singerApp").hidden = true;
             document.getElementById("roomUnavailablePage").hidden = false;
             return;

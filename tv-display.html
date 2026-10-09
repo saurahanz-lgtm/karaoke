@@ -228,14 +228,35 @@
         transition: all 0.3s ease;
       }
 
-      #activeRoomSelect {
-        max-width: 190px;
-        padding: 10px 12px;
+      .active-room-display {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 190px;
+        min-height: 52px;
+        padding: 7px 12px;
         border: 1px solid rgba(255, 255, 255, 0.45);
         border-radius: 8px;
         background: #191927;
         color: white;
-        font-weight: 600;
+        line-height: 1.3;
+      }
+
+      .active-room-display span {
+        color: rgba(255, 255, 255, 0.62);
+        font-size: 0.7rem;
+      }
+
+      .active-room-display strong {
+        overflow: hidden;
+        font-size: 0.9rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .active-room-display small {
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.65rem;
       }
 
       #fullscreenBtn {
@@ -388,10 +409,9 @@
           gap: 8px;
         }
 
-        #activeRoomSelect {
+        .active-room-display {
           grid-column: 1 / -1;
           width: 100%;
-          max-width: none;
           min-width: 0;
           box-sizing: border-box;
         }
@@ -692,13 +712,11 @@
 
       <!-- Buttons (Top Right) -->
       <div class="button-group">
-        <select
-          id="activeRoomSelect"
-          aria-label="Active karaoke room"
-          onchange="selectKaraokeRoom(this.value)"
-        >
-          <option value="">Loading rooms...</option>
-        </select>
+        <div class="active-room-display" aria-live="polite">
+          <span>TV connected to</span>
+          <strong id="activeRoomName">Loading room...</strong>
+          <small id="activeRoomCode"></small>
+        </div>
         <button id="fullscreenBtn" onclick="toggleFullscreen()">
           ⛶ Full Screen
         </button>
