@@ -2,7 +2,7 @@
   const ROOM_LIST_PATH = "karaokeRooms";
   const ROOM_DATA_PATH = "karaokeSessions";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
-  const MAX_DEVICES = 1;
+  const MAX_DEVICES = 3;
   const DEFAULT_ROOM_VOLUME = 70;
   const MEMBER_TIMEOUT_MS = 60000;
   const HEARTBEAT_INTERVAL_MS = 15000;
@@ -534,27 +534,56 @@
   }
 
   async function joinRoomWithFallback(roomId, username) {
-    try {
-      return await joinRoom(roomId, username);
-    } catch (error) {
-      if (error.message !== "ROOM_FULL") throw error;
+    const deviceId = getDeviceId();
+    const roomsSnapshot = await database().ref(ROOM_LIST_PATH).once("value");
+    const rooms = Object.entries(roomsSnapshot.val() || {}).map(
+      ([id, room]) => ({ ...room, id }),
+    );
+    const getActiveMembers = async (candidateRoomId) => {
+      const snapshot = await database()
+        .ref(`${ROOM_DATA_PATH}/${candidateRoomId}/members`)
+        .once("value");
+      const activeCutoff = Date.now() - MEMBER_TIMEOUT_MS;
+      return Object.entries(snapshot.val() || {}).filter(
+        ([, member]) => member && Number(member.lastSeen) >= activeCutoff,
+      );
+    };
+
+    const requestedMembers = await getActiveMembers(roomId);
+    if (requestedMembers.some(([id]) => id === deviceId)) {
+      return joinRoom(roomId, username);
     }
 
-    const roomsSnapshot = await database().ref(ROOM_LIST_PATH).once("value");
-    const availableRoomCandidates = Object.entries(roomsSnapshot.val() || {})
-      .map(([id, room]) => ({ ...room, id }))
-      .filter((room) => room.id !== roomId)
+    const candidates = await Promise.all(
+      rooms
+        .filter((room) => room.id !== roomId)
+        .map(async (room) => ({
+          ...room,
+          activeCount: (await getActiveMembers(room.id)).length,
+        })),
+    );
+    const availableCandidates = candidates
+      .filter((room) => room.activeCount < MAX_DEVICES)
       .sort(
-        (first, second) => (first.createdAt || 0) - (second.createdAt || 0),
+        (first, second) =>
+          first.activeCount - second.activeCount ||
+          (first.createdAt || 0) - (second.createdAt || 0),
       );
+    const requestedCount = requestedMembers.length;
+    const routeToOtherRoom =
+      requestedCount > 0 &&
+      availableCandidates.length > 0 &&
+      availableCandidates[0].activeCount <= requestedCount;
+    const orderedRooms = routeToOtherRoom
+      ? [...availableCandidates, { id: roomId }]
+      : [{ id: roomId }, ...availableCandidates];
 
-    for (const room of availableRoomCandidates) {
+    for (const room of orderedRooms) {
       try {
-        return {
-          ...(await joinRoom(room.id, username)),
-          requestedRoomId: roomId,
-          autoAssigned: true,
-        };
+        const membership = await joinRoom(room.id, username);
+        return room.id === roomId
+          ? membership
+          : { ...membership, requestedRoomId: roomId, autoAssigned: true };
       } catch (error) {
         if (error.message !== "ROOM_FULL") throw error;
       }
