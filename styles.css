@@ -2358,9 +2358,17 @@ body.tv-page {
 
 .home-page .title-glow {
   color: #fff;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
   text-shadow:
     0 0 24px rgba(137, 105, 255, 0.56),
     0 0 52px rgba(49, 92, 251, 0.34);
+}
+
+.home-page .subtitle {
+  color: #c2cde6;
+  font-family: "DM Sans", sans-serif;
 }
 
 .home-page #userDisplayName {
@@ -2375,11 +2383,46 @@ body.tv-page {
 }
 
 .home-page .role-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 270px);
+  min-height: 190px;
+  gap: 12px;
+  padding: 24px 20px !important;
   border: 1px solid rgba(166, 143, 255, 0.4) !important;
   border-radius: 14px;
   color: #fff !important;
   background: var(--karaoke-gradient) !important;
   box-shadow: 0 12px 32px rgba(54, 49, 156, 0.34);
+}
+
+.home-page .role-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 14px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 23px;
+}
+
+.home-page .role-label {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.home-page .role-desc {
+  max-width: 220px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 .home-page .role-btn:nth-child(2) {
