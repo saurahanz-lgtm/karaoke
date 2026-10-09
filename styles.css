@@ -2959,9 +2959,31 @@ body.tv-page {
   outline-offset: 2px;
 }
 
-.account-request-actions {
-  min-height: 29px;
-  margin: 0 4px 3px 0;
+.account-request-action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 31px;
+  flex-wrap: wrap;
+}
+
+.account-request-resolution {
+  min-width: 0;
+  flex: 1 1 120px;
+  color: #a7b6d6;
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.account-request-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 76px;
+  min-height: 30px;
+  margin: 0;
   padding: 0 9px;
   border: 1px solid rgba(123, 133, 235, 0.34);
   border-radius: 6px;
@@ -2969,32 +2991,45 @@ body.tv-page {
   background: rgba(88, 75, 179, 0.3);
   font: inherit;
   font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    filter 120ms ease;
 }
 
 .account-request-approve {
-  border-color: rgba(26, 197, 158, 0.35);
-  background: rgba(15, 139, 123, 0.28);
+  border-color: rgba(26, 197, 158, 0.38);
+  color: #88f0d0;
+  background: rgba(15, 139, 123, 0.24);
 }
 
-.account-request-reject {
-  border-color: rgba(232, 88, 130, 0.36);
-  background: rgba(152, 44, 96, 0.27);
+.account-request-reject,
+.account-request-delete {
+  border-color: rgba(232, 88, 130, 0.38);
+  color: #ff9eac;
+  background: rgba(152, 44, 96, 0.22);
 }
 
 .account-request-delete {
+  min-width: 30px;
   width: 30px;
   padding: 0;
-  border-color: rgba(232, 88, 130, 0.32);
-  color: #ff9eac;
-  background: rgba(152, 44, 96, 0.2);
 }
 
-.account-request-actions:hover:not(:disabled) {
+.account-request-action:hover:not(:disabled) {
   filter: brightness(1.2);
 }
 
-.account-request-actions:disabled {
+.account-request-action:focus-visible {
+  outline: 2px solid #b5a5ff;
+  outline-offset: 2px;
+}
+
+.account-request-action:disabled {
   cursor: wait;
   opacity: 0.6;
 }
@@ -3021,5 +3056,22 @@ body.tv-page {
 
   .admin-topbar-actions {
     gap: 9px;
+  }
+
+  .account-request-action-group {
+    gap: 5px;
+  }
+
+  .account-request-action {
+    min-width: 69px;
+    min-height: 29px;
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
+  .account-request-delete {
+    min-width: 29px;
+    width: 29px;
+    padding: 0;
   }
 }

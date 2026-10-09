@@ -42,6 +42,9 @@ const roomDeviceIds = new Map();
 const roomMemberListeners = new Map();
 const roomRequestListeners = new Map();
 const roomRequestsByRoom = new Map();
+const knownPendingRoomRequestIds = new Map();
+let knownPendingAccountRequestIds = null;
+let requestNotificationAudioContext = null;
 
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", function () {
@@ -105,6 +108,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const isOpen = requestNotificationPanel.hidden;
     requestNotificationPanel.hidden = !isOpen;
     requestNotificationToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+  document.addEventListener("pointerdown", enableRequestNotificationSound, {
+    once: true,
+  });
+  document.addEventListener("keydown", enableRequestNotificationSound, {
+    once: true,
   });
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".admin-profile")) {
@@ -308,6 +317,7 @@ function initializeRoomManagement() {
             stopListening();
             roomRequestListeners.delete(roomId);
             roomRequestsByRoom.delete(roomId);
+            knownPendingRoomRequestIds.delete(roomId);
           }
         });
 
@@ -329,6 +339,21 @@ function initializeRoomManagement() {
             const stopListening = KaraokeSessions.listenRoomRequests(
               room.id,
               (requests) => {
+                const pendingIds = new Set(
+                  requests
+                    .filter((request) => request.status === "pending")
+                    .map((request) => request.id),
+                );
+                const previousPendingIds = knownPendingRoomRequestIds.get(
+                  room.id,
+                );
+                if (
+                  previousPendingIds &&
+                  [...pendingIds].some((id) => !previousPendingIds.has(id))
+                ) {
+                  playRequestNotificationSound();
+                }
+                knownPendingRoomRequestIds.set(room.id, pendingIds);
                 roomRequestsByRoom.set(room.id, requests);
                 renderRoomRequests(
                   Array.from(roomRequestsByRoom.values()).flat(),
@@ -369,6 +394,18 @@ function initializeAccountRequestListener() {
 
   stopListeningToAccountRequests = KaraokeAccountRequests.listenAll(
     (requests) => {
+      const pendingIds = new Set(
+        requests
+          .filter((request) => request.status === "pending")
+          .map((request) => request.id),
+      );
+      if (
+        knownPendingAccountRequestIds &&
+        [...pendingIds].some((id) => !knownPendingAccountRequestIds.has(id))
+      ) {
+        playRequestNotificationSound();
+      }
+      knownPendingAccountRequestIds = pendingIds;
       accountRequests = requests;
       renderAccountRequests();
     },
@@ -437,6 +474,8 @@ function renderAccountRequests() {
         const dateCell = document.createElement("td");
         const statusCell = document.createElement("td");
         const actionCell = document.createElement("td");
+        const actionGroup = document.createElement("div");
+        actionGroup.className = "account-request-action-group";
         usernameCell.textContent = request.username || "Unknown username";
         dateCell.textContent = request.createdAt
           ? new Date(request.createdAt).toLocaleString()
@@ -455,11 +494,13 @@ function renderAccountRequests() {
           approveButton.type = "button";
           approveButton.className =
             "account-request-action account-request-approve";
-          approveButton.textContent = "Approve";
+          approveButton.innerHTML =
+            '<i class="bi bi-check2" aria-hidden="true"></i><span>Approve</span>';
           rejectButton.type = "button";
           rejectButton.className =
             "account-request-action account-request-reject";
-          rejectButton.textContent = "Reject";
+          rejectButton.innerHTML =
+            '<i class="bi bi-x-lg" aria-hidden="true"></i><span>Reject</span>';
           approveButton.addEventListener("click", () =>
             handleAccountRequestDecision(request, "approve", [
               approveButton,
@@ -472,21 +513,30 @@ function renderAccountRequests() {
               rejectButton,
             ]),
           );
-          actionCell.append(approveButton, rejectButton);
+          actionGroup.append(approveButton, rejectButton);
         } else if (request.status === "approved") {
-          actionCell.textContent = "Account created";
+          const resolution = document.createElement("span");
+          resolution.className = "account-request-resolution";
+          resolution.textContent = "Account created";
+          actionGroup.appendChild(resolution);
         } else if (request.status === "rejected") {
-          actionCell.textContent =
+          const resolution = document.createElement("span");
+          resolution.className = "account-request-resolution";
+          resolution.textContent =
             request.resolutionMessage || "Request declined";
+          actionGroup.appendChild(resolution);
         } else {
-          actionCell.textContent = "In progress";
+          const resolution = document.createElement("span");
+          resolution.className = "account-request-resolution";
+          resolution.textContent = "Approval in progress";
+          actionGroup.appendChild(resolution);
         }
 
         if (request.status !== "approving") {
           const deleteButton = document.createElement("button");
           deleteButton.type = "button";
           deleteButton.className =
-            "account-request-actions account-request-delete";
+            "account-request-action account-request-delete";
           deleteButton.title = "Delete request";
           deleteButton.setAttribute(
             "aria-label",
@@ -497,13 +547,50 @@ function renderAccountRequests() {
           deleteButton.addEventListener("click", () =>
             deleteAccountRequest(request, deleteButton),
           );
-          actionCell.appendChild(deleteButton);
+          actionGroup.appendChild(deleteButton);
         }
 
+        actionCell.appendChild(actionGroup);
         row.append(usernameCell, dateCell, statusCell, actionCell);
         return row;
       }),
   );
+}
+
+function enableRequestNotificationSound() {
+  const AudioContextConstructor =
+    window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) return;
+
+  try {
+    requestNotificationAudioContext ??= new AudioContextConstructor();
+    if (requestNotificationAudioContext.state === "suspended") {
+      requestNotificationAudioContext.resume().catch(() => {});
+    }
+  } catch (error) {
+    console.warn("Could not enable request notification sound:", error.message);
+  }
+}
+
+function playRequestNotificationSound() {
+  const audioContext = requestNotificationAudioContext;
+  if (!audioContext || audioContext.state !== "running") return;
+
+  const startAt = audioContext.currentTime;
+  [880, 1174].forEach((frequency, index) => {
+    const oscillator = audioContext.createOscillator();
+    const volume = audioContext.createGain();
+    const toneStart = startAt + index * 0.14;
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, toneStart);
+    volume.gain.setValueAtTime(0.0001, toneStart);
+    volume.gain.exponentialRampToValueAtTime(0.12, toneStart + 0.015);
+    volume.gain.exponentialRampToValueAtTime(0.0001, toneStart + 0.18);
+    oscillator.connect(volume);
+    volume.connect(audioContext.destination);
+    oscillator.start(toneStart);
+    oscillator.stop(toneStart + 0.2);
+  });
 }
 
 function selectAccountRequestView(view) {
