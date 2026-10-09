@@ -53,6 +53,10 @@ let activeRoomMuted = false;
 let tvDisplayEnabled = true;
 let tvDisabledAnnouncement = "";
 let tvAvailabilityListenerAttached = false;
+const TV_ROOM_REQUEST_STORAGE_KEY = "karaoke_tv_room_request_v1";
+let stopListeningToTVRoomRequest = null;
+let activeTVRoomRequestKey = null;
+let tvRoomRequestPollTimer = null;
 
 // SCORING SYSTEM
 let songStartTime = null;
@@ -219,6 +223,21 @@ async function chooseInitialTVRoomId(rooms, globalActiveRoomId) {
     return requestedRoomId;
   }
 
+  const requestState = readTVRoomRequestState();
+  if (
+    ["creating", "pending", "rejected", "missing"].includes(
+      requestState?.status,
+    )
+  ) {
+    return null;
+  }
+  if (
+    requestState?.status === "approved" &&
+    rooms.some((room) => room.id === requestState.approvedRoomId)
+  ) {
+    return requestState.approvedRoomId;
+  }
+
   const roomCounts = new Map(
     await Promise.all(
       rooms.map(async (room) => [
@@ -228,36 +247,226 @@ async function chooseInitialTVRoomId(rooms, globalActiveRoomId) {
     ),
   );
   const savedRoomId = sessionStorage.getItem("karaokeTvRoomId");
-  const globalRoomCount = roomCounts.get(globalActiveRoomId) || 0;
+  const emptyRooms = rooms
+    .filter((room) => (roomCounts.get(room.id) || 0) === 0)
+    .sort((first, second) => (first.createdAt || 0) - (second.createdAt || 0));
+  const preferredEmptyRoomId = [savedRoomId, globalActiveRoomId].find(
+    (roomId) => emptyRooms.some((room) => room.id === roomId),
+  );
+  return preferredEmptyRoomId || emptyRooms[0]?.id || null;
+}
 
-  if (globalRoomCount > 0) {
-    const alternativeRoom = rooms
-      .filter(
-        (room) =>
-          room.id !== globalActiveRoomId &&
-          (roomCounts.get(room.id) || 0) < KaraokeSessions.MAX_DEVICES,
-      )
-      .sort(
-        (first, second) =>
-          (roomCounts.get(first.id) || 0) - (roomCounts.get(second.id) || 0) ||
-          (first.createdAt || 0) - (second.createdAt || 0),
-      )[0];
-    if (alternativeRoom) return alternativeRoom.id;
+function readTVRoomRequestState() {
+  try {
+    return JSON.parse(
+      localStorage.getItem(TV_ROOM_REQUEST_STORAGE_KEY) || "null",
+    );
+  } catch (error) {
+    console.warn("Could not read TV room request state:", error.message);
+    return null;
+  }
+}
+
+function saveTVRoomRequestState(state) {
+  try {
+    localStorage.setItem(TV_ROOM_REQUEST_STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.warn("Could not save TV room request state:", error.message);
+  }
+}
+
+function showTVRoomRequestStatus(title, message, rejected = false) {
+  const splash = document.getElementById("splashScreen");
+  if (!splash) return;
+  splash.innerHTML = `
+    <section style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;padding:24px;box-sizing:border-box;background:#080b13;color:#fff;text-align:center;font-family:'DM Sans',sans-serif">
+      <div aria-hidden="true" style="display:grid;place-items:center;width:60px;height:60px;margin-bottom:22px;border:1px solid ${rejected ? "#c45b68" : "#3c8b80"};border-radius:50%;color:${rejected ? "#ff9eac" : "#7fe0c3"};font-size:30px">${rejected ? "!" : "…"}</div>
+      <h1 id="tvRoomRequestTitle" style="max-width:min(90vw,800px);margin:0;color:#f0f3ff;font-size:clamp(1.5rem,4vw,3rem)"></h1>
+      <p id="tvRoomRequestMessage" style="max-width:min(86vw,760px);margin:18px 0 0;color:#b6c3dc;font-size:clamp(1rem,2.2vw,1.4rem);line-height:1.6;overflow-wrap:anywhere"></p>
+    </section>
+  `;
+  splash.querySelector("#tvRoomRequestTitle").textContent = title;
+  splash.querySelector("#tvRoomRequestMessage").textContent = message;
+  splash.style.display = "flex";
+}
+
+function hideTVRoomRequestStatus() {
+  const splash = document.getElementById("splashScreen");
+  if (!splash) return;
+  splash.style.display = "none";
+  splash.replaceChildren();
+}
+
+function listenToTVRoomRequest(state) {
+  const listenerKey = `${state.anchorRoomId}:${state.requestId}`;
+  if (activeTVRoomRequestKey === listenerKey) return;
+  stopListeningToTVRoomRequest?.();
+  activeTVRoomRequestKey = listenerKey;
+  stopListeningToTVRoomRequest = KaraokeSessions.listenRoomRequest(
+    state.anchorRoomId,
+    state.requestId,
+    async (request) => {
+      const currentState = readTVRoomRequestState() || state;
+      if (!request) {
+        currentState.status = "missing";
+        saveTVRoomRequestState(currentState);
+        showTVRoomRequestStatus(
+          "Room request unavailable",
+          "The request could not be found. Please contact the administrator.",
+          true,
+        );
+      } else if (request.status === "approved" && request.approvedRoomId) {
+        currentState.status = "approved";
+        currentState.approvedRoomId = request.approvedRoomId;
+        saveTVRoomRequestState(currentState);
+        showTVRoomRequestStatus(
+          "Room approved",
+          "Connecting this TV display to the new room...",
+        );
+        const roomSnapshot = await firebase
+          .database()
+          .ref(`karaokeRooms/${request.approvedRoomId}`)
+          .once("value");
+        const room = roomSnapshot.val();
+        if (!room) return;
+        if (!karaokeRooms.some((item) => item.id === request.approvedRoomId)) {
+          karaokeRooms.push({ ...room, id: request.approvedRoomId });
+        }
+        hideTVRoomRequestStatus();
+        activateKaraokeRoom(request.approvedRoomId);
+      } else if (request.status === "rejected") {
+        currentState.status = "rejected";
+        saveTVRoomRequestState(currentState);
+        showTVRoomRequestStatus(
+          "Room request rejected",
+          "The administrator could not open another room. Please contact them for assistance.",
+          true,
+        );
+      } else if (request.status === "approving") {
+        showTVRoomRequestStatus(
+          "Preparing your room",
+          "The administrator approved the request. A new room is being prepared...",
+        );
+      } else {
+        currentState.status = "pending";
+        saveTVRoomRequestState(currentState);
+        showTVRoomRequestStatus(
+          "Waiting for approval",
+          "No unoccupied room is available. A request was sent to the administrator.",
+        );
+      }
+    },
+    (error) => {
+      console.error("Could not follow TV room request:", error.message);
+      showTVRoomRequestStatus(
+        "Waiting for approval",
+        "The room request was sent, but its status cannot be checked right now.",
+      );
+    },
+  );
+}
+
+async function requestTVRoomApproval(anchorRoomId) {
+  const existingRequest = readTVRoomRequestState();
+  if (existingRequest?.status === "pending" && existingRequest.requestId) {
+    listenToTVRoomRequest(existingRequest);
+    return;
+  }
+  if (existingRequest?.status === "approved") {
+    const approvedRoom = karaokeRooms.find(
+      (room) => room.id === existingRequest.approvedRoomId,
+    );
+    if (approvedRoom) {
+      hideTVRoomRequestStatus();
+      activateKaraokeRoom(approvedRoom.id);
+    } else {
+      showTVRoomRequestStatus(
+        "Room approved",
+        "The new room is being added to the TV display...",
+      );
+    }
+    return;
+  }
+  if (
+    existingRequest?.status === "rejected" ||
+    existingRequest?.status === "missing"
+  ) {
+    showTVRoomRequestStatus(
+      "Room request rejected",
+      "The administrator could not open another room. Please contact them for assistance.",
+      true,
+    );
+    return;
+  }
+  if (existingRequest?.status === "creating") {
+    showTVRoomRequestStatus(
+      "Sending request",
+      "A room request is being sent to the administrator...",
+    );
+    if (!tvRoomRequestPollTimer) {
+      tvRoomRequestPollTimer = setInterval(() => {
+        const latestRequest = readTVRoomRequestState();
+        if (latestRequest?.status === "pending" && latestRequest.requestId) {
+          clearInterval(tvRoomRequestPollTimer);
+          tvRoomRequestPollTimer = null;
+          listenToTVRoomRequest(latestRequest);
+        } else if (!latestRequest) {
+          clearInterval(tvRoomRequestPollTimer);
+          tvRoomRequestPollTimer = null;
+          requestTVRoomApproval(anchorRoomId);
+        } else if (
+          latestRequest.status === "creating" &&
+          Date.now() - latestRequest.createdAt > 30000
+        ) {
+          clearInterval(tvRoomRequestPollTimer);
+          tvRoomRequestPollTimer = null;
+          localStorage.removeItem(TV_ROOM_REQUEST_STORAGE_KEY);
+          requestTVRoomApproval(anchorRoomId);
+        }
+      }, 500);
+    }
+    return;
+  }
+  if (!anchorRoomId) {
+    showTVRoomRequestStatus(
+      "Waiting for approval",
+      "No room is available. Waiting for the administrator to add one.",
+    );
+    return;
   }
 
-  const preferredAvailableRoomId = [savedRoomId, globalActiveRoomId].find(
-    (roomId) =>
-      rooms.some((room) => room.id === roomId) &&
-      (roomCounts.get(roomId) || 0) < KaraokeSessions.MAX_DEVICES,
+  const creatingState = {
+    status: "creating",
+    anchorRoomId,
+    createdAt: Date.now(),
+  };
+  saveTVRoomRequestState(creatingState);
+  showTVRoomRequestStatus(
+    "Sending request",
+    "No unoccupied room is available. Sending a request to the administrator...",
   );
-  if (preferredAvailableRoomId) return preferredAvailableRoomId;
-
-  const leastOccupiedRoom = [...rooms].sort(
-    (first, second) =>
-      (roomCounts.get(first.id) || 0) - (roomCounts.get(second.id) || 0) ||
-      (first.createdAt || 0) - (second.createdAt || 0),
-  )[0];
-  return leastOccupiedRoom?.id || globalActiveRoomId || savedRoomId || null;
+  try {
+    const request = await KaraokeSessions.createRoomRequest(
+      "TV Display",
+      anchorRoomId,
+    );
+    const pendingState = {
+      status: "pending",
+      anchorRoomId,
+      requestId: request.id,
+      createdAt: request.createdAt,
+    };
+    saveTVRoomRequestState(pendingState);
+    listenToTVRoomRequest(pendingState);
+  } catch (error) {
+    localStorage.removeItem(TV_ROOM_REQUEST_STORAGE_KEY);
+    console.error("Could not request another TV room:", error.message);
+    showTVRoomRequestStatus(
+      "Room request failed",
+      "Could not send the room request. Check the connection and reload this page.",
+      true,
+    );
+  }
 }
 
 function initializeKaraokeRooms() {
@@ -278,6 +487,8 @@ function initializeKaraokeRooms() {
                   !rooms.some((room) => room.id === activeKaraokeRoomId)
                 ) {
                   activateKaraokeRoom(roomId);
+                } else if (!roomId) {
+                  requestTVRoomApproval(activeRoomId || rooms[0]?.id || null);
                 }
               })
               .catch((error) =>
