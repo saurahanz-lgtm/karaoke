@@ -2044,6 +2044,37 @@ body.admin-page {
   border-radius: 20px;
   font-size: 11px;
 }
+.admin-page .tv-announcement-control {
+  width: min(100%, 480px);
+  margin-top: 16px;
+}
+.admin-page .tv-announcement-control .form-label {
+  margin-bottom: 6px;
+  color: #d9e3fb;
+  font-size: 11px;
+  font-weight: 600;
+}
+.admin-page .tv-announcement-control .form-select,
+.admin-page .tv-announcement-control .form-control {
+  border-color: rgba(110, 137, 232, 0.38);
+  color: #edf2ff;
+  background-color: #081533;
+  font-size: 11px;
+}
+.admin-page .tv-announcement-control .form-control {
+  margin-top: 8px;
+  resize: vertical;
+}
+.admin-page .tv-announcement-preview {
+  margin: 8px 0 0;
+  color: #b5c4e3;
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.admin-page .tv-announcement-control [hidden] {
+  display: none;
+}
 .admin-page .tv-btn {
   border-radius: 7px;
   font-size: 11px;
@@ -2609,6 +2640,33 @@ body.tv-page {
   border-color: rgba(101, 123, 239, 0.48) !important;
   background: rgba(63, 66, 166, 0.2) !important;
   color: #dbe2ff;
+}
+
+.singer-page .controls button:disabled,
+.singer-page .volume-slider:disabled,
+.singer-page .song-item-btn:disabled,
+.singer-page .refresh.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.singer-page .refresh.is-disabled {
+  pointer-events: none;
+}
+
+.singer-page .tv-availability-notice {
+  padding: 11px 13px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(240, 173, 78, 0.6);
+  border-radius: 8px;
+  color: #ffe5ad;
+  background: rgba(183, 121, 31, 0.2);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.singer-page .tv-availability-notice[hidden] {
+  display: none;
 }
 
 .singer-page .controls .play,

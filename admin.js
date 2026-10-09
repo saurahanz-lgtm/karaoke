@@ -248,6 +248,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Load TV display status on page load
+  initializeTVAnnouncementControls();
   loadTVDisplayStatus();
 });
 
@@ -2630,6 +2631,61 @@ function showNotification(message, type = "info") {
 }
 // ===== TV DISPLAY CONTROL FUNCTIONS =====
 
+const TV_ANNOUNCEMENT_TEMPLATES = {
+  maintenance:
+    "The karaoke system is under maintenance. Please check back soon.",
+  systemUpdate:
+    "We are updating the karaoke system. Singing will be available again shortly.",
+  temporarilyUnavailable:
+    "The TV display is temporarily unavailable. Please try again later.",
+  privateEvent: "The TV display is reserved for a private event.",
+};
+
+function getTVAnnouncementFromControls() {
+  const selectedTemplate = document.getElementById(
+    "tvAnnouncementTemplate",
+  ).value;
+  if (selectedTemplate === "custom") {
+    return (
+      document.getElementById("tvAnnouncementCustom").value.trim() ||
+      TV_ANNOUNCEMENT_TEMPLATES.maintenance
+    );
+  }
+  return TV_ANNOUNCEMENT_TEMPLATES[selectedTemplate];
+}
+
+function updateTVAnnouncementPreview() {
+  const template = document.getElementById("tvAnnouncementTemplate");
+  const customMessage = document.getElementById("tvAnnouncementCustom");
+  customMessage.hidden = template.value !== "custom";
+  document.getElementById("tvAnnouncementPreview").textContent =
+    `TV message: ${getTVAnnouncementFromControls()}`;
+}
+
+function initializeTVAnnouncementControls() {
+  const template = document.getElementById("tvAnnouncementTemplate");
+  const customMessage = document.getElementById("tvAnnouncementCustom");
+  template.addEventListener("change", updateTVAnnouncementPreview);
+  customMessage.addEventListener("input", updateTVAnnouncementPreview);
+  updateTVAnnouncementPreview();
+}
+
+function setTVAnnouncementControls(announcement) {
+  const matchingTemplate = Object.entries(TV_ANNOUNCEMENT_TEMPLATES).find(
+    ([, message]) => message === announcement,
+  );
+  const template = document.getElementById("tvAnnouncementTemplate");
+  const customMessage = document.getElementById("tvAnnouncementCustom");
+  if (announcement && !matchingTemplate) {
+    template.value = "custom";
+    customMessage.value = announcement;
+  } else {
+    template.value = matchingTemplate?.[0] || "maintenance";
+    customMessage.value = "";
+  }
+  updateTVAnnouncementPreview();
+}
+
 // Load TV display status from Firebase
 function loadTVDisplayStatus() {
   if (typeof firebase === "undefined" || !firebase.database) {
@@ -2641,12 +2697,14 @@ function loadTVDisplayStatus() {
   try {
     firebase
       .database()
-      .ref("tvControl/enabled")
+      .ref("tvControl")
       .on(
         "value",
         (snapshot) => {
-          const isEnabled = snapshot.val() !== false; // Default to true if not set
+          const settings = snapshot.val() || {};
+          const isEnabled = settings.enabled !== false;
           console.log("📺 TV Display Status Loaded from Firebase:", isEnabled);
+          setTVAnnouncementControls(settings.announcement || "");
           updateTVStatusUI(isEnabled);
         },
         (err) => {
@@ -2693,10 +2751,11 @@ function enableTVDisplay() {
   try {
     firebase
       .database()
-      .ref("tvControl/enabled")
-      .set(true)
+      .ref("tvControl")
+      .update({ enabled: true, announcement: null })
       .then(() => {
         console.log("✅ TV Display Enabled via Firebase");
+        setTVAnnouncementControls("");
         updateTVStatusUI(true);
         showNotification("✅ TV Display has been ENABLED", "success");
       })
@@ -2731,10 +2790,11 @@ function disableTVDisplay() {
   }
 
   try {
+    const announcement = getTVAnnouncementFromControls();
     firebase
       .database()
-      .ref("tvControl/enabled")
-      .set(false)
+      .ref("tvControl")
+      .update({ enabled: false, announcement })
       .then(() => {
         console.log("✅ TV Display Disabled via Firebase");
         updateTVStatusUI(false);

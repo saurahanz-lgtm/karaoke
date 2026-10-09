@@ -645,6 +645,35 @@
                 <div style="margin-top: 12px">
                   <span class="tv-status" id="tvStatus">🟢 ENABLED</span>
                 </div>
+                <div class="tv-announcement-control">
+                  <label class="form-label" for="tvAnnouncementTemplate">
+                    Message shown while TV is disabled
+                  </label>
+                  <select class="form-select" id="tvAnnouncementTemplate">
+                    <option value="maintenance">
+                      Under maintenance
+                    </option>
+                    <option value="systemUpdate">System update</option>
+                    <option value="temporarilyUnavailable">
+                      Temporarily unavailable
+                    </option>
+                    <option value="privateEvent">Private event</option>
+                    <option value="custom">Custom message</option>
+                  </select>
+                  <textarea
+                    class="form-control"
+                    id="tvAnnouncementCustom"
+                    maxlength="180"
+                    rows="2"
+                    placeholder="Write a short message for the TV display"
+                    hidden
+                  ></textarea>
+                  <p
+                    class="tv-announcement-preview"
+                    id="tvAnnouncementPreview"
+                    aria-live="polite"
+                  ></p>
+                </div>
               </div>
               <div class="tv-control-buttons">
                 <button

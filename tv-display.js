@@ -49,6 +49,9 @@ let stopListeningToRoomVolume = null;
 let stopListeningToRoomMuted = null;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
+let tvDisplayEnabled = true;
+let tvDisabledAnnouncement = "";
+let tvAvailabilityListenerAttached = false;
 
 // SCORING SYSTEM
 let songStartTime = null;
@@ -168,6 +171,7 @@ function activateKaraokeRoom(roomId) {
     roomId,
     {
       onQueue: (queue) => {
+        if (!tvDisplayEnabled) return;
         tvQueue = queue;
         firebaseReady = true;
         if (queue.length && (!currentSong || !currentSong.videoId)) {
@@ -188,6 +192,7 @@ function activateKaraokeRoom(roomId) {
         checkBootupCompletion();
       },
       onCurrentSong: (song) => {
+        if (!tvDisplayEnabled) return;
         if (!song?.videoId) {
           clearCurrentSongPlayback();
           return;
@@ -254,7 +259,7 @@ function selectKaraokeRoom(roomId) {
 }
 
 function handleRoomControl(control) {
-  if (!control?.command) return;
+  if (!tvDisplayEnabled || !control?.command) return;
   console.log("📱 Room control command received:", control.command);
 
   switch (control.command) {
@@ -303,9 +308,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Check if TV is enabled before initializing
   checkTVEnabled(function (isEnabled) {
+    tvDisplayEnabled = isEnabled;
     if (!isEnabled) {
       console.warn("⚠️ TV Display is DISABLED");
-      showTVDisabledMessage();
+      showTVDisabledMessage(tvDisabledAnnouncement);
       return;
     }
 
@@ -398,19 +404,37 @@ function initializeTVDisplay() {
     try {
       firebase
         .database()
-        .ref("tvControl/enabled")
+        .ref("tvControl")
         .on("value", (snapshot) => {
-          const isEnabled = snapshot.val() !== false;
+          const settings = snapshot.val() || {};
+          const isEnabled = settings.enabled !== false;
           console.log(
             "📺 TV Status Changed:",
             isEnabled ? "ENABLED" : "DISABLED",
           );
 
           if (!isEnabled) {
+            tvDisplayEnabled = false;
+            tvDisabledAnnouncement =
+              settings.announcement ||
+              "The TV display is temporarily unavailable. Please check back soon.";
             console.warn("⚠️ TV Display has been DISABLED by admin");
-            showTVDisabledMessage();
+            stopListeningToRoom?.();
+            stopListeningToRoom = null;
+            stopListeningToMembers?.();
+            stopListeningToMembers = null;
+            stopListeningToRoomVolume?.();
+            stopListeningToRoomVolume = null;
+            stopListeningToRoomMuted?.();
+            stopListeningToRoomMuted = null;
+            clearCurrentSongPlayback();
+            showTVDisabledMessage(tvDisabledAnnouncement);
+          } else if (!tvDisplayEnabled) {
+            tvDisplayEnabled = true;
+            window.location.reload();
           }
         });
+      tvAvailabilityListenerAttached = true;
     } catch (e) {
       console.warn("Error setting up TV status listener:", e.message);
     }
@@ -852,7 +876,7 @@ function createYouTubePlayer() {
 
 // D. SINGLE ENTRY POINT (MOST IMPORTANT)
 function tryInitPlayback() {
-  if (!ytReady || !firebaseReady) {
+  if (!tvDisplayEnabled || !ytReady || !firebaseReady) {
     console.log(
       `⏳ Not ready yet: ytReady=${ytReady}, firebaseReady=${firebaseReady}`,
     );
@@ -1832,9 +1856,11 @@ function checkTVEnabled(callback) {
   try {
     firebase
       .database()
-      .ref("tvControl/enabled")
+      .ref("tvControl")
       .once("value", (snapshot) => {
-        const isEnabled = snapshot.val() !== false; // Default to true if not set
+        const settings = snapshot.val() || {};
+        tvDisabledAnnouncement = settings.announcement || "";
+        const isEnabled = settings.enabled !== false;
         console.log("📺 TV Enabled Status from Firebase:", isEnabled);
         callback(isEnabled);
       })
@@ -1854,42 +1880,55 @@ function checkTVEnabled(callback) {
 }
 
 // Show TV disabled message
-function showTVDisabledMessage() {
+function showTVDisabledMessage(announcement = tvDisabledAnnouncement) {
+  tvDisplayEnabled = false;
+  tvDisabledAnnouncement =
+    announcement ||
+    "The TV display is temporarily unavailable. Please check back soon.";
   const splashScreen = document.getElementById("splashScreen");
   if (splashScreen) {
     splashScreen.innerHTML = `
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; color: white; text-align: center; background: linear-gradient(135deg, #1a0a2e 0%, #0f0f1e 100%); padding: 20px; box-sizing: border-box; font-family: Arial, sans-serif;">
                 <div style="font-size: clamp(40px, 12vw, 100px); margin-bottom: clamp(15px, 5vw, 40px);">🔴</div>
                 <h1 style="font-size: clamp(1.5rem, 8vw, 3.5rem); font-weight: 700; margin: 0 0 clamp(10px, 3vw, 25px) 0; letter-spacing: 2px;">TV DISPLAY</h1>
-                <h2 style="font-size: clamp(1.2rem, 6vw, 2.5rem); font-weight: 500; margin: 0 0 clamp(8px, 2vw, 15px) 0; color: #ef4444;">DISABLED</h2>
-                <p style="font-size: clamp(0.9rem, 3.5vw, 1.3rem); color: #999; margin: clamp(15px, 3vw, 30px) auto 0; max-width: 90%; line-height: 1.6;">
-                    The TV display has been disabled by the admin.<br>
-                    Please contact an administrator to enable it.
+                <h2 style="font-size: clamp(1.2rem, 6vw, 2.5rem); font-weight: 500; margin: 0 0 clamp(8px, 2vw, 15px) 0; color: #ef4444;">TEMPORARILY UNAVAILABLE</h2>
+                <p id="tvDisabledAnnouncement" style="font-size: clamp(0.9rem, 3.5vw, 1.3rem); color: #d5d9e3; margin: clamp(15px, 3vw, 30px) auto 0; max-width: 90%; line-height: 1.6;"></p>
+                <p style="font-size: clamp(0.85rem, 3vw, 1.1rem); color: #999; margin: 14px auto 0; max-width: 90%; line-height: 1.6;">
+                    Song reservations and playback are temporarily disabled.
                 </p>
                 <div style="margin-top: clamp(25px, 5vw, 50px); font-size: clamp(0.75rem, 2.5vw, 1rem); color: #666; line-height: 1.8;">
-                    <p style="margin: 0;">Admin can enable it from the dashboard</p>
-                    <p style="margin: clamp(20px, 3vw, 40px) 0 0 0; font-size: clamp(0.7rem, 2vw, 0.9rem);">⏰ Please wait or refresh the page</p>
+                    <p style="margin: 0;">Please wait for the administrator to restore service.</p>
                 </div>
             </div>
         `;
+    document.getElementById("tvDisabledAnnouncement").textContent =
+      tvDisabledAnnouncement;
     splashScreen.style.display = "flex";
   }
 
-  // Also listen for TV to be re-enabled
-  if (typeof firebase !== "undefined" && firebase.database) {
+  if (
+    !tvAvailabilityListenerAttached &&
+    typeof firebase !== "undefined" &&
+    firebase.database
+  ) {
     try {
       firebase
         .database()
-        .ref("tvControl/enabled")
+        .ref("tvControl")
         .on("value", (snapshot) => {
-          const isEnabled = snapshot.val() !== false;
-          if (isEnabled) {
+          const settings = snapshot.val() || {};
+          if (settings.enabled !== false) {
             console.log("📺 TV has been re-enabled, reloading...");
             setTimeout(() => {
               location.reload();
             }, 1000);
+          } else if (settings.announcement) {
+            tvDisabledAnnouncement = settings.announcement;
+            const message = document.getElementById("tvDisabledAnnouncement");
+            if (message) message.textContent = tvDisabledAnnouncement;
           }
         });
+      tvAvailabilityListenerAttached = true;
     } catch (e) {
       console.warn("Error setting up listener:", e.message);
     }

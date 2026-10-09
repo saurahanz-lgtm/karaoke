@@ -17,6 +17,18 @@
     return firebase.database();
   }
 
+  async function assertTVDisplayEnabled() {
+    const snapshot = await database().ref("tvControl").once("value");
+    const settings = snapshot.val() || {};
+    if (settings.enabled === false) {
+      const error = new Error("TV_DISPLAY_DISABLED");
+      error.announcement =
+        settings.announcement ||
+        "The TV display is temporarily unavailable. Please check back soon.";
+      throw error;
+    }
+  }
+
   function getDeviceId() {
     let deviceId = localStorage.getItem("karaoke_room_device_id");
     if (!deviceId) {
@@ -546,6 +558,7 @@
   }
 
   async function addSong(roomId, song) {
+    await assertTVDisplayEnabled();
     const result = await roomRef(roomId).transaction((current) => {
       const room = current || {};
       const queue = normalizeQueue(room.queue);
@@ -567,6 +580,7 @@
   }
 
   async function claimNextSong(roomId) {
+    await assertTVDisplayEnabled();
     return roomRef(roomId).transaction((current) => {
       const room = current || {};
       if (room.currentSong?.videoId) return undefined;
@@ -582,6 +596,7 @@
   }
 
   async function advanceToNextSong(roomId) {
+    await assertTVDisplayEnabled();
     return roomRef(roomId).transaction((current) => {
       const room = current || {};
       const queue = normalizeQueue(room.queue);
@@ -597,7 +612,8 @@
     });
   }
 
-  function sendControl(roomId, command, payload = {}) {
+  async function sendControl(roomId, command, payload = {}) {
+    await assertTVDisplayEnabled();
     return roomRef(roomId, "control").update({
       ...payload,
       command,

@@ -545,6 +545,14 @@
         </button>
       </div>
 
+      <div
+        class="tv-availability-notice"
+        id="tvAvailabilityNotice"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
+
       <!-- PLAYER -->
       <div class="card-ui">
         <div style="margin-bottom: 15px; font-size: 18px; font-weight: 600">
@@ -693,8 +701,57 @@
       let roomMuted = false;
       let roomCurrentSong = null;
       let roomQueue = [];
+      let tvDisplayEnabled = true;
+      let tvDisabledAnnouncement = "";
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
+
+      function applyTVControlAvailability() {
+        const disabled = !tvDisplayEnabled;
+        ["muteBtn", "playPauseBtn", "volumeSlider"].forEach((id) => {
+          const control = document.getElementById(id);
+          if (control) control.disabled = disabled;
+        });
+        const skipButton = document.querySelector(".controls .stop");
+        if (skipButton) skipButton.disabled = disabled;
+        const refreshButton = document.querySelector(".refresh");
+        if (refreshButton) {
+          refreshButton.classList.toggle("is-disabled", disabled);
+          refreshButton.setAttribute("aria-disabled", String(disabled));
+        }
+        document.querySelectorAll(".song-item-btn").forEach((button) => {
+          button.disabled = disabled;
+          button.title = disabled
+            ? "Song reservations are unavailable while the TV is disabled"
+            : "Reserve this song";
+        });
+      }
+
+      function updateTVDisplayAvailability(settings = {}) {
+        tvDisplayEnabled = settings.enabled !== false;
+        tvDisabledAnnouncement =
+          settings.announcement ||
+          "The TV display is temporarily unavailable. Please check back soon.";
+        const notice = document.getElementById("tvAvailabilityNotice");
+        notice.hidden = tvDisplayEnabled;
+        notice.textContent = tvDisplayEnabled
+          ? ""
+          : `${tvDisabledAnnouncement} Song reservations and playback are temporarily disabled.`;
+        applyTVControlAvailability();
+      }
+
+      function listenToTVDisplayAvailability() {
+        if (typeof firebase === "undefined" || !firebase.database) return;
+        firebase
+          .database()
+          .ref("tvControl")
+          .on(
+            "value",
+            (snapshot) => updateTVDisplayAvailability(snapshot.val() || {}),
+            (error) =>
+              console.warn("Could not check TV availability:", error.message),
+          );
+      }
 
       function getRoomLoginUrl() {
         const roomId = KaraokeSessions.getRoomIdFromUrl();
@@ -828,6 +885,7 @@
       // Initialize page on load
       document.addEventListener("DOMContentLoaded", async function () {
         if (!checkSingerLogin()) return;
+        listenToTVDisplayAvailability();
 
         try {
           const logoutChannel = new BroadcastChannel("karaoke_user_updates");
@@ -1431,10 +1489,18 @@
         });
 
         container.innerHTML = html;
+        applyTVControlAvailability();
       }
 
       // Request song
       async function requestSong(title, artist, videoId, userName, btn) {
+        if (!tvDisplayEnabled) {
+          showAlert(
+            `${tvDisabledAnnouncement} Song reservations are temporarily disabled.`,
+            "danger",
+          );
+          return;
+        }
         if (!userName.trim()) {
           alert("Please enter your name first");
           return;
@@ -1469,9 +1535,11 @@
         } catch (error) {
           console.error("Error requesting song:", error);
           showAlert(
-            error.message === "ROOM_FULL"
-              ? "This room is full. Join another room from the TV."
-              : "Error adding song. Check your connection and try again.",
+            error.message === "TV_DISPLAY_DISABLED"
+              ? `${error.announcement || tvDisabledAnnouncement} Song reservations are temporarily disabled.`
+              : error.message === "ROOM_FULL"
+                ? "This room is full. Join another room from the TV."
+                : "Error adding song. Check your connection and try again.",
             "danger",
           );
           btn.disabled = false;
@@ -1535,7 +1603,7 @@
 
       // Set current song and trigger auto-play
       async function setCurrentSongAndAutoPlay(song) {
-        if (!activeKaraokeRoomId) return;
+        if (!tvDisplayEnabled || !activeKaraokeRoomId) return;
         const roomCurrentSong = {
           title: song.title,
           artist: song.artist,
@@ -1692,6 +1760,10 @@
 
       // Reload player - restart current song on TV display
       function reloadPlayer() {
+        if (!tvDisplayEnabled) {
+          showAlert(tvDisabledAnnouncement, "danger");
+          return;
+        }
         animateRefreshButton();
 
         console.log("🔄 Reload requested");
@@ -1724,6 +1796,10 @@
 
       // Toggle play/pause on TV display
       function togglePlayPause() {
+        if (!tvDisplayEnabled) {
+          showAlert(tvDisabledAnnouncement, "danger");
+          return;
+        }
         console.log("⏯️ Play/Pause toggled");
 
         if (
@@ -1746,6 +1822,10 @@
 
       // Stop player - skip to next song on TV display
       function stopPlayer() {
+        if (!tvDisplayEnabled) {
+          showAlert(tvDisabledAnnouncement, "danger");
+          return;
+        }
         console.log("⏭️ Stop (skip) requested");
 
         if (
@@ -1768,6 +1848,10 @@
 
       // Toggle mute on TV display
       function toggleMute() {
+        if (!tvDisplayEnabled) {
+          showAlert(tvDisabledAnnouncement, "danger");
+          return;
+        }
         if (!activeKaraokeRoomId || !useSingerFirebase) {
           showAlert("Firebase not available - controls disabled", "warning");
           return;
