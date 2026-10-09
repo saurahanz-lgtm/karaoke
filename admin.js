@@ -43,6 +43,8 @@ const roomMemberListeners = new Map();
 const roomRequestListeners = new Map();
 const roomRequestsByRoom = new Map();
 const knownPendingRoomRequestIds = new Map();
+let roomRequestApprovalAudioContext = null;
+let pendingRoomRequestApprovalId = null;
 let knownPendingAccountRequestIds = null;
 let requestNotificationAudioContext = null;
 
@@ -1001,11 +1003,19 @@ function watchRoomRequestForSinger() {
   const roomId = params.get("room");
   const requestId = params.get("request");
   const status = document.getElementById("roomRequestConfirmationStatus");
+  let roomApprovalNavigationStarted = false;
   if (!roomId || !requestId) {
     status.textContent =
       "Request details are missing. Return to karaoke and send the request again.";
     return;
   }
+
+  document.addEventListener("pointerdown", enableRoomRequestApprovalSound, {
+    once: true,
+  });
+  document.addEventListener("keydown", enableRoomRequestApprovalSound, {
+    once: true,
+  });
 
   KaraokeSessions.listenRoomRequest(
     roomId,
@@ -1014,11 +1024,20 @@ function watchRoomRequestForSinger() {
       if (!request) {
         status.textContent =
           "Could not find your room request. Return to karaoke and try again.";
-      } else if (request.status === "approved" && request.approvedRoomId) {
+      } else if (
+        request.status === "approved" &&
+        request.approvedRoomId &&
+        !roomApprovalNavigationStarted
+      ) {
+        roomApprovalNavigationStarted = true;
         status.textContent = "Approved! Connecting you to your new room...";
+        const soundStarted = playRoomRequestApprovalSound(requestId);
         const url = new URL("singer.html", window.location.href);
         url.searchParams.set("room", request.approvedRoomId);
-        window.location.replace(url.toString());
+        window.setTimeout(
+          () => window.location.replace(url.toString()),
+          soundStarted ? 900 : 1800,
+        );
       } else if (request.status === "rejected") {
         status.textContent =
           "Your room request was rejected. You can return to karaoke and try again later.";
@@ -1033,6 +1052,65 @@ function watchRoomRequestForSinger() {
         "Could not check your request status. Please refresh this page.";
     },
   );
+}
+
+function enableRoomRequestApprovalSound() {
+  const AudioContextConstructor =
+    window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) return;
+
+  try {
+    roomRequestApprovalAudioContext ??= new AudioContextConstructor();
+    const resumePromise =
+      roomRequestApprovalAudioContext.state === "suspended"
+        ? roomRequestApprovalAudioContext.resume()
+        : Promise.resolve();
+    resumePromise
+      .then(() => {
+        if (
+          pendingRoomRequestApprovalId &&
+          roomRequestApprovalAudioContext.state === "running"
+        ) {
+          const requestId = pendingRoomRequestApprovalId;
+          pendingRoomRequestApprovalId = null;
+          playRoomRequestApprovalSound(requestId);
+        }
+      })
+      .catch(() => {});
+  } catch (error) {
+    console.warn("Could not enable room approval sound:", error.message);
+  }
+}
+
+function playRoomRequestApprovalSound(requestId) {
+  const playedKey = `karaoke_room_approval_sound_${requestId}`;
+  if (sessionStorage.getItem(playedKey)) return true;
+  if (
+    !roomRequestApprovalAudioContext ||
+    roomRequestApprovalAudioContext.state !== "running"
+  ) {
+    pendingRoomRequestApprovalId = requestId;
+    enableRoomRequestApprovalSound();
+    return false;
+  }
+
+  sessionStorage.setItem(playedKey, "1");
+  const startAt = roomRequestApprovalAudioContext.currentTime;
+  [784, 1046].forEach((frequency, index) => {
+    const oscillator = roomRequestApprovalAudioContext.createOscillator();
+    const volume = roomRequestApprovalAudioContext.createGain();
+    const toneStart = startAt + index * 0.14;
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, toneStart);
+    volume.gain.setValueAtTime(0.0001, toneStart);
+    volume.gain.exponentialRampToValueAtTime(0.12, toneStart + 0.015);
+    volume.gain.exponentialRampToValueAtTime(0.0001, toneStart + 0.2);
+    oscillator.connect(volume);
+    volume.connect(roomRequestApprovalAudioContext.destination);
+    oscillator.start(toneStart);
+    oscillator.stop(toneStart + 0.22);
+  });
+  return true;
 }
 
 // Validate Firebase session match for admin

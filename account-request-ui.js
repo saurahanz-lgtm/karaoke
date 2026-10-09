@@ -11,6 +11,57 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   let stopWatchingRequest = null;
   let currentRequestStatus = null;
+  let requestApprovalAudioContext = null;
+
+  function enableRequestApprovalSound() {
+    const AudioContextConstructor =
+      window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextConstructor) return;
+
+    try {
+      requestApprovalAudioContext ??= new AudioContextConstructor();
+      if (requestApprovalAudioContext.state === "suspended") {
+        requestApprovalAudioContext.resume().catch(() => {});
+      }
+    } catch (error) {
+      console.warn("Could not enable account approval sound:", error.message);
+    }
+  }
+
+  function playRequestApprovalSound(requestId) {
+    const playedKey = `karaoke_account_approval_sound_${requestId}`;
+    if (
+      sessionStorage.getItem(playedKey) ||
+      !requestApprovalAudioContext ||
+      requestApprovalAudioContext.state !== "running"
+    ) {
+      return;
+    }
+
+    sessionStorage.setItem(playedKey, "1");
+    const startAt = requestApprovalAudioContext.currentTime;
+    [784, 1046].forEach((frequency, index) => {
+      const oscillator = requestApprovalAudioContext.createOscillator();
+      const volume = requestApprovalAudioContext.createGain();
+      const toneStart = startAt + index * 0.14;
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, toneStart);
+      volume.gain.setValueAtTime(0.0001, toneStart);
+      volume.gain.exponentialRampToValueAtTime(0.12, toneStart + 0.015);
+      volume.gain.exponentialRampToValueAtTime(0.0001, toneStart + 0.2);
+      oscillator.connect(volume);
+      volume.connect(requestApprovalAudioContext.destination);
+      oscillator.start(toneStart);
+      oscillator.stop(toneStart + 0.22);
+    });
+  }
+
+  document.addEventListener("pointerdown", enableRequestApprovalSound, {
+    once: true,
+  });
+  document.addEventListener("keydown", enableRequestApprovalSound, {
+    once: true,
+  });
 
   function setDefaultRequestButtonText() {
     if (currentRequestStatus === "approved") {
@@ -56,7 +107,11 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        const previousStatus = currentRequestStatus;
         currentRequestStatus = request.status;
+        if (request.status === "approved" && previousStatus !== "approved") {
+          playRequestApprovalSound(requestId);
+        }
         usernameInput.value = request.username || usernameInput.value;
         usernameInput.disabled = true;
         submitButton.disabled = true;

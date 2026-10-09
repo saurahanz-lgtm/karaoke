@@ -39,20 +39,13 @@
   }
 
   function generateRoomId() {
-    const alphabet =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    const randomValues = new Uint8Array(6);
+    const randomValues = new Uint16Array(1);
     if (global.crypto?.getRandomValues) {
       global.crypto.getRandomValues(randomValues);
     } else {
-      for (let index = 0; index < randomValues.length; index += 1) {
-        randomValues[index] = Math.floor(Math.random() * 256);
-      }
+      randomValues[0] = Math.floor(Math.random() * 10000);
     }
-    return Array.from(
-      randomValues,
-      (value) => alphabet[value % alphabet.length],
-    ).join("");
+    return `sd${String(randomValues[0] % 10000).padStart(4, "0")}`;
   }
 
   function normalizeQueue(value) {
