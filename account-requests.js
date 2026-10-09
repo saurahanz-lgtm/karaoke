@@ -103,6 +103,17 @@
     return result.snapshot.val();
   }
 
+  async function remove(id) {
+    if (!id) throw new Error("REQUEST_ID_REQUIRED");
+    const ref = database().ref(`${REQUESTS_PATH}/${id}`);
+    const result = await ref.transaction((request) =>
+      request && ["pending", "approved", "rejected"].includes(request.status)
+        ? null
+        : undefined,
+    );
+    if (!result.committed) throw new Error("REQUEST_NOT_DELETABLE");
+  }
+
   async function approve(id) {
     const db = database();
     const requestRef = db.ref(`${REQUESTS_PATH}/${id}`);
@@ -188,6 +199,7 @@
     create,
     listen,
     listenAll,
+    remove,
     reject,
   };
 })(window);

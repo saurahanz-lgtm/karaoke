@@ -411,27 +411,65 @@
           <div class="topbar-status">
             <span class="live-indicator"></span><span>System overview</span>
           </div>
-          <div class="admin-profile">
-            <button
-              class="admin-profile-toggle"
-              id="adminProfileToggle"
-              type="button"
-              aria-haspopup="true"
-              aria-expanded="false"
-              aria-controls="adminProfileMenu"
-            >
-              <span class="profile-avatar"
-                ><i class="bi bi-person-fill"></i
-              ></span>
-              <span class="profile-copy"
-                ><strong id="adminProfileName">Administrator</strong
-                ><small>Administrator</small></span
+          <div class="admin-topbar-actions">
+            <div class="admin-notifications">
+              <button
+                class="admin-notification-toggle"
+                id="adminRequestNotificationsButton"
+                type="button"
+                aria-label="Notifications: no pending requests"
+                aria-expanded="false"
+                aria-controls="adminRequestNotificationsPanel"
+                title="Pending account and room requests"
               >
-              <i class="bi bi-chevron-down profile-chevron"></i>
-            </button>
-            <div class="profile-menu" id="adminProfileMenu" role="menu" hidden>
-              <button type="button" role="menuitem" onclick="logout()">
-                <i class="bi bi-box-arrow-right"></i>Log out
+                <i class="bi bi-bell" aria-hidden="true"></i>
+                <span
+                  class="admin-notification-count"
+                  id="adminRequestNotificationCount"
+                  hidden
+                ></span>
+              </button>
+              <div
+                class="admin-notification-panel"
+                id="adminRequestNotificationsPanel"
+                aria-label="Pending requests"
+                hidden
+              >
+                <h2>Pending requests</h2>
+                <p id="adminRequestNotificationsEmpty">
+                  No pending requests.
+                </p>
+                <div id="adminRequestNotificationList"></div>
+              </div>
+            </div>
+            <div class="admin-profile">
+              <button
+                class="admin-profile-toggle"
+                id="adminProfileToggle"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="adminProfileMenu"
+              >
+                <span class="profile-avatar"
+                  ><i class="bi bi-person-fill"></i
+                ></span>
+                <span class="profile-copy"
+                  ><strong id="adminProfileName">Administrator</strong
+                  ><small>Administrator</small></span
+                >
+                <i class="bi bi-chevron-down profile-chevron"></i>
+              </button>
+              <div
+                class="profile-menu"
+                id="adminProfileMenu"
+                role="menu"
+                hidden
+              >
+                <button type="button" role="menuitem" onclick="logout()">
+                  <i class="bi bi-box-arrow-right"></i>Log out
+                </button>
+              </div>
               </button>
             </div>
           </div>
@@ -783,12 +821,36 @@
                     Review new account requests and issue approved credentials.
                   </p>
                 </div>
-                <span
-                  id="pendingAccountRequestCount"
-                  class="account-request-count"
-                >
-                  0 pending
-                </span>
+                <div class="account-request-controls">
+                  <span
+                    id="pendingAccountRequestCount"
+                    class="account-request-count"
+                  >
+                    0 pending
+                  </span>
+                  <div
+                    class="account-request-filters"
+                    role="group"
+                    aria-label="Account request status"
+                  >
+                    <button
+                      class="account-request-filter"
+                      type="button"
+                      data-account-request-filter="pending"
+                      aria-pressed="true"
+                    >
+                      Pending
+                    </button>
+                    <button
+                      class="account-request-filter"
+                      type="button"
+                      data-account-request-filter="history"
+                      aria-pressed="false"
+                    >
+                      History
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="table-responsive">
                 <table class="table table-dark table-hover">
@@ -808,6 +870,41 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              <div class="account-list-footer">
+                <nav
+                  id="accountRequestsPagination"
+                  class="account-pagination"
+                  aria-label="Account request pages"
+                  hidden
+                >
+                  <button
+                    id="previousAccountRequestsPage"
+                    class="account-page-arrow"
+                    type="button"
+                    aria-label="Previous account request page"
+                    title="Previous page"
+                  >
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                  </button>
+                  <span class="account-page-indicator" aria-live="polite">
+                    <span class="visually-hidden">Account request page </span>
+                    <span id="currentAccountRequestsPage">1</span>
+                    <span class="account-page-divider" aria-hidden="true"
+                      >/</span
+                    >
+                    <span id="totalAccountRequestsPages">1</span>
+                  </span>
+                  <button
+                    id="nextAccountRequestsPage"
+                    class="account-page-arrow"
+                    type="button"
+                    aria-label="Next account request page"
+                    title="Next page"
+                  >
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                  </button>
+                </nav>
               </div>
             </section>
             <div class="account-stats">

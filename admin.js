@@ -27,7 +27,10 @@ let currentEditingUserId = null;
 let loggedInUser = null;
 let currentFilter = null;
 let currentUserPage = 1;
+let currentAccountRequestView = "pending";
+let currentAccountRequestPage = 1;
 const USERS_PER_PAGE = 5;
+const ACCOUNT_REQUESTS_PER_PAGE = 5;
 let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
 let accountRequests = [];
@@ -47,6 +50,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const profileToggle = document.getElementById("adminProfileToggle");
   const profileMenu = document.getElementById("adminProfileMenu");
+  const requestNotificationToggle = document.getElementById(
+    "adminRequestNotificationsButton",
+  );
+  const requestNotificationPanel = document.getElementById(
+    "adminRequestNotificationsPanel",
+  );
   const sidebar = document.getElementById("adminSidebar");
   const sidebarToggle = document.getElementById("mobileSidebarToggle");
   const sidebarBackdrop = document.getElementById("mobileSidebarBackdrop");
@@ -92,10 +101,19 @@ document.addEventListener("DOMContentLoaded", function () {
     profileMenu.hidden = !isOpen;
     profileToggle.setAttribute("aria-expanded", String(isOpen));
   });
+  requestNotificationToggle.addEventListener("click", () => {
+    const isOpen = requestNotificationPanel.hidden;
+    requestNotificationPanel.hidden = !isOpen;
+    requestNotificationToggle.setAttribute("aria-expanded", String(isOpen));
+  });
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".admin-profile")) {
       profileMenu.hidden = true;
       profileToggle.setAttribute("aria-expanded", "false");
+    }
+    if (!event.target.closest(".admin-notifications")) {
+      requestNotificationPanel.hidden = true;
+      requestNotificationToggle.setAttribute("aria-expanded", "false");
     }
   });
   document.addEventListener("keydown", (event) => {
@@ -104,6 +122,12 @@ document.addEventListener("DOMContentLoaded", function () {
       sidebarToggle.getAttribute("aria-expanded") === "true"
     ) {
       setMobileSidebarOpen(false);
+      return;
+    }
+    if (event.key === "Escape" && !requestNotificationPanel.hidden) {
+      requestNotificationPanel.hidden = true;
+      requestNotificationToggle.setAttribute("aria-expanded", "false");
+      requestNotificationToggle.focus();
       return;
     }
     if (event.key === "Escape" && !profileMenu.hidden) {
@@ -144,6 +168,25 @@ document.addEventListener("DOMContentLoaded", function () {
     currentUserPage += 1;
     displayUsers();
   });
+  document
+    .querySelectorAll("[data-account-request-filter]")
+    .forEach((button) => {
+      button.addEventListener("click", () =>
+        selectAccountRequestView(button.dataset.accountRequestFilter),
+      );
+    });
+  document
+    .getElementById("previousAccountRequestsPage")
+    .addEventListener("click", () => {
+      currentAccountRequestPage = Math.max(1, currentAccountRequestPage - 1);
+      renderAccountRequests();
+    });
+  document
+    .getElementById("nextAccountRequestsPage")
+    .addEventListener("click", () => {
+      currentAccountRequestPage += 1;
+      renderAccountRequests();
+    });
   document
     .getElementById("createRoomForm")
     .addEventListener("submit", handleCreateRoom);
@@ -296,6 +339,7 @@ function initializeRoomManagement() {
           }
         });
 
+        updateAdminRequestNotifications();
         document.getElementById("roomMonitorStatus").textContent =
           "Live room status";
         renderKaraokeRooms();
@@ -338,72 +382,219 @@ function initializeAccountRequestListener() {
 
 function renderAccountRequests() {
   const tableBody = document.getElementById("accountRequestsTableBody");
+  const pagination = document.getElementById("accountRequestsPagination");
+  const previousButton = document.getElementById("previousAccountRequestsPage");
+  const nextButton = document.getElementById("nextAccountRequestsPage");
   const pendingCount = accountRequests.filter(
     (request) => request.status === "pending",
   ).length;
   document.getElementById("pendingAccountRequestCount").textContent =
     `${pendingCount} pending`;
+  updateAdminRequestNotifications();
 
-  if (accountRequests.length === 0) {
+  const visibleRequests =
+    currentAccountRequestView === "history"
+      ? accountRequests.filter((request) =>
+          ["approved", "rejected"].includes(request.status),
+        )
+      : accountRequests.filter((request) =>
+          ["pending", "approving"].includes(request.status),
+        );
+  if (visibleRequests.length === 0) {
+    currentAccountRequestPage = 1;
+    pagination.hidden = true;
     tableBody.innerHTML =
-      '<tr><td colspan="4" class="text-center text-white-50">No account requests yet.</td></tr>';
+      currentAccountRequestView === "history"
+        ? '<tr><td colspan="4" class="text-center text-white-50">No approved or rejected requests yet.</td></tr>'
+        : '<tr><td colspan="4" class="text-center text-white-50">No pending account requests.</td></tr>';
     return;
   }
 
+  const pageCount = Math.ceil(
+    visibleRequests.length / ACCOUNT_REQUESTS_PER_PAGE,
+  );
+  currentAccountRequestPage = Math.min(
+    Math.max(1, currentAccountRequestPage),
+    pageCount,
+  );
+  pagination.hidden = pageCount <= 1;
+  previousButton.disabled = currentAccountRequestPage === 1;
+  nextButton.disabled = currentAccountRequestPage === pageCount;
+  document.getElementById("currentAccountRequestsPage").textContent = String(
+    currentAccountRequestPage,
+  );
+  document.getElementById("totalAccountRequestsPages").textContent =
+    String(pageCount);
+  const firstRequestIndex =
+    (currentAccountRequestPage - 1) * ACCOUNT_REQUESTS_PER_PAGE;
+
   tableBody.replaceChildren(
-    ...accountRequests.map((request) => {
-      const row = document.createElement("tr");
-      const usernameCell = document.createElement("td");
-      const dateCell = document.createElement("td");
-      const statusCell = document.createElement("td");
-      const actionCell = document.createElement("td");
-      usernameCell.textContent = request.username || "Unknown username";
-      dateCell.textContent = request.createdAt
-        ? new Date(request.createdAt).toLocaleString()
-        : "-";
+    ...visibleRequests
+      .slice(firstRequestIndex, firstRequestIndex + ACCOUNT_REQUESTS_PER_PAGE)
+      .map((request) => {
+        const row = document.createElement("tr");
+        const usernameCell = document.createElement("td");
+        const dateCell = document.createElement("td");
+        const statusCell = document.createElement("td");
+        const actionCell = document.createElement("td");
+        usernameCell.textContent = request.username || "Unknown username";
+        dateCell.textContent = request.createdAt
+          ? new Date(request.createdAt).toLocaleString()
+          : "-";
 
-      const status =
-        request.status === "approving" ? "processing" : request.status;
-      const statusBadge = document.createElement("span");
-      statusBadge.className = `request-status request-status-${status || "pending"}`;
-      statusBadge.textContent = status || "pending";
-      statusCell.appendChild(statusBadge);
+        const status =
+          request.status === "approving" ? "processing" : request.status;
+        const statusBadge = document.createElement("span");
+        statusBadge.className = `request-status request-status-${status || "pending"}`;
+        statusBadge.textContent = status || "pending";
+        statusCell.appendChild(statusBadge);
 
-      if (request.status === "pending") {
-        const approveButton = document.createElement("button");
-        const rejectButton = document.createElement("button");
-        approveButton.type = "button";
-        approveButton.className =
-          "account-request-action account-request-approve";
-        approveButton.textContent = "Approve";
-        rejectButton.type = "button";
-        rejectButton.className =
-          "account-request-action account-request-reject";
-        rejectButton.textContent = "Reject";
-        approveButton.addEventListener("click", () =>
-          handleAccountRequestDecision(request, "approve", [
-            approveButton,
-            rejectButton,
-          ]),
-        );
-        rejectButton.addEventListener("click", () =>
-          handleAccountRequestDecision(request, "reject", [
-            approveButton,
-            rejectButton,
-          ]),
-        );
-        actionCell.append(approveButton, rejectButton);
-      } else if (request.status === "approved") {
-        actionCell.textContent = "Account created";
-      } else if (request.status === "rejected") {
-        actionCell.textContent =
-          request.resolutionMessage || "Request declined";
-      } else {
-        actionCell.textContent = "In progress";
-      }
+        if (request.status === "pending") {
+          const approveButton = document.createElement("button");
+          const rejectButton = document.createElement("button");
+          approveButton.type = "button";
+          approveButton.className =
+            "account-request-action account-request-approve";
+          approveButton.textContent = "Approve";
+          rejectButton.type = "button";
+          rejectButton.className =
+            "account-request-action account-request-reject";
+          rejectButton.textContent = "Reject";
+          approveButton.addEventListener("click", () =>
+            handleAccountRequestDecision(request, "approve", [
+              approveButton,
+              rejectButton,
+            ]),
+          );
+          rejectButton.addEventListener("click", () =>
+            handleAccountRequestDecision(request, "reject", [
+              approveButton,
+              rejectButton,
+            ]),
+          );
+          actionCell.append(approveButton, rejectButton);
+        } else if (request.status === "approved") {
+          actionCell.textContent = "Account created";
+        } else if (request.status === "rejected") {
+          actionCell.textContent =
+            request.resolutionMessage || "Request declined";
+        } else {
+          actionCell.textContent = "In progress";
+        }
 
-      row.append(usernameCell, dateCell, statusCell, actionCell);
-      return row;
+        if (request.status !== "approving") {
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className =
+            "account-request-actions account-request-delete";
+          deleteButton.title = "Delete request";
+          deleteButton.setAttribute(
+            "aria-label",
+            `Delete account request from ${request.username || "unknown user"}`,
+          );
+          deleteButton.innerHTML =
+            '<i class="bi bi-trash3" aria-hidden="true"></i>';
+          deleteButton.addEventListener("click", () =>
+            deleteAccountRequest(request, deleteButton),
+          );
+          actionCell.appendChild(deleteButton);
+        }
+
+        row.append(usernameCell, dateCell, statusCell, actionCell);
+        return row;
+      }),
+  );
+}
+
+function selectAccountRequestView(view) {
+  currentAccountRequestView = view === "history" ? "history" : "pending";
+  currentAccountRequestPage = 1;
+  document
+    .querySelectorAll("[data-account-request-filter]")
+    .forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        String(
+          button.dataset.accountRequestFilter === currentAccountRequestView,
+        ),
+      );
+    });
+  renderAccountRequests();
+}
+
+async function deleteAccountRequest(request, button) {
+  if (
+    !window.confirm(
+      `Delete the account request from "${request.username || "unknown user"}"? This cannot be undone.`,
+    )
+  ) {
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    await KaraokeAccountRequests.remove(request.id);
+    showNotification("Account request deleted.", "info");
+  } catch (error) {
+    console.error("Could not delete account request:", error.message);
+    button.disabled = false;
+    showNotification(
+      error.message === "REQUEST_NOT_DELETABLE"
+        ? "This request is being approved or no longer exists."
+        : "Could not delete the account request. Check the Firebase connection.",
+      "danger",
+    );
+  }
+}
+
+function updateAdminRequestNotifications() {
+  const count = document.getElementById("adminRequestNotificationCount");
+  const toggle = document.getElementById("adminRequestNotificationsButton");
+  const emptyMessage = document.getElementById(
+    "adminRequestNotificationsEmpty",
+  );
+  const list = document.getElementById("adminRequestNotificationList");
+  if (!count || !toggle || !emptyMessage || !list) return;
+
+  const pendingRequests = [
+    ...accountRequests
+      .filter((request) => request.status === "pending")
+      .map((request) => ({
+        label: `Account request from ${request.username || "unknown user"}`,
+        view: "users",
+        createdAt: request.createdAt || 0,
+      })),
+    ...Array.from(roomRequestsByRoom.values())
+      .flat()
+      .filter((request) => request.status === "pending")
+      .map((request) => ({
+        label: `Room request from ${request.username || "singer"} (${request.roomId || "unknown room"})`,
+        view: "requests",
+        createdAt: request.createdAt || 0,
+      })),
+  ].sort((first, second) => second.createdAt - first.createdAt);
+
+  count.textContent =
+    pendingRequests.length > 99 ? "99+" : String(pendingRequests.length);
+  count.hidden = pendingRequests.length === 0;
+  toggle.setAttribute(
+    "aria-label",
+    `Notifications: ${pendingRequests.length} pending ${pendingRequests.length === 1 ? "request" : "requests"}`,
+  );
+  emptyMessage.hidden = pendingRequests.length > 0;
+  list.replaceChildren(
+    ...pendingRequests.map((request) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "admin-notification-item";
+      button.textContent = request.label;
+      button.addEventListener("click", () => {
+        if (request.view === "users") selectAccountRequestView("pending");
+        setAdminView(request.view);
+        document.getElementById("adminRequestNotificationsPanel").hidden = true;
+        toggle.setAttribute("aria-expanded", "false");
+      });
+      return button;
     }),
   );
 }
@@ -446,6 +637,7 @@ async function handleAccountRequestDecision(request, decision, buttons) {
 }
 
 function renderRoomRequests(requests) {
+  updateAdminRequestNotifications();
   const tableBody = document.getElementById("roomRequestsTableBody");
   const pendingCount = requests.filter(
     (request) => request.status === "pending",
