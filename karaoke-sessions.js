@@ -296,7 +296,6 @@
       callback(
         Object.entries(requests)
           .map(([id, request]) => ({ ...request, id }))
-          .filter((request) => request.status === "pending")
           .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)),
       );
     };
@@ -352,13 +351,15 @@
 
   function rejectRoomRequest(roomId, requestId) {
     const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
-    return requestRef.transaction((request) =>
-      request?.status === "pending"
-        ? { ...request, status: "rejected", handledAt: Date.now() }
-        : undefined,
-    ).then((result) => {
-      if (!result.committed) throw new Error("ROOM_REQUEST_ALREADY_RESOLVED");
-    });
+    return requestRef
+      .transaction((request) =>
+        request?.status === "pending"
+          ? { ...request, status: "rejected", handledAt: Date.now() }
+          : undefined,
+      )
+      .then((result) => {
+        if (!result.committed) throw new Error("ROOM_REQUEST_ALREADY_RESOLVED");
+      });
   }
 
   function listenRoom(roomId, handlers, onError) {

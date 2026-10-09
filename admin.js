@@ -41,27 +41,40 @@ document.addEventListener("DOMContentLoaded", function () {
   // Check if user is logged in
   if (!checkAuthentication()) return;
 
-  const adminMenuToggle = document.getElementById("adminMenuToggle");
-  const adminMenuClose = document.getElementById("adminMenuClose");
-  const adminMenuBackdrop = document.getElementById("adminMenuBackdrop");
+  const profileToggle = document.getElementById("adminProfileToggle");
+  const profileMenu = document.getElementById("adminProfileMenu");
   document.querySelectorAll("[data-admin-view-target]").forEach((button) => {
     button.addEventListener("click", () => {
       setAdminView(button.dataset.adminViewTarget);
-      setAdminMenuOpen(false);
     });
   });
-  adminMenuToggle.addEventListener("click", () => setAdminMenuOpen(true));
-  adminMenuClose.addEventListener("click", () => setAdminMenuOpen(false));
-  adminMenuBackdrop.addEventListener("click", () => setAdminMenuOpen(false));
-  document.addEventListener("keydown", (event) => {
-    if (
-      event.key === "Escape" &&
-      !document.getElementById("adminMenu").hidden
-    ) {
-      setAdminMenuOpen(false);
+  profileToggle.addEventListener("click", () => {
+    const isOpen = profileMenu.hidden;
+    profileMenu.hidden = !isOpen;
+    profileToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".admin-profile")) {
+      profileMenu.hidden = true;
+      profileToggle.setAttribute("aria-expanded", "false");
     }
   });
-  setAdminView("singers");
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !profileMenu.hidden) {
+      profileMenu.hidden = true;
+      profileToggle.setAttribute("aria-expanded", "false");
+      profileToggle.focus();
+    }
+  });
+  document.getElementById("adminProfileName").textContent =
+    loggedInUser?.username || "Administrator";
+  document.getElementById("todayDate").textContent =
+    new Date().toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  setAdminView("dashboard");
 
   // Load users from localStorage
   loadUsers();
@@ -72,6 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("addUserForm")
     .addEventListener("submit", handleAddUser);
+  document.getElementById("userSearch").addEventListener("input", displayUsers);
   document
     .getElementById("createRoomForm")
     .addEventListener("submit", handleCreateRoom);
@@ -128,27 +142,6 @@ document.addEventListener("DOMContentLoaded", function () {
   loadTVDisplayStatus();
 });
 
-function setAdminMenuOpen(isOpen) {
-  const menu = document.getElementById("adminMenu");
-  const toggle = document.getElementById("adminMenuToggle");
-  const backdrop = document.getElementById("adminMenuBackdrop");
-
-  menu.hidden = !isOpen;
-  backdrop.hidden = !isOpen;
-  toggle.setAttribute("aria-expanded", String(isOpen));
-  toggle.setAttribute(
-    "aria-label",
-    isOpen ? "Close admin menu" : "Open admin menu",
-  );
-  document.body.style.overflow = isOpen ? "hidden" : "";
-
-  if (isOpen) {
-    document.getElementById("adminMenuClose").focus();
-  } else {
-    toggle.focus();
-  }
-}
-
 function setAdminView(viewName) {
   const selectedView = document.querySelector(
     `[data-admin-view="${viewName}"]`,
@@ -168,6 +161,20 @@ function setAdminView(viewName) {
       button.removeAttribute("aria-current");
     }
   });
+  const heading = document.getElementById("viewHeading");
+  const subheading = document.getElementById("viewSubheading");
+  const viewCopy = {
+    dashboard: ["Dashboard", "A live overview of your karaoke system."],
+    users: ["User Management", "Manage registered accounts and access."],
+    tv: ["TV Display Control", "Manage the shared karaoke screen."],
+    rooms: ["Karaoke Rooms", "Monitor rooms and connected singers."],
+    requests: ["Room Requests", "Review requests waiting for approval."],
+    addUser: ["Add New User", "Create an account for your karaoke system."],
+  }[viewName];
+  if (viewCopy && heading && subheading) {
+    heading.textContent = viewCopy[0];
+    subheading.textContent = viewCopy[1];
+  }
 }
 
 function initializeRoomManagement() {
@@ -234,6 +241,7 @@ function initializeRoomManagement() {
         document.getElementById("roomMonitorStatus").textContent =
           "Live room status";
         renderKaraokeRooms();
+        renderDashboard();
       });
     })
     .catch((error) => {
@@ -247,12 +255,15 @@ function initializeRoomManagement() {
 
 function renderRoomRequests(requests) {
   const tableBody = document.getElementById("roomRequestsTableBody");
+  const pendingCount = requests.filter(
+    (request) => request.status === "pending",
+  ).length;
   document.getElementById("pendingRoomRequestCount").textContent =
-    `${requests.length} pending`;
+    `${pendingCount} pending · ${requests.length} total`;
 
   if (requests.length === 0) {
     tableBody.innerHTML =
-      '<tr><td colspan="4" class="text-center text-white-50">No pending requests.</td></tr>';
+      '<tr><td colspan="5" class="text-center text-white-50">No room requests yet.</td></tr>';
     return;
   }
 
@@ -262,34 +273,47 @@ function renderRoomRequests(requests) {
       const singerCell = document.createElement("td");
       const roomCell = document.createElement("td");
       const dateCell = document.createElement("td");
+      const statusCell = document.createElement("td");
       const actionCell = document.createElement("td");
-      const approveButton = document.createElement("button");
-      const rejectButton = document.createElement("button");
       singerCell.textContent = request.username || "Singer";
       roomCell.textContent = request.roomId || "Unknown room";
       dateCell.textContent = request.createdAt
         ? new Date(request.createdAt).toLocaleString()
         : "-";
-      approveButton.type = "button";
-      approveButton.className = "btn btn-sm btn-success me-2";
-      approveButton.textContent = "Approve";
-      rejectButton.type = "button";
-      rejectButton.className = "btn btn-sm btn-outline-danger";
-      rejectButton.textContent = "Reject";
-      approveButton.addEventListener("click", () =>
-        handleRoomRequestDecision(request, "approve", [
-          approveButton,
-          rejectButton,
-        ]),
-      );
-      rejectButton.addEventListener("click", () =>
-        handleRoomRequestDecision(request, "reject", [
-          approveButton,
-          rejectButton,
-        ]),
-      );
-      actionCell.append(approveButton, rejectButton);
-      row.append(singerCell, roomCell, dateCell, actionCell);
+      const status =
+        request.status === "approving" ? "processing" : request.status;
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `request-status request-status-${status || "pending"}`;
+      statusBadge.textContent = status || "pending";
+      statusCell.appendChild(statusBadge);
+      if (request.status === "pending") {
+        const approveButton = document.createElement("button");
+        const rejectButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.className = "btn btn-sm btn-success me-2";
+        approveButton.textContent = "Approve";
+        rejectButton.type = "button";
+        rejectButton.className = "btn btn-sm btn-outline-danger";
+        rejectButton.textContent = "Reject";
+        approveButton.addEventListener("click", () =>
+          handleRoomRequestDecision(request, "approve", [
+            approveButton,
+            rejectButton,
+          ]),
+        );
+        rejectButton.addEventListener("click", () =>
+          handleRoomRequestDecision(request, "reject", [
+            approveButton,
+            rejectButton,
+          ]),
+        );
+        actionCell.append(approveButton, rejectButton);
+      } else {
+        actionCell.textContent = request.approvedRoomId
+          ? `Room ${request.approvedRoomId}`
+          : "-";
+      }
+      row.append(singerCell, roomCell, dateCell, statusCell, actionCell);
       return row;
     }),
   );
@@ -340,10 +364,11 @@ function renderKaraokeRooms() {
   );
   document.getElementById("totalRoomDevices").textContent =
     String(totalDevices);
+  renderDashboard();
 
   if (karaokeRooms.length === 0) {
     tableBody.innerHTML =
-      '<tr><td colspan="4" class="text-center text-white-50">No rooms created yet.</td></tr>';
+      '<tr><td colspan="5" class="text-center text-white-50">No rooms created yet.</td></tr>';
     return;
   }
 
@@ -353,11 +378,22 @@ function renderKaraokeRooms() {
       const nameCell = document.createElement("td");
       const codeCell = document.createElement("td");
       const devicesCell = document.createElement("td");
+      const statusCell = document.createElement("td");
       const actionCell = document.createElement("td");
       nameCell.textContent = room.name;
       codeCell.textContent = room.id;
       const deviceCount = roomDeviceCounts.get(room.id) || 0;
       devicesCell.textContent = `${deviceCount} / ${KaraokeSessions.MAX_DEVICES}`;
+      const statusBadge = document.createElement("span");
+      const roomStatus =
+        deviceCount >= KaraokeSessions.MAX_DEVICES
+          ? "full"
+          : deviceCount > 0
+            ? "occupied"
+            : "available";
+      statusBadge.className = `account-state room-state-${roomStatus}`;
+      statusBadge.textContent = roomStatus;
+      statusCell.appendChild(statusBadge);
       if (room.id === "main") {
         actionCell.textContent = "Default room";
       } else {
@@ -375,7 +411,7 @@ function renderKaraokeRooms() {
         );
         actionCell.appendChild(deleteButton);
       }
-      row.append(nameCell, codeCell, devicesCell, actionCell);
+      row.append(nameCell, codeCell, devicesCell, statusCell, actionCell);
       return row;
     }),
   );
@@ -944,47 +980,8 @@ function loadFromLocalStorage() {
     }
   }
 
-  // Fallback to demo data if localStorage is empty or invalid
-  console.log("⚠️ localStorage empty or invalid. Using demo data.");
-  users = [
-    {
-      id: 1,
-      username: "john_doe",
-      password: "pass123",
-      role: "admin",
-      joined: "2024-01-01",
-      lastActivity: 0,
-      disabled: false,
-    },
-    {
-      id: 2,
-      username: "maria_santos",
-      password: "pass123",
-      role: "admin",
-      joined: "2024-01-02",
-      lastActivity: 0,
-      disabled: false,
-    },
-    {
-      id: 3,
-      username: "sarah_johnson",
-      password: "pass123",
-      role: "admin",
-      joined: "2024-01-03",
-      lastActivity: 0,
-      disabled: false,
-    },
-    {
-      id: 4,
-      username: "admin_user",
-      password: "admin123",
-      role: "admin",
-      joined: "2024-01-01",
-      lastActivity: 0,
-      disabled: false,
-    },
-  ];
-  saveUsers(); // Save demo data
+  console.log("ℹ️ No cached accounts found; waiting for Firebase data.");
+  users = [];
 }
 
 // Save users to Firebase/localStorage
@@ -1464,12 +1461,7 @@ function continueAddUser(username, password, role) {
   document.getElementById("addUserForm").reset();
 
   // Close modal
-  const modal = bootstrap.Modal.getInstance(
-    document.getElementById("addUserModal"),
-  );
-  if (modal) {
-    modal.hide();
-  }
+  setAdminView("users");
 
   showNotification(`✅ User "${username}" added successfully!`, "success");
   displayUsers();
@@ -1488,12 +1480,25 @@ function validatePassword(password) {
 function handleAddUser(e) {
   e.preventDefault();
 
+  if (loggedInUser?.role !== "admin") {
+    showNotification("Only administrators can create accounts.", "danger");
+    return;
+  }
+
   const username = document.getElementById("userName").value.trim();
   const password = document.getElementById("userPassword").value.trim();
   const role = document.getElementById("userRole").value;
 
   if (!username || !password || !role) {
     showNotification("Please fill in all fields", "warning");
+    return;
+  }
+
+  if (role === "admin" && loggedInUser?.role !== "admin") {
+    showNotification(
+      "Only administrators can create admin accounts.",
+      "danger",
+    );
     return;
   }
 
@@ -1508,6 +1513,15 @@ function displayUsers() {
 
   // Filter users based on current filter and validity
   let filteredUsers = users.filter((u) => u && u.username); // Ensure valid users only
+  const searchTerm = document
+    .getElementById("userSearch")
+    ?.value.trim()
+    .toLowerCase();
+  if (searchTerm) {
+    filteredUsers = filteredUsers.filter((user) =>
+      String(user.username).toLowerCase().includes(searchTerm),
+    );
+  }
   if (currentFilter === "online") {
     filteredUsers = filteredUsers.filter((u) => isUserOnline(u));
   } else if (currentFilter === "offline") {
@@ -1526,8 +1540,7 @@ function displayUsers() {
   let html = "";
   filteredUsers.forEach((user, index) => {
     const isOnline = isUserOnline(user);
-    const statusColor = isOnline ? "#28a745" : "#6c757d";
-    const statusLabel = isOnline ? "🟢 Online" : "⚫ Offline";
+    const statusLabel = isOnline ? "Online" : "Offline";
     // Handle both number and string formats for lastActivity
     const lastActivityNum =
       typeof user.lastActivity === "string"
@@ -1539,44 +1552,62 @@ function displayUsers() {
         : "Never";
     const isDisabled = user.disabled || false;
     const disabledBadge = isDisabled
-      ? '<span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 8px;">🔒 DISABLED</span>'
+      ? '<span class="account-state account-state-disabled">Disabled</span>'
       : "";
+    const roleBadge =
+      user.role === "admin"
+        ? '<span class="role-badge role-badge-admin">Admin</span>'
+        : '<span class="role-badge role-badge-user">User</span>';
+    const safeUsername = escapeHtml(user.username);
 
     html += `
-            <tr style="border-bottom: 1px solid rgba(102, 126, 234, 0.2); opacity: ${isDisabled ? "0.6" : "1"};">
-                <td style="padding: 1.2rem;">${index + 1}</td>
-                <td style="padding: 1.2rem;">
-                    <strong>${user.username}</strong>
+        <tr class="${isDisabled ? "account-disabled" : ""}">
+          <td>${index + 1}</td>
+          <td>
+            <strong>${safeUsername}</strong>
                     ${disabledBadge}
                 </td>
-                <td style="padding: 1.2rem;">
-                    <span style="background: ${statusColor}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
-                        ${statusLabel}
-                    </span>
-                </td>
-                <td style="padding: 1.2rem;">
-                    <small style="opacity: 0.8;">Last: ${lastActivityText}</small>
-                </td>
-                <td style="padding: 1.2rem;">${user.joined}</td>
-                <td style="padding: 1.2rem;">
-                    <button class="btn btn-sm btn-warning" onclick="openChangePasswordModal(${user.id}, '${user.username}')" style="margin-right: 5px;">
-                        🔐 Pass
-                    </button>
-                    <button class="btn btn-sm ${isDisabled ? "btn-success" : "btn-secondary"}" onclick="toggleUserDisabled(${user.id})" style="margin-right: 5px;">
-                        ${isDisabled ? "🔓 Enable" : "🔒 Disable"}
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="logoutUser(${user.id})" style="margin-right: 5px;" ${loggedInUser?.username === user.username ? 'disabled title="You cannot logout yourself from this panel"' : ""}>
-                        🚪 Logout
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
-                        🗑️ Delete
-                    </button>
+          <td>${roleBadge}</td>
+          <td><span class="account-state ${isOnline ? "account-state-online" : "account-state-offline"}">${statusLabel}</span>${disabledBadge}</td>
+          <td>${lastActivityText}</td>
+          <td>${escapeHtml(user.joined || "-")}</td>
+          <td class="account-actions">
+                    <button class="table-action" type="button" data-account-action="edit" data-user-id="${escapeHtml(user.id)}" aria-label="Edit ${safeUsername}" title="Edit account"><i class="bi bi-pencil-square"></i></button>
+                    <button class="table-action" type="button" data-account-action="password" data-user-id="${escapeHtml(user.id)}" aria-label="Reset password for ${safeUsername}" title="Reset password"><i class="bi bi-key"></i></button>
+                    <button class="table-action" type="button" data-account-action="toggle" data-user-id="${escapeHtml(user.id)}" aria-label="${isDisabled ? "Enable" : "Disable"} ${safeUsername}" title="${isDisabled ? "Enable" : "Disable"} account"><i class="bi ${isDisabled ? "bi-unlock" : "bi-lock"}"></i></button>
+                    <button class="table-action" type="button" data-account-action="logout" data-user-id="${escapeHtml(user.id)}" aria-label="Log out ${safeUsername}" title="Log out account" ${loggedInUser?.username === user.username ? "disabled" : ""}><i class="bi bi-box-arrow-right"></i></button>
+                    <button class="table-action table-action-danger" type="button" data-account-action="delete" data-user-id="${escapeHtml(user.id)}" aria-label="Delete ${safeUsername}" title="Delete account"><i class="bi bi-trash3"></i></button>
                 </td>
             </tr>
         `;
   });
 
   tbody.innerHTML = html;
+  tbody.querySelectorAll("[data-account-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const user = users.find(
+        (account) => String(account.id) === button.dataset.userId,
+      );
+      if (!user) return;
+      switch (button.dataset.accountAction) {
+        case "edit":
+          openEditModal(user.id);
+          break;
+        case "password":
+          openChangePasswordModal(user.id, user.username);
+          break;
+        case "toggle":
+          toggleUserDisabled(user.id);
+          break;
+        case "logout":
+          logoutUser(user.id);
+          break;
+        case "delete":
+          deleteUser(user.id);
+          break;
+      }
+    });
+  });
 }
 
 // Update statistics
@@ -1586,6 +1617,80 @@ function updateStats() {
   document.getElementById("totalRegularUsers").textContent = onlineCount;
   const offlineCount = users.filter((u) => !isUserOnline(u)).length;
   document.getElementById("totalAdmins").textContent = offlineCount;
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const totalUsers = document.getElementById("dashboardTotalUsers");
+  if (!totalUsers) return;
+
+  const onlineUsers = users.filter((user) => isUserOnline(user)).length;
+  const activeRooms = karaokeRooms.filter(
+    (room) => (roomDeviceCounts.get(room.id) || 0) > 0,
+  ).length;
+  const availableRooms = karaokeRooms.filter(
+    (room) =>
+      (roomDeviceCounts.get(room.id) || 0) < KaraokeSessions.MAX_DEVICES,
+  ).length;
+  totalUsers.textContent = String(users.length);
+  document.getElementById("dashboardOnlineUsers").textContent =
+    String(onlineUsers);
+  document.getElementById("dashboardActiveRooms").textContent =
+    String(activeRooms);
+  document.getElementById("dashboardAvailableRooms").textContent =
+    String(availableRooms);
+
+  const roomList = document.getElementById("dashboardRoomStatus");
+  roomList.replaceChildren();
+  karaokeRooms.slice(0, 5).forEach((room) => {
+    const item = document.createElement("li");
+    const count = roomDeviceCounts.get(room.id) || 0;
+    const status =
+      count >= KaraokeSessions.MAX_DEVICES
+        ? "Full"
+        : count > 0
+          ? "Occupied"
+          : "Available";
+    item.innerHTML = `<span class="room-dot ${count ? "room-dot-active" : "room-dot-idle"}"></span><span class="dashboard-room-name">${escapeHtml(room.name)}</span><span class="dashboard-room-meta">${status}</span><span class="dashboard-room-count">${count}/${KaraokeSessions.MAX_DEVICES}</span>`;
+    roomList.appendChild(item);
+  });
+  if (!karaokeRooms.length) {
+    roomList.innerHTML =
+      '<li class="dashboard-empty">Room data is loading.</li>';
+  }
+
+  const activityList = document.getElementById("dashboardRecentActivity");
+  const recentUsers = [...users]
+    .filter((user) => user && user.username && Number(user.lastActivity) > 0)
+    .sort(
+      (first, second) =>
+        Number(second.lastActivity) - Number(first.lastActivity),
+    )
+    .slice(0, 5);
+  activityList.replaceChildren();
+  recentUsers.forEach((user) => {
+    const item = document.createElement("li");
+    item.innerHTML = `<span class="activity-mark"><i class="bi bi-person-check"></i></span><span class="activity-copy"><strong>${escapeHtml(user.username)} active</strong><small>${new Date(Number(user.lastActivity)).toLocaleString()}</small></span>`;
+    activityList.appendChild(item);
+  });
+  if (!recentUsers.length) {
+    activityList.innerHTML =
+      '<li class="dashboard-empty">No recent activity recorded.</li>';
+  }
+}
+
+function escapeHtml(value) {
+  return String(value).replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[character],
+  );
 }
 
 function initializePresenceListener() {
@@ -1927,18 +2032,17 @@ function loadTVDisplayStatus() {
     firebase
       .database()
       .ref("tvControl/enabled")
-      .once("value", (snapshot) => {
-        const isEnabled = snapshot.val() !== false; // Default to true if not set
-        console.log("📺 TV Display Status Loaded from Firebase:", isEnabled);
-        updateTVStatusUI(isEnabled);
-      })
-      .catch((err) => {
-        console.error("❌ Firebase error loading TV status:", err.message);
-        console.log(
-          'Make sure Firebase Rules are set to: { "rules": { ".read": true, ".write": true } }',
-        );
-        updateTVStatusUI(true); // Default to enabled on error
-      });
+      .on(
+        "value",
+        (snapshot) => {
+          const isEnabled = snapshot.val() !== false; // Default to true if not set
+          console.log("📺 TV Display Status Loaded from Firebase:", isEnabled);
+          updateTVStatusUI(isEnabled);
+        },
+        (err) => {
+          console.error("❌ Firebase error loading TV status:", err.message);
+        },
+      );
   } catch (e) {
     console.error("Firebase exception:", e.message);
     updateTVStatusUI(true);
@@ -1953,12 +2057,12 @@ function updateTVStatusUI(isEnabled) {
 
   if (statusElement) {
     if (isEnabled) {
-      statusElement.textContent = "🟢 ENABLED";
+      statusElement.textContent = "TV Display Enabled";
       statusElement.className = "tv-status tv-status-enabled";
       if (enableBtn) enableBtn.disabled = true;
       if (disableBtn) disableBtn.disabled = false;
     } else {
-      statusElement.textContent = "🔴 DISABLED";
+      statusElement.textContent = "TV Display Disabled";
       statusElement.className = "tv-status tv-status-disabled";
       if (enableBtn) enableBtn.disabled = false;
       if (disableBtn) disableBtn.disabled = true;
