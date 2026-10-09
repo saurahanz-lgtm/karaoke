@@ -30,6 +30,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="karaoke-sessions.js"></script>
+    <script src="account-requests.js"></script>
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="youtube-api.js"></script>
@@ -771,6 +772,44 @@
                 <i class="bi bi-plus-lg"></i> Add account
               </button>
             </div>
+            <section
+              class="account-requests-panel"
+              aria-labelledby="accountRequestsHeading"
+            >
+              <div class="account-requests-heading">
+                <div>
+                  <h3 id="accountRequestsHeading">Account Requests</h3>
+                  <p>
+                    Review new account requests and issue approved credentials.
+                  </p>
+                </div>
+                <span
+                  id="pendingAccountRequestCount"
+                  class="account-request-count"
+                >
+                  0 pending
+                </span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-dark table-hover">
+                  <thead>
+                    <tr>
+                      <th>Requested Username</th>
+                      <th>Submitted</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="accountRequestsTableBody">
+                    <tr>
+                      <td colspan="4" class="text-center text-white-50">
+                        Loading account requests...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
             <div class="account-stats">
               <article>
                 <span>Total Accounts</span><strong id="totalUsers">0</strong>

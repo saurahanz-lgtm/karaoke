@@ -30,6 +30,8 @@ let currentUserPage = 1;
 const USERS_PER_PAGE = 5;
 let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
+let accountRequests = [];
+let stopListeningToAccountRequests = null;
 const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
 let karaokeRooms = [];
 const roomDeviceCounts = new Map();
@@ -123,6 +125,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Load users from localStorage
   loadUsers();
   initializePresenceListener();
+  initializeAccountRequestListener();
   initializeRoomManagement();
 
   // Add event listeners
@@ -306,6 +309,140 @@ function initializeRoomManagement() {
       document.getElementById("roomsTableBody").innerHTML =
         '<tr><td colspan="3" class="text-center text-danger">Check the Firebase connection.</td></tr>';
     });
+}
+
+function initializeAccountRequestListener() {
+  const tableBody = document.getElementById("accountRequestsTableBody");
+  if (
+    !window.KaraokeAccountRequests ||
+    typeof firebase === "undefined" ||
+    !firebase.database
+  ) {
+    tableBody.innerHTML =
+      '<tr><td colspan="4" class="text-center text-white-50">Account request review is unavailable.</td></tr>';
+    return;
+  }
+
+  stopListeningToAccountRequests = KaraokeAccountRequests.listenAll(
+    (requests) => {
+      accountRequests = requests;
+      renderAccountRequests();
+    },
+    (error) => {
+      console.error("Account request listener failed:", error.message);
+      tableBody.innerHTML =
+        '<tr><td colspan="4" class="text-center text-white-50">Could not load account requests.</td></tr>';
+    },
+  );
+}
+
+function renderAccountRequests() {
+  const tableBody = document.getElementById("accountRequestsTableBody");
+  const pendingCount = accountRequests.filter(
+    (request) => request.status === "pending",
+  ).length;
+  document.getElementById("pendingAccountRequestCount").textContent =
+    `${pendingCount} pending`;
+
+  if (accountRequests.length === 0) {
+    tableBody.innerHTML =
+      '<tr><td colspan="4" class="text-center text-white-50">No account requests yet.</td></tr>';
+    return;
+  }
+
+  tableBody.replaceChildren(
+    ...accountRequests.map((request) => {
+      const row = document.createElement("tr");
+      const usernameCell = document.createElement("td");
+      const dateCell = document.createElement("td");
+      const statusCell = document.createElement("td");
+      const actionCell = document.createElement("td");
+      usernameCell.textContent = request.username || "Unknown username";
+      dateCell.textContent = request.createdAt
+        ? new Date(request.createdAt).toLocaleString()
+        : "-";
+
+      const status =
+        request.status === "approving" ? "processing" : request.status;
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `request-status request-status-${status || "pending"}`;
+      statusBadge.textContent = status || "pending";
+      statusCell.appendChild(statusBadge);
+
+      if (request.status === "pending") {
+        const approveButton = document.createElement("button");
+        const rejectButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.className =
+          "account-request-action account-request-approve";
+        approveButton.textContent = "Approve";
+        rejectButton.type = "button";
+        rejectButton.className =
+          "account-request-action account-request-reject";
+        rejectButton.textContent = "Reject";
+        approveButton.addEventListener("click", () =>
+          handleAccountRequestDecision(request, "approve", [
+            approveButton,
+            rejectButton,
+          ]),
+        );
+        rejectButton.addEventListener("click", () =>
+          handleAccountRequestDecision(request, "reject", [
+            approveButton,
+            rejectButton,
+          ]),
+        );
+        actionCell.append(approveButton, rejectButton);
+      } else if (request.status === "approved") {
+        actionCell.textContent = "Account created";
+      } else if (request.status === "rejected") {
+        actionCell.textContent =
+          request.resolutionMessage || "Request declined";
+      } else {
+        actionCell.textContent = "In progress";
+      }
+
+      row.append(usernameCell, dateCell, statusCell, actionCell);
+      return row;
+    }),
+  );
+}
+
+async function handleAccountRequestDecision(request, decision, buttons) {
+  if (
+    decision === "reject" &&
+    !window.confirm(`Reject the account request for "${request.username}"?`)
+  ) {
+    return;
+  }
+
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
+  try {
+    if (decision === "approve") {
+      await KaraokeAccountRequests.approve(request.id);
+      showNotification(
+        "Account approved. The requester can now view their temporary password.",
+        "success",
+      );
+    } else {
+      await KaraokeAccountRequests.reject(request.id);
+      showNotification("Account request rejected.", "warning");
+    }
+  } catch (error) {
+    console.error(`Could not ${decision} account request:`, error.message);
+    buttons.forEach((button) => {
+      button.disabled = false;
+    });
+    const message =
+      error.message === "ACCOUNT_ALREADY_EXISTS"
+        ? "That username is already in use. The requester has been notified."
+        : error.message === "REQUEST_ALREADY_RESOLVED"
+          ? "This account request has already been handled."
+          : "Could not update the account request. Check the Firebase connection.";
+    showNotification(message, "danger");
+  }
 }
 
 function renderRoomRequests(requests) {
