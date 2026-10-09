@@ -26,6 +26,7 @@ let users = [];
 let currentEditingUserId = null;
 let loggedInUser = null;
 let currentFilter = null;
+let showAllUsers = false;
 let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
 const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
@@ -85,7 +86,16 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("addUserForm")
     .addEventListener("submit", handleAddUser);
-  document.getElementById("userSearch").addEventListener("input", displayUsers);
+  document.getElementById("userSearch").addEventListener("input", () => {
+    showAllUsers = false;
+    displayUsers();
+  });
+  document
+    .getElementById("toggleUsersVisibility")
+    .addEventListener("click", () => {
+      showAllUsers = !showAllUsers;
+      displayUsers();
+    });
   document
     .getElementById("createRoomForm")
     .addEventListener("submit", handleCreateRoom);
@@ -1510,6 +1520,7 @@ function handleAddUser(e) {
 function displayUsers() {
   const tbody = document.getElementById("usersTableBody");
   const emptyMessage = document.getElementById("emptyMessage");
+  const showMoreButton = document.getElementById("toggleUsersVisibility");
 
   // Filter users based on current filter and validity
   let filteredUsers = users.filter((u) => u && u.username); // Ensure valid users only
@@ -1528,6 +1539,12 @@ function displayUsers() {
     filteredUsers = filteredUsers.filter((u) => !isUserOnline(u));
   }
 
+  if (filteredUsers.length <= 5) {
+    showAllUsers = false;
+    showMoreButton.hidden = true;
+    showMoreButton.setAttribute("aria-expanded", "false");
+  }
+
   if (filteredUsers.length === 0) {
     tbody.innerHTML = "";
     emptyMessage.style.display = "block";
@@ -1536,9 +1553,15 @@ function displayUsers() {
   }
 
   emptyMessage.style.display = "none";
+  showMoreButton.hidden = filteredUsers.length <= 5;
+  showMoreButton.setAttribute("aria-expanded", String(showAllUsers));
+  showMoreButton.textContent = showAllUsers
+    ? "Show fewer accounts"
+    : `Show ${filteredUsers.length - 5} more accounts`;
+  const visibleUsers = showAllUsers ? filteredUsers : filteredUsers.slice(0, 5);
 
   let html = "";
-  filteredUsers.forEach((user, index) => {
+  visibleUsers.forEach((user, index) => {
     const isOnline = isUserOnline(user);
     const statusLabel = isOnline ? "Online" : "Offline";
     // Handle both number and string formats for lastActivity
@@ -1770,6 +1793,7 @@ function isUserOnline(user) {
 // Filter singers by status
 function filterSingers(filter) {
   currentFilter = filter;
+  showAllUsers = false;
   document.getElementById("singerListContainer").hidden = false;
   console.log("🔍 Filtering singers by:", filter);
   updateFilterButtons();

@@ -1802,6 +1802,34 @@ body.admin-page {
   margin: 7px 0 0;
   font-size: 11px;
 }
+.account-list-footer {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 5px;
+}
+.account-list-toggle {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(112, 130, 231, 0.38);
+  border-radius: 7px;
+  color: #c3ccff;
+  background: rgba(75, 71, 167, 0.2);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.account-list-toggle:hover {
+  border-color: rgba(146, 132, 255, 0.68);
+  color: #fff;
+  background: rgba(89, 79, 197, 0.32);
+}
+.account-list-toggle:focus-visible {
+  outline: 2px solid #b5a5ff;
+  outline-offset: 2px;
+}
+.account-list-toggle[hidden] {
+  display: none;
+}
 
 .account-form {
   display: grid;
