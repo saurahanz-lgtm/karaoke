@@ -475,7 +475,9 @@ function renderAccountRequests() {
         const statusCell = document.createElement("td");
         const actionCell = document.createElement("td");
         const actionGroup = document.createElement("div");
-        actionGroup.className = "account-request-action-group";
+        const actionButtons = document.createElement("div");
+        actionGroup.className = "account-request-row-actions";
+        actionButtons.className = "account-actions";
         usernameCell.textContent = request.username || "Unknown username";
         dateCell.textContent = request.createdAt
           ? new Date(request.createdAt).toLocaleString()
@@ -492,15 +494,23 @@ function renderAccountRequests() {
           const approveButton = document.createElement("button");
           const rejectButton = document.createElement("button");
           approveButton.type = "button";
-          approveButton.className =
-            "account-request-action account-request-approve";
+          approveButton.className = "table-action";
+          approveButton.title = "Approve request";
+          approveButton.setAttribute(
+            "aria-label",
+            `Approve account request from ${request.username || "unknown user"}`,
+          );
           approveButton.innerHTML =
-            '<i class="bi bi-check2" aria-hidden="true"></i><span>Approve</span>';
+            '<i class="bi bi-check2-circle" aria-hidden="true"></i>';
           rejectButton.type = "button";
-          rejectButton.className =
-            "account-request-action account-request-reject";
+          rejectButton.className = "table-action table-action-danger";
+          rejectButton.title = "Reject request";
+          rejectButton.setAttribute(
+            "aria-label",
+            `Reject account request from ${request.username || "unknown user"}`,
+          );
           rejectButton.innerHTML =
-            '<i class="bi bi-x-lg" aria-hidden="true"></i><span>Reject</span>';
+            '<i class="bi bi-x-circle" aria-hidden="true"></i>';
           approveButton.addEventListener("click", () =>
             handleAccountRequestDecision(request, "approve", [
               approveButton,
@@ -513,7 +523,7 @@ function renderAccountRequests() {
               rejectButton,
             ]),
           );
-          actionGroup.append(approveButton, rejectButton);
+          actionButtons.append(approveButton, rejectButton);
         } else if (request.status === "approved") {
           const resolution = document.createElement("span");
           resolution.className = "account-request-resolution";
@@ -535,8 +545,7 @@ function renderAccountRequests() {
         if (request.status !== "approving") {
           const deleteButton = document.createElement("button");
           deleteButton.type = "button";
-          deleteButton.className =
-            "account-request-action account-request-delete";
+          deleteButton.className = "table-action table-action-danger";
           deleteButton.title = "Delete request";
           deleteButton.setAttribute(
             "aria-label",
@@ -547,9 +556,12 @@ function renderAccountRequests() {
           deleteButton.addEventListener("click", () =>
             deleteAccountRequest(request, deleteButton),
           );
-          actionGroup.appendChild(deleteButton);
+          actionButtons.appendChild(deleteButton);
         }
 
+        if (actionButtons.childElementCount > 0) {
+          actionGroup.appendChild(actionButtons);
+        }
         actionCell.appendChild(actionGroup);
         row.append(usernameCell, dateCell, statusCell, actionCell);
         return row;

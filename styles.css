@@ -2959,17 +2959,21 @@ body.tv-page {
   outline-offset: 2px;
 }
 
-.account-request-action-group {
+.account-request-row-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 31px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 112px;
+}
+
+.account-request-row-actions .account-actions {
+  flex: 0 0 auto;
 }
 
 .account-request-resolution {
   min-width: 0;
-  flex: 1 1 120px;
+  flex: 1 1 auto;
   color: #a7b6d6;
   font-size: 10px;
   line-height: 1.45;
@@ -3056,22 +3060,5 @@ body.tv-page {
 
   .admin-topbar-actions {
     gap: 9px;
-  }
-
-  .account-request-action-group {
-    gap: 5px;
-  }
-
-  .account-request-action {
-    min-width: 69px;
-    min-height: 29px;
-    padding: 0 7px;
-    font-size: 9px;
-  }
-
-  .account-request-delete {
-    min-width: 29px;
-    width: 29px;
-    padding: 0;
   }
 }
