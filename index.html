@@ -261,19 +261,6 @@
           margin-bottom: 18px;
         }
 
-        .room-join-choices {
-          display: flex;
-          gap: 10px;
-        }
-
-        .room-join-choices .login-btn {
-          flex: 1;
-        }
-
-        #manualRoomEntry {
-          margin-top: 12px;
-        }
-
         #roomQrReader {
           margin-top: 12px;
           overflow: hidden;
@@ -293,29 +280,23 @@
 
         <p class="subtitle">Select an access portal to continue.</p>
         <div class="role-container">
-          <button
-            class="role-btn"
-            style="
-              background: linear-gradient(135deg, #667eea, #764ba2);
-              color: white;
-            "
-            onclick="openAdminLogin()"
-          >
-            <span class="role-icon" aria-hidden="true"><i class="bi bi-shield-lock"></i></span>
+          <button class="role-btn" onclick="openAdminLogin()">
+            <span class="role-icon" aria-hidden="true"
+              ><i class="bi bi-shield-lock"></i
+            ></span>
             <span class="role-label">System Administration</span>
-            <span class="role-desc">Manage accounts, rooms, and display settings</span>
+            <span class="role-desc"
+              >Manage accounts, rooms, and display settings</span
+            >
           </button>
-          <button
-            class="role-btn"
-            style="
-              background: linear-gradient(135deg, #f093fb, #f5576c);
-              color: white;
-            "
-            onclick="openSingerLogin()"
-          >
-            <span class="role-icon" aria-hidden="true"><i class="bi bi-music-note-list"></i></span>
+          <button class="role-btn" onclick="openSingerLogin()">
+            <span class="role-icon" aria-hidden="true"
+              ><i class="bi bi-music-note-list"></i
+            ></span>
             <span class="role-label">Karaoke Performer</span>
-            <span class="role-desc">Search songs and manage your room queue</span>
+            <span class="role-desc"
+              >Search songs and manage your room queue</span
+            >
           </button>
         </div>
       </div>
@@ -364,85 +345,129 @@
     <!-- Singer Login Modal -->
     <div id="singerLoginModal" class="login-modal-custom">
       <div class="login-title">Performer Sign In</div>
-      <div class="room-qr-scanner">
-        <div class="room-join-choices" id="roomJoinChoices">
+      <div id="performerSignInOptions">
+        <div class="room-qr-scanner">
           <button
             type="button"
             class="login-btn login-btn-submit"
             id="scanRoomQrButton"
             onclick="startRoomQrScanner()"
           >
-            Scan Room QR Code
+            <i class="bi bi-qr-code-scan" aria-hidden="true"></i> Scan Room QR
+            Code
           </button>
-          <button
-            type="button"
-            class="login-btn login-btn-cancel"
-            id="enterRoomIdButton"
-            onclick="showManualRoomEntry()"
-          >
-            Enter Room ID
-          </button>
+          <div id="roomQrReader" hidden></div>
+          <p id="roomQrStatus" role="status" aria-live="polite">
+            Scan the room QR code to connect to a karaoke room.
+          </p>
         </div>
-        <div id="roomQrReader" hidden></div>
-        <div id="manualRoomEntry" hidden>
+        <form id="singerLoginForm" onsubmit="validateSingerLogin(event)" hidden>
           <div class="login-form-group">
-            <label for="manualRoomId">Room ID</label>
+            <label>Username</label>
             <input
               type="text"
-              id="manualRoomId"
-              placeholder="Enter the Room ID shown on the TV"
-              autocomplete="off"
+              id="singerUsername"
+              placeholder="Enter your username"
+              required
             />
           </div>
-          <button
-            type="button"
-            class="login-btn login-btn-submit"
-            id="useRoomIdButton"
-            onclick="useSingerRoomId()"
-          >
-            Continue
-          </button>
-        </div>
-        <p id="roomQrStatus" role="status" aria-live="polite">
-          Scan the QR code or enter the room ID to continue.
-        </p>
+          <div class="login-form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              id="singerPassword"
+              placeholder="Enter password"
+              required
+            />
+          </div>
+          <div class="login-buttons">
+            <button
+              type="submit"
+              class="login-btn login-btn-submit"
+              id="singerLoginSubmit"
+              disabled
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              class="login-btn login-btn-cancel"
+              onclick="closeLoginModal()"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
-      <form id="singerLoginForm" onsubmit="validateSingerLogin(event)" hidden>
+      <button
+        id="showAccountRequestButton"
+        class="account-request-link"
+        type="button"
+        aria-live="polite"
+      >
+        Don’t have an account? Request access
+      </button>
+      <form id="accountRequestPanel" class="account-request-form" hidden>
+        <div>
+          <h2>Request an Account</h2>
+          <p>Choose a username and submit it for administrator review.</p>
+        </div>
         <div class="login-form-group">
-          <label>Username</label>
+          <label for="requestedAccountUsername">Requested username</label>
           <input
+            id="requestedAccountUsername"
+            name="username"
             type="text"
-            id="singerUsername"
-            placeholder="Enter your username"
+            minlength="3"
+            maxlength="30"
+            pattern="[A-Za-z0-9_.-]+"
+            autocomplete="username"
+            placeholder="3-30 letters, numbers, dots, dashes, or underscores"
             required
           />
         </div>
-        <div class="login-form-group">
-          <label>Password</label>
-          <input
-            type="password"
-            id="singerPassword"
-            placeholder="Enter password"
-            required
-          />
-        </div>
-        <div class="login-buttons">
-          <button
-            type="submit"
-            class="login-btn login-btn-submit"
-            id="singerLoginSubmit"
-            disabled
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            class="login-btn login-btn-cancel"
-            onclick="closeLoginModal()"
-          >
-            Cancel
-          </button>
-        </div>
+        <button
+          id="submitAccountRequestButton"
+          class="login-btn login-btn-submit"
+          type="submit"
+        >
+          Submit request
+        </button>
+        <p
+          id="accountRequestFeedback"
+          class="account-request-feedback"
+          role="status"
+          aria-live="assertive"
+        ></p>
+        <section
+          id="accountRequestCredentials"
+          class="account-request-credentials"
+          hidden
+        >
+          <h3>Account approved</h3>
+          <p>Your account is ready. Use these credentials to sign in.</p>
+          <dl>
+            <dt>Username</dt>
+            <dd id="approvedAccountUsername"></dd>
+            <dt>Temporary password</dt>
+            <dd><code id="approvedAccountPassword"></code></dd>
+          </dl>
+        </section>
+        <button
+          id="anotherAccountRequestButton"
+          class="login-btn login-btn-submit"
+          type="button"
+          hidden
+        >
+          Submit another request
+        </button>
+        <button
+          id="backToPerformerSignInButton"
+          class="login-btn login-btn-cancel"
+          type="button"
+        >
+          Back to sign in
+        </button>
       </form>
     </div>
 
@@ -977,6 +1002,7 @@
         document
           .getElementById(roomId ? "singerUsername" : "scanRoomQrButton")
           .focus();
+        if (!roomId) startRoomQrScanner();
       }
 
       function updateSingerRoomLoginState(roomId) {
@@ -984,63 +1010,13 @@
         const hasRoom = Boolean(selectedRoomId);
         document.getElementById("singerLoginForm").hidden = !hasRoom;
         document.getElementById("singerLoginSubmit").disabled = !hasRoom;
-        document.getElementById("roomJoinChoices").hidden = hasRoom;
-        document.getElementById("manualRoomEntry").hidden = true;
+        document.getElementById("scanRoomQrButton").textContent = hasRoom
+          ? "Scan Another Room"
+          : "Scan Room QR Code";
         document.getElementById("roomQrStatus").textContent = hasRoom
-          ? `Room ${selectedRoomId} selected. Log in to join.`
-          : "Scan the room QR code or enter its Room ID.";
+          ? `Room ${selectedRoomId} selected. Sign in to continue.`
+          : "Scan the QR code or enter the room ID to continue.";
         return selectedRoomId;
-      }
-
-      function showManualRoomEntry() {
-        stopRoomQrScanner();
-        document.getElementById("manualRoomEntry").hidden = false;
-        document.getElementById("roomQrStatus").textContent =
-          "Enter the Room ID shown on the TV.";
-        document.getElementById("manualRoomId").focus();
-      }
-
-      async function useSingerRoomId() {
-        const roomId = document.getElementById("manualRoomId").value.trim();
-        const status = document.getElementById("roomQrStatus");
-        const button = document.getElementById("useRoomIdButton");
-        if (!roomId) {
-          status.textContent = "Enter the Room ID shown on the TV.";
-          return;
-        }
-
-        button.disabled = true;
-        status.textContent = "Checking Room ID...";
-        try {
-          const snapshot = await firebase
-            .database()
-            .ref(`karaokeRooms/${roomId}`)
-            .once("value");
-          if (!snapshot.exists()) {
-            status.textContent =
-              "Room ID not found. Check the ID and try again.";
-            return;
-          }
-          selectSingerRoom(roomId);
-          if (localStorage.getItem("karaoke_logged_in_user")) {
-            window.location.href = `singer.html?room=${encodeURIComponent(roomId)}`;
-            return;
-          }
-          document.getElementById("singerUsername").focus();
-        } catch (error) {
-          console.warn("Could not check room ID:", error.message);
-          status.textContent =
-            "Could not check the Room ID. Check your connection.";
-        } finally {
-          button.disabled = false;
-        }
-      }
-
-      function selectSingerRoom(roomId) {
-        const loginUrl = new URL(window.location.href);
-        loginUrl.searchParams.set("room", roomId);
-        window.history.replaceState(null, "", loginUrl);
-        updateSingerRoomLoginState(roomId);
       }
 
       function getScannedRoomId(decodedText) {
@@ -1057,7 +1033,6 @@
         const status = document.getElementById("roomQrStatus");
         const reader = document.getElementById("roomQrReader");
         const button = document.getElementById("scanRoomQrButton");
-        document.getElementById("manualRoomEntry").hidden = true;
 
         if (typeof Html5Qrcode === "undefined") {
           status.textContent =
@@ -1086,7 +1061,10 @@
               }
 
               roomQrHandled = true;
-              selectSingerRoom(roomId);
+              const loginUrl = new URL(window.location.href);
+              loginUrl.searchParams.set("room", roomId);
+              window.history.replaceState(null, "", loginUrl);
+              updateSingerRoomLoginState(roomId);
               stopRoomQrScanner();
 
               if (localStorage.getItem("karaoke_logged_in_user")) {
