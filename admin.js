@@ -44,10 +44,45 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const profileToggle = document.getElementById("adminProfileToggle");
   const profileMenu = document.getElementById("adminProfileMenu");
+  const sidebar = document.getElementById("adminSidebar");
+  const sidebarToggle = document.getElementById("mobileSidebarToggle");
+  const sidebarBackdrop = document.getElementById("mobileSidebarBackdrop");
+  const setMobileSidebarOpen = (isOpen) => {
+    const shouldOpen =
+      isOpen && window.matchMedia("(max-width: 800px)").matches;
+    sidebar.classList.toggle("is-open", shouldOpen);
+    sidebarBackdrop.hidden = !shouldOpen;
+    sidebarToggle.setAttribute("aria-expanded", String(shouldOpen));
+    sidebarToggle.setAttribute(
+      "aria-label",
+      shouldOpen ? "Close navigation" : "Open navigation",
+    );
+    document.body.classList.toggle("mobile-sidebar-open", shouldOpen);
+    if (shouldOpen) {
+      sidebar.querySelector("[data-admin-view-target]").focus();
+    } else if (
+      isOpen === false &&
+      window.matchMedia("(max-width: 800px)").matches
+    ) {
+      sidebarToggle.focus();
+    }
+  };
   document.querySelectorAll("[data-admin-view-target]").forEach((button) => {
     button.addEventListener("click", () => {
       setAdminView(button.dataset.adminViewTarget);
+      setMobileSidebarOpen(false);
     });
+  });
+  sidebarToggle.addEventListener("click", () => {
+    setMobileSidebarOpen(
+      sidebarToggle.getAttribute("aria-expanded") !== "true",
+    );
+  });
+  sidebarBackdrop.addEventListener("click", () => setMobileSidebarOpen(false));
+  window.addEventListener("resize", () => {
+    if (!window.matchMedia("(max-width: 800px)").matches) {
+      setMobileSidebarOpen(false);
+    }
   });
   profileToggle.addEventListener("click", () => {
     const isOpen = profileMenu.hidden;
@@ -61,6 +96,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
   document.addEventListener("keydown", (event) => {
+    if (
+      event.key === "Escape" &&
+      sidebarToggle.getAttribute("aria-expanded") === "true"
+    ) {
+      setMobileSidebarOpen(false);
+      return;
+    }
     if (event.key === "Escape" && !profileMenu.hidden) {
       profileMenu.hidden = true;
       profileToggle.setAttribute("aria-expanded", "false");

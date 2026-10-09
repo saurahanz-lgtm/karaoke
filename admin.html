@@ -315,7 +315,11 @@
       </section>
     </main>
     <div id="adminDashboard" class="admin-shell">
-      <aside class="admin-sidebar" aria-label="Admin navigation">
+      <aside
+        class="admin-sidebar"
+        id="adminSidebar"
+        aria-label="Admin navigation"
+      >
         <a
           class="admin-brand"
           href="#dashboard"
@@ -384,8 +388,25 @@
           ><span>Good Music<br />Brings People<br />Together</span>
         </div>
       </aside>
+      <button
+        class="mobile-sidebar-backdrop"
+        id="mobileSidebarBackdrop"
+        type="button"
+        aria-label="Close navigation"
+        hidden
+      ></button>
       <div class="admin-workspace">
         <header class="admin-topbar">
+          <button
+            class="mobile-sidebar-toggle"
+            id="mobileSidebarToggle"
+            type="button"
+            aria-label="Open navigation"
+            aria-controls="adminSidebar"
+            aria-expanded="false"
+          >
+            <i class="bi bi-layout-sidebar-inset"></i>
+          </button>
           <div class="topbar-status">
             <span class="live-indicator"></span><span>System overview</span>
           </div>
