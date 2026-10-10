@@ -340,13 +340,6 @@
             required
           />
         </div>
-        <button
-          class="account-request-link"
-          type="button"
-          onclick="openForgotPassword()"
-        >
-          Forgot password?
-        </button>
         <div class="login-buttons">
           <button type="submit" class="login-btn login-btn-submit">
             Sign In
@@ -433,13 +426,6 @@
               required
             />
           </div>
-          <button
-            class="account-request-link"
-            type="button"
-            onclick="openForgotPassword()"
-          >
-            Forgot password?
-          </button>
           <div class="login-buttons">
             <button
               type="submit"
@@ -542,65 +528,6 @@
       </form>
     </div>
 
-    <div id="forgotPasswordModal" class="login-modal-custom">
-      <div class="login-title">Reset Password</div>
-      <p>
-        Enter your username. The administrator will review your request and
-        provide a temporary password here.
-      </p>
-      <form id="passwordResetForm" onsubmit="submitPasswordReset(event)">
-        <div id="passwordResetUsernameStep">
-          <div class="login-form-group">
-            <label for="passwordResetUsername">Username</label>
-            <input
-              id="passwordResetUsername"
-              name="username"
-              type="text"
-              autocomplete="username"
-              placeholder="Enter your username"
-              required
-            />
-          </div>
-          <button type="submit" class="login-btn login-btn-submit">
-            Request password reset
-          </button>
-        </div>
-        <div id="passwordResetProgress" hidden>
-          <p id="passwordResetFeedback" role="status" aria-live="polite"></p>
-          <div id="passwordResetResult" hidden>
-            <div class="login-form-group">
-              <label for="temporaryResetPassword">Temporary password</label>
-              <input id="temporaryResetPassword" type="text" readonly />
-            </div>
-            <div class="login-buttons">
-              <button
-                id="copyTemporaryResetPasswordButton"
-                type="button"
-                class="login-btn login-btn-submit"
-                onclick="copyTemporaryResetPassword()"
-              >
-                Copy password
-              </button>
-              <button
-                type="button"
-                class="login-btn login-btn-cancel"
-                onclick="finishPasswordReset()"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      </form>
-      <button
-        type="button"
-        class="login-btn login-btn-cancel"
-        onclick="closeLoginModal()"
-      >
-        Cancel
-      </button>
-    </div>
-
     <!-- Performer portal is served from performer-portal.html. -->
     <script>
       document.title = "SD Karaoke | Welcome";
@@ -618,10 +545,6 @@
       let usePerformerFirebase = false;
       let roomQrScanner = null;
       let roomQrHandled = false;
-      let passwordResetPollTimer = null;
-      let passwordResetPollInProgress = false;
-      const passwordResetSessionKey = "karaoke_password_reset_session_v1";
-
       // Check if Firebase is properly configured
       function isPerformerFirebaseConfigured() {
         try {
@@ -1141,175 +1064,6 @@
           .focus();
       }
 
-      function openForgotPassword() {
-        ["adminLoginModal", "singerLoginModal"].forEach((id) =>
-          document.getElementById(id).classList.remove("show"),
-        );
-        document.getElementById("forgotPasswordModal").classList.add("show");
-        document.getElementById("passwordResetForm").reset();
-        document.getElementById("passwordResetUsernameStep").hidden = false;
-        document.getElementById("passwordResetProgress").hidden = true;
-        document.getElementById("passwordResetResult").hidden = true;
-        document.getElementById(
-          "copyTemporaryResetPasswordButton",
-        ).textContent = "Copy password";
-        document.getElementById("passwordResetFeedback").textContent = "";
-        const savedRequest = getPasswordResetSession();
-        if (savedRequest) {
-          document.getElementById("passwordResetUsername").value =
-            savedRequest.username;
-          showPasswordResetProgress(
-            "Your request is waiting for administrator approval.",
-          );
-          pollPasswordResetStatus(savedRequest);
-        } else {
-          document.getElementById("passwordResetUsername").focus();
-        }
-      }
-
-      async function submitPasswordReset(event) {
-        event.preventDefault();
-        const form = document.getElementById("passwordResetForm");
-        const button = form.querySelector(
-          '#passwordResetUsernameStep button[type="submit"]',
-        );
-        const username = document
-          .getElementById("passwordResetUsername")
-          .value.trim();
-        button.disabled = true;
-        showPasswordResetProgress("Submitting your request...");
-        try {
-          const request =
-            await KaraokeAccountAuth.requestPasswordReset(username);
-          const savedRequest = { ...request, username };
-          sessionStorage.setItem(
-            passwordResetSessionKey,
-            JSON.stringify(savedRequest),
-          );
-          showPasswordResetProgress(
-            "Your request is waiting for administrator approval. Keep this page open; your temporary password will appear here when approved.",
-          );
-          pollPasswordResetStatus(savedRequest);
-        } catch (error) {
-          console.error("Could not submit password reset:", error.message);
-          document.getElementById("passwordResetProgress").hidden = true;
-          document.getElementById("passwordResetUsernameStep").hidden = false;
-          document.getElementById("passwordResetFeedback").textContent =
-            error.message === "INVALID_USERNAME"
-              ? "Enter a valid username (3-40 letters, numbers, dots, dashes, or underscores)."
-              : error.message === "RESET_RATE_LIMITED"
-                ? "Too many reset requests from this network. Try again later."
-                : "Password reset requests are unavailable. Please try again later.";
-        } finally {
-          button.disabled = Boolean(getPasswordResetSession());
-        }
-      }
-
-      function getPasswordResetSession() {
-        try {
-          return JSON.parse(
-            sessionStorage.getItem(passwordResetSessionKey) || "null",
-          );
-        } catch (error) {
-          return null;
-        }
-      }
-
-      function showPasswordResetProgress(message) {
-        document.getElementById("passwordResetUsernameStep").hidden = true;
-        document.getElementById("passwordResetProgress").hidden = false;
-        document.getElementById("passwordResetFeedback").textContent = message;
-      }
-
-      function pollPasswordResetStatus(request) {
-        if (passwordResetPollTimer) clearInterval(passwordResetPollTimer);
-        const checkStatus = async () => {
-          if (passwordResetPollInProgress) return;
-          passwordResetPollInProgress = true;
-          try {
-            const result = await KaraokeAccountAuth.getPasswordResetStatus(
-              request.requestId,
-              request.token,
-            );
-            if (result.status === "approved" && result.temporaryPassword) {
-              clearInterval(passwordResetPollTimer);
-              passwordResetPollTimer = null;
-              document.getElementById("passwordResetResult").hidden = false;
-              document.getElementById("temporaryResetPassword").value =
-                result.temporaryPassword;
-              document.getElementById("passwordResetFeedback").textContent =
-                "Approved. Copy this temporary password and use it to sign in.";
-              return;
-            }
-            if (result.status === "rejected") {
-              clearInterval(passwordResetPollTimer);
-              passwordResetPollTimer = null;
-              sessionStorage.removeItem(passwordResetSessionKey);
-              document.getElementById("passwordResetFeedback").textContent =
-                "The administrator did not approve this request. You may submit another request.";
-              document.getElementById("passwordResetUsernameStep").hidden =
-                false;
-              document.getElementById("passwordResetUsername").disabled = false;
-              document.querySelector(
-                '#passwordResetUsernameStep button[type="submit"]',
-              ).disabled = false;
-            }
-          } catch (error) {
-            if (error.status === 404) {
-              clearInterval(passwordResetPollTimer);
-              passwordResetPollTimer = null;
-              sessionStorage.removeItem(passwordResetSessionKey);
-              document.getElementById("passwordResetFeedback").textContent =
-                "This reset request expired or is no longer available. Submit a new request.";
-              document.getElementById("passwordResetUsernameStep").hidden =
-                false;
-              document.getElementById("passwordResetUsername").disabled = false;
-              document.querySelector(
-                '#passwordResetUsernameStep button[type="submit"]',
-              ).disabled = false;
-              return;
-            }
-            console.error("Could not check password reset status:", error);
-          } finally {
-            passwordResetPollInProgress = false;
-          }
-        };
-        checkStatus();
-        passwordResetPollTimer = setInterval(checkStatus, 4000);
-      }
-
-      async function copyTemporaryResetPassword() {
-        const password = document.getElementById("temporaryResetPassword");
-        try {
-          await navigator.clipboard.writeText(password.value);
-        } catch (error) {
-          password.focus();
-          password.select();
-          document.execCommand("copy");
-        }
-        document.getElementById(
-          "copyTemporaryResetPasswordButton",
-        ).textContent = "Copied";
-      }
-
-      function finishPasswordReset() {
-        if (passwordResetPollTimer) clearInterval(passwordResetPollTimer);
-        passwordResetPollTimer = null;
-        passwordResetPollInProgress = false;
-        sessionStorage.removeItem(passwordResetSessionKey);
-        document.getElementById("passwordResetForm").reset();
-        document.getElementById("passwordResetUsernameStep").hidden = false;
-        document.getElementById("passwordResetUsername").disabled = false;
-        document.getElementById("passwordResetResult").hidden = true;
-        document.getElementById(
-          "copyTemporaryResetPasswordButton",
-        ).textContent = "Copy password";
-        document.querySelector(
-          '#passwordResetUsernameStep button[type="submit"]',
-        ).disabled = false;
-        closeLoginModal();
-      }
-
       function updatePerformerRoomLoginState(roomId) {
         const selectedRoomId = roomId ?? KaraokeSessions.getRoomIdFromUrl();
         const hasRoom = Boolean(selectedRoomId);
@@ -1459,7 +1213,6 @@
         document.getElementById("loginOverlay").classList.remove("show");
         document.getElementById("adminLoginModal").classList.remove("show");
         document.getElementById("singerLoginModal").classList.remove("show");
-        document.getElementById("forgotPasswordModal").classList.remove("show");
       }
 
       async function verifyLoginCredentials(user, password) {

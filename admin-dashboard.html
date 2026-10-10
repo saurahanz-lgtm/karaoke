@@ -965,41 +965,6 @@
                 </nav>
               </div>
             </section>
-            <section
-              class="account-requests-panel"
-              aria-labelledby="passwordResetRequestsHeading"
-            >
-              <div class="account-requests-heading">
-                <div>
-                  <h3 id="passwordResetRequestsHeading">
-                    Password Reset Requests
-                  </h3>
-                  <p>Review requests and issue temporary passwords</p>
-                </div>
-                <span id="pendingPasswordResetCount" class="account-request-count">
-                  0 pending
-                </span>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-dark table-hover">
-                  <thead>
-                    <tr>
-                      <th>Username</th>
-                      <th>Requested</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="passwordResetRequestsTableBody">
-                    <tr>
-                      <td colspan="4" class="text-center text-white-50">
-                        Loading password reset requests...
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
             <div class="account-stats">
               <article>
                 <span>Total Accounts</span><strong id="totalUsers">0</strong>
@@ -1307,28 +1272,6 @@
             ></button>
           </div>
           <div class="modal-body">
-            <p id="editUserPasswordResetNotice" role="status" hidden></p>
-            <div id="adminTemporaryPasswordResult" hidden>
-              <label for="adminTemporaryPassword" class="form-label fw-600"
-                >Temporary Password</label
-              >
-              <div class="input-group mb-3">
-                <input
-                  type="text"
-                  class="form-control"
-                  id="adminTemporaryPassword"
-                  readonly
-                />
-                <button
-                  type="button"
-                  class="btn btn-outline-light"
-                  id="copyAdminTemporaryPasswordButton"
-                  onclick="copyAdminTemporaryPassword()"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
             <div class="mb-3">
               <label for="editUserPasswordInput" class="form-label fw-600"
                 >New Password</label

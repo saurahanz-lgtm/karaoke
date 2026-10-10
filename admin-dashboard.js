@@ -36,8 +36,6 @@ let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
 let accountRequests = [];
 let stopListeningToAccountRequests = null;
-let passwordResetRequests = [];
-let stopListeningToPasswordResetRequests = null;
 const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
 let karaokeRooms = [];
 const roomDeviceCounts = new Map();
@@ -163,7 +161,6 @@ document.addEventListener("DOMContentLoaded", function () {
   loadUsers();
   initializePresenceListener();
   initializeAccountRequestListener();
-  initializePasswordResetRequestListener();
   initializeRoomManagement();
 
   // Add event listeners
@@ -444,129 +441,6 @@ function initializeAccountRequestListener() {
   );
 }
 
-function initializePasswordResetRequestListener() {
-  const tableBody = document.getElementById("passwordResetRequestsTableBody");
-  if (
-    !window.KaraokeAccountAuth ||
-    typeof firebase === "undefined" ||
-    !firebase.database
-  ) {
-    tableBody.innerHTML =
-      '<tr><td colspan="4" class="text-center text-white-50">Password reset request review is unavailable.</td></tr>';
-    return;
-  }
-
-  stopListeningToPasswordResetRequests = KaraokeAccountAuth.listenResetRequests(
-    (requests) => {
-      passwordResetRequests = requests;
-      renderPasswordResetRequests();
-    },
-    (error) => {
-      console.error("Password reset request listener failed:", error.message);
-      tableBody.innerHTML =
-        '<tr><td colspan="4" class="text-center text-white-50">Could not load password reset requests.</td></tr>';
-    },
-  );
-}
-
-function renderPasswordResetRequests() {
-  const tableBody = document.getElementById("passwordResetRequestsTableBody");
-  const pending = passwordResetRequests.filter(
-    (request) => request.status === "pending",
-  ).length;
-  document.getElementById("pendingPasswordResetCount").textContent =
-    `${pending} pending`;
-  updateAdminRequestNotifications();
-
-  if (passwordResetRequests.length === 0) {
-    tableBody.innerHTML =
-      '<tr><td colspan="4" class="text-center text-white-50">No password reset requests.</td></tr>';
-    return;
-  }
-
-  tableBody.replaceChildren(
-    ...passwordResetRequests.map((request) => {
-      const row = document.createElement("tr");
-      const usernameCell = document.createElement("td");
-      const requestedCell = document.createElement("td");
-      const statusCell = document.createElement("td");
-      const actionCell = document.createElement("td");
-      usernameCell.textContent = request.username || "-";
-      requestedCell.textContent = request.requestedAt
-        ? new Date(request.requestedAt).toLocaleString()
-        : "-";
-      statusCell.textContent =
-        request.status === "approved"
-          ? "Temporary password ready for requester"
-          : request.status === "processing"
-            ? "Creating temporary password"
-            : request.status === "rejected"
-              ? "Rejected"
-              : request.credentialStatus === "RESET_ACCOUNT_NOT_READY"
-                ? "Account needs admin setup"
-                : request.status || "pending";
-      if (request.status === "pending") {
-        const approveButton = document.createElement("button");
-        approveButton.type = "button";
-        approveButton.className = "btn btn-sm btn-success me-2";
-        approveButton.textContent = "Approve & create password";
-        approveButton.addEventListener("click", () =>
-          handlePasswordResetDecision(request.id, "approve", approveButton),
-        );
-        const rejectButton = document.createElement("button");
-        rejectButton.type = "button";
-        rejectButton.className = "btn btn-sm btn-outline-danger";
-        rejectButton.textContent = "Reject";
-        rejectButton.addEventListener("click", () =>
-          handlePasswordResetDecision(request.id, "reject", rejectButton),
-        );
-        actionCell.append(approveButton, rejectButton);
-      } else {
-        actionCell.textContent = request.approvedAt
-          ? new Date(request.approvedAt).toLocaleString()
-          : request.reviewedAt
-            ? new Date(request.reviewedAt).toLocaleString()
-            : "-";
-      }
-      row.append(usernameCell, requestedCell, statusCell, actionCell);
-      return row;
-    }),
-  );
-}
-
-async function handlePasswordResetDecision(requestId, decision, button) {
-  button.disabled = true;
-  try {
-    if (decision === "approve") {
-      await KaraokeAccountAuth.approvePasswordResetRequest(requestId);
-      showNotification(
-        "New temporary password created. It is now available to the requester in their reset window.",
-        "success",
-      );
-    } else {
-      await KaraokeAccountAuth.rejectPasswordResetRequest(requestId);
-      showNotification("Password reset request rejected.", "warning");
-    }
-  } catch (error) {
-    console.error("Could not resolve password reset request:", error.message);
-    button.disabled = false;
-    const message =
-      error.message === "RESET_ACCOUNT_NOT_FOUND"
-        ? "No account matches this username. Reject the request if the username is incorrect."
-        : error.message === "RESET_ACCOUNT_NOT_READY"
-          ? "This account has no Firebase Auth or legacy password to reset. Contact the requester before approving."
-          : error.message === "RESET_ACCOUNT_DISABLED"
-            ? "This account is disabled and cannot receive a temporary password."
-            : error.message === "RESET_REQUEST_ALREADY_RESOLVED"
-              ? "This request has already been resolved."
-              : error.message === "ADMIN_AUTH_REQUIRED" ||
-                  error.message === "ADMIN_ACCESS_REQUIRED"
-                ? "Your admin session is not authorized for this action. Sign out and sign in again."
-                : "Could not resolve this request. Check the server configuration and try again.";
-    showNotification(message, "danger");
-  }
-}
-
 function renderAccountRequests() {
   const tableBody = document.getElementById("accountRequestsTableBody");
   const pagination = document.getElementById("accountRequestsPagination");
@@ -844,13 +718,6 @@ function updateAdminRequestNotifications() {
     ).values(),
   );
   const pendingRequests = [
-    ...passwordResetRequests
-      .filter((request) => request.status === "pending")
-      .map((request) => ({
-        label: `Password reset request for ${request.username || "unknown user"}`,
-        view: "users",
-        createdAt: request.requestedAt || 0,
-      })),
     ...accountRequests
       .filter((request) => request.status === "pending")
       .map((request) => ({
@@ -2926,27 +2793,20 @@ function logoutUser(userId) {
 function openChangePasswordModal(userId, username) {
   currentEditingUserId = userId;
   const user = users.find((account) => account.id === userId);
-  const resetByAuth = Boolean(user?.authUid);
-  document.getElementById("editUserPasswordInput").parentElement.hidden =
-    resetByAuth;
-  document.getElementById("editUserPasswordConfirm").parentElement.hidden =
-    resetByAuth;
-  document.getElementById("editUserPasswordResetNotice").hidden = !resetByAuth;
-  document.getElementById("editUserPasswordResetNotice").textContent =
-    resetByAuth
-      ? "Generate a temporary password for this account. Share it with the user through a private channel."
-      : "Set a password for this legacy account. The user can migrate it to Firebase Authentication at their next sign-in.";
-  document.getElementById("adminTemporaryPasswordResult").hidden = true;
-  document.getElementById("adminTemporaryPassword").value = "";
+  if (user?.authUid) {
+    showNotification(
+      "Password changes are unavailable for Firebase-linked accounts.",
+      "warning",
+    );
+    return;
+  }
   document.getElementById("editUserPasswordUsername").textContent = username;
   document.getElementById("editUserPasswordInput").value = "";
   document.getElementById("editUserPasswordConfirm").value = "";
   const submitButton = document.getElementById(
     "changeUserPasswordSubmitButton",
   );
-  submitButton.textContent = resetByAuth
-    ? "Generate temporary password"
-    : "Change Password";
+  submitButton.textContent = "Change Password";
   submitButton.disabled = false;
 
   const modal = new bootstrap.Modal(
@@ -2956,34 +2816,11 @@ function openChangePasswordModal(userId, username) {
 }
 
 // Change password for a specific user
-async function handleChangeUserPassword() {
+function handleChangeUserPassword() {
   if (!currentEditingUserId) return;
 
   const user = users.find((account) => account.id === currentEditingUserId);
   if (!user) return;
-  if (user.authUid) {
-    const button = document.getElementById("changeUserPasswordSubmitButton");
-    button.disabled = true;
-    try {
-      const result = await KaraokeAccountAuth.resetUserPassword(user.username);
-      document.getElementById("adminTemporaryPassword").value =
-        result.temporaryPassword;
-      document.getElementById("adminTemporaryPasswordResult").hidden = false;
-      document.getElementById("editUserPasswordResetNotice").textContent =
-        "Password changed. Share this temporary password privately; it is not sent by email.";
-      button.textContent = "Password changed";
-      showNotification(
-        "Temporary password generated for this account.",
-        "success",
-      );
-    } catch (error) {
-      console.error("Could not reset account password:", error.message);
-      button.disabled = false;
-      showNotification("Could not reset the account password.", "danger");
-    }
-    return;
-  }
-
   const newPassword = document.getElementById("editUserPasswordInput").value;
   const confirmPassword = document.getElementById(
     "editUserPasswordConfirm",
@@ -3014,19 +2851,6 @@ async function handleChangeUserPassword() {
 
   showNotification(`✅ Password changed for "${user.username}"!`, "success");
   console.log("🔐 Password changed for user:", user.username);
-}
-
-async function copyAdminTemporaryPassword() {
-  const password = document.getElementById("adminTemporaryPassword");
-  try {
-    await navigator.clipboard.writeText(password.value);
-  } catch (error) {
-    password.focus();
-    password.select();
-    document.execCommand("copy");
-  }
-  document.getElementById("copyAdminTemporaryPasswordButton").textContent =
-    "Copied";
 }
 
 // Show notification

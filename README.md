@@ -234,19 +234,15 @@ Third-party Services:
 
 ## 🔐 Security & API Usage
 
-### Password Recovery Setup
+### Account Authentication Setup
 
-Password recovery uses Firebase Authentication. Before deploying this flow:
+Account requests and email-linked sign-in use Firebase Authentication. Before deploying:
 
 1. In Firebase Console, open **Authentication → Sign-in method** and enable **Email/Password**.
 2. In **Authentication → Settings → Authorized domains**, add `sdkaraoke.vercel.app` if it is not listed.
 3. Back up the Realtime Database before deployment. Existing accounts can be linked by signing in with their current credentials and entering an email, or by adding the email in Admin → User Management → Edit Account.
 4. New account requests and accounts created by an administrator require an email. Account request approval provisions Firebase Authentication and sends a verification message.
-5. Forgot Password asks only for the username. Admin → User Management → Password Reset Requests offers **Approve & create password** or **Reject**. The requester sees the temporary password in the same browser session after approval.
-
-The temporary password is generated and applied by the server-side Firebase Admin SDK. See [PASSWORD_RESET_SETUP.md](PASSWORD_RESET_SETUP.md) for the required Vercel server secrets.
-
-The existing Realtime Database access rules must allow the login page to read/write user account metadata and reset requests. Review those rules before production use; client-side role checks alone are not authorization.
+   The existing Realtime Database access rules must allow the login page to read/write user account metadata and account requests. Review those rules before production use; client-side role checks alone are not authorization.
 
 ### API Keys
 
