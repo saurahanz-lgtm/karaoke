@@ -1264,7 +1264,7 @@
             roomRequestRoomId = requestedRoomId;
             document.getElementById("roomFullMessage").textContent =
               error.message === "NO_AVAILABLE_ROOMS"
-                ? `All rooms already have ${KaraokeSessions.MAX_DEVICES} connected phones. Send a request to User Management to open another room.`
+                ? "No room is available right now. Send a request to User Management to open another room."
                 : `This room already has ${KaraokeSessions.MAX_DEVICES} connected phones. Send a request to User Management to open another room.`;
             document.getElementById("singerApp").hidden = true;
             document.getElementById("roomUnavailablePage").hidden = false;
