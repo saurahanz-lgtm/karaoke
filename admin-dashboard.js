@@ -43,6 +43,8 @@ const roomMemberListeners = new Map();
 const roomRequestListeners = new Map();
 const roomRequestsByRoom = new Map();
 const knownPendingRoomRequestIds = new Map();
+let knownPendingGlobalRoomRequestIds = new Set();
+let stopListeningToAllRoomRequests = null;
 let roomRequestApprovalAudioContext = null;
 let pendingRoomRequestApprovalId = null;
 let knownPendingAccountRequestIds = null;
@@ -363,6 +365,41 @@ function initializeRoomManagement() {
             roomRequestListeners.set(room.id, stopListening);
           }
         });
+
+        stopListeningToAllRoomRequests?.();
+        stopListeningToAllRoomRequests = KaraokeSessions.listenAllRoomRequests(
+          (requests) => {
+            const pendingIds = new Set(
+              requests
+                .filter((request) => request.status === "pending")
+                .map((request) => request.id),
+            );
+            if (
+              knownPendingGlobalRoomRequestIds.size > 0 &&
+              [...pendingIds].some(
+                (id) => !knownPendingGlobalRoomRequestIds.has(id),
+              )
+            ) {
+              playRequestNotificationSound();
+            }
+            knownPendingGlobalRoomRequestIds = pendingIds;
+            const deduplicatedRequests = Array.from(
+              new Map(
+                [
+                  ...Array.from(roomRequestsByRoom.values()).flat(),
+                  ...requests,
+                ].map((request) => [request.id, request]),
+              ).values(),
+            ).sort(
+              (first, second) =>
+                (first.createdAt || 0) - (second.createdAt || 0),
+            );
+            renderRoomRequests(deduplicatedRequests);
+          },
+          (error) => {
+            console.error("Could not listen for room requests:", error.message);
+          },
+        );
 
         updateAdminRequestNotifications();
         document.getElementById("roomMonitorStatus").textContent =

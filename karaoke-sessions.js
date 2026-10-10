@@ -1,6 +1,7 @@
 (function (global) {
   const ROOM_LIST_PATH = "karaokeRooms";
   const ROOM_DATA_PATH = "karaokeSessions";
+  const ROOM_REQUESTS_PATH = "roomRequests";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
   const MAX_DEVICES = 3;
   const DEFAULT_ROOM_VOLUME = 70;
@@ -280,6 +281,7 @@
 
   async function createRoomRequest(username, roomId) {
     if (!roomId) throw new Error("ROOM_REQUIRED");
+    const db = database();
     const requestRef = roomRef(roomId, "roomRequests").push();
     const request = {
       id: requestRef.key,
@@ -290,7 +292,10 @@
       status: "pending",
       createdAt: Date.now(),
     };
-    await requestRef.set(request);
+    await db.ref().update({
+      [`${ROOM_DATA_PATH}/${roomId}/roomRequests/${request.id}`]: request,
+      [`${ROOM_REQUESTS_PATH}/${request.id}`]: request,
+    });
     return request;
   }
 
@@ -308,6 +313,20 @@
     return () => ref.off("value", handler);
   }
 
+  function listenAllRoomRequests(callback, onError) {
+    const ref = database().ref(ROOM_REQUESTS_PATH);
+    const handler = (snapshot) => {
+      const requests = snapshot.val() || {};
+      callback(
+        Object.entries(requests)
+          .map(([id, request]) => ({ ...request, id }))
+          .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)),
+      );
+    };
+    ref.on("value", handler, onError);
+    return () => ref.off("value", handler);
+  }
+
   function listenRoomRequest(roomId, requestId, callback, onError) {
     const ref = roomRef(roomId, `roomRequests/${requestId}`);
     const handler = (snapshot) => callback(snapshot.val());
@@ -316,7 +335,9 @@
   }
 
   async function approveRoomRequest(roomId, requestId, roomName) {
+    const db = database();
     const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
+    const globalRequestRef = db.ref(`${ROOM_REQUESTS_PATH}/${requestId}`);
     const claim = await requestRef.transaction((request) =>
       request?.status === "pending"
         ? { ...request, status: "approving" }
@@ -327,10 +348,22 @@
     let room = null;
     try {
       room = await createRoom(roomName);
-      await requestRef.update({
+      const handledAt = Date.now();
+      const nextStatus = {
         status: "approved",
         approvedRoomId: room.id,
-        handledAt: Date.now(),
+        handledAt,
+      };
+      await db.ref().update({
+        [`${ROOM_DATA_PATH}/${roomId}/roomRequests/${requestId}`]: {
+          ...(claim.snapshot.val() || {}),
+          ...nextStatus,
+        },
+        [`${ROOM_REQUESTS_PATH}/${requestId}`]: {
+          ...((await globalRequestRef.once("value")).val() || {}),
+          roomId,
+          ...nextStatus,
+        },
       });
       return room;
     } catch (error) {
@@ -355,15 +388,27 @@
   }
 
   function rejectRoomRequest(roomId, requestId) {
+    const db = database();
     const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
+    const globalRequestRef = db.ref(`${ROOM_REQUESTS_PATH}/${requestId}`);
     return requestRef
       .transaction((request) =>
         request?.status === "pending"
           ? { ...request, status: "rejected", handledAt: Date.now() }
           : undefined,
       )
-      .then((result) => {
+      .then(async (result) => {
         if (!result.committed) throw new Error("ROOM_REQUEST_ALREADY_RESOLVED");
+        const request = result.snapshot.val();
+        const nextRequest = { ...(request || {}), roomId, status: "rejected" };
+        await db.ref().update({
+          [`${ROOM_DATA_PATH}/${roomId}/roomRequests/${requestId}`]:
+            nextRequest,
+          [`${ROOM_REQUESTS_PATH}/${requestId}`]: {
+            ...((await globalRequestRef.once("value")).val() || {}),
+            ...nextRequest,
+          },
+        });
       });
   }
 
@@ -710,6 +755,7 @@
     deleteRoom,
     ensureDefaultRoom,
     getActiveRoomId,
+    listenAllRoomRequests,
     getActiveMemberCount,
     getJoinUrl,
     getRoomIdFromUrl,
