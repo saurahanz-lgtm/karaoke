@@ -28,9 +28,13 @@ let loggedInUser = null;
 let currentFilter = null;
 let currentUserPage = 1;
 let currentRoomRequestView = "pending";
+let currentKaraokeRoomPage = 1;
+let currentRoomRequestPage = 1;
 let currentAccountRequestView = "pending";
 let currentAccountRequestPage = 1;
 const USERS_PER_PAGE = 5;
+const KARAOKE_ROOMS_PER_PAGE = 5;
+const ROOM_REQUESTS_PER_PAGE = 5;
 const ACCOUNT_REQUESTS_PER_PAGE = 5;
 let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
@@ -191,6 +195,30 @@ document.addEventListener("DOMContentLoaded", function () {
       selectRoomRequestView(button.dataset.roomRequestFilter),
     );
   });
+  document
+    .getElementById("previousKaraokeRoomsPage")
+    .addEventListener("click", () => {
+      currentKaraokeRoomPage = Math.max(1, currentKaraokeRoomPage - 1);
+      renderKaraokeRooms();
+    });
+  document
+    .getElementById("nextKaraokeRoomsPage")
+    .addEventListener("click", () => {
+      currentKaraokeRoomPage += 1;
+      renderKaraokeRooms();
+    });
+  document
+    .getElementById("previousRoomRequestsPage")
+    .addEventListener("click", () => {
+      currentRoomRequestPage = Math.max(1, currentRoomRequestPage - 1);
+      renderCurrentRoomRequests();
+    });
+  document
+    .getElementById("nextRoomRequestsPage")
+    .addEventListener("click", () => {
+      currentRoomRequestPage += 1;
+      renderCurrentRoomRequests();
+    });
   document
     .getElementById("previousAccountRequestsPage")
     .addEventListener("click", () => {
@@ -804,6 +832,9 @@ async function handleAccountRequestDecision(request, decision, buttons) {
 function renderRoomRequests(requests) {
   updateAdminRequestNotifications();
   const tableBody = document.getElementById("roomRequestsTableBody");
+  const pagination = document.getElementById("roomRequestsPagination");
+  const previousButton = document.getElementById("previousRoomRequestsPage");
+  const nextButton = document.getElementById("nextRoomRequestsPage");
   const pendingCount = requests.filter((request) =>
     ["pending", "approving"].includes(request.status),
   ).length;
@@ -819,91 +850,113 @@ function renderRoomRequests(requests) {
       : ["pending", "approving"].includes(request.status),
   );
   if (visibleRequests.length === 0) {
+    currentRoomRequestPage = 1;
+    pagination.hidden = true;
     tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-white-50">No ${currentRoomRequestView === "history" ? "room request history" : "pending room requests"}.</td></tr>`;
     return;
   }
 
+  const pageCount = Math.ceil(visibleRequests.length / ROOM_REQUESTS_PER_PAGE);
+  currentRoomRequestPage = Math.min(
+    Math.max(1, currentRoomRequestPage),
+    pageCount,
+  );
+  pagination.hidden = pageCount <= 1;
+  previousButton.disabled = currentRoomRequestPage === 1;
+  nextButton.disabled = currentRoomRequestPage === pageCount;
+  document.getElementById("currentRoomRequestsPage").textContent = String(
+    currentRoomRequestPage,
+  );
+  document.getElementById("totalRoomRequestsPages").textContent =
+    String(pageCount);
+  const firstRequestIndex =
+    (currentRoomRequestPage - 1) * ROOM_REQUESTS_PER_PAGE;
+
   tableBody.replaceChildren(
-    ...visibleRequests.map((request) => {
-      const row = document.createElement("tr");
-      const singerCell = document.createElement("td");
-      const roomCell = document.createElement("td");
-      const dateCell = document.createElement("td");
-      const statusCell = document.createElement("td");
-      const actionCell = document.createElement("td");
-      singerCell.textContent = request.username || "Performer";
-      roomCell.textContent = request.roomId || "Unknown room";
-      dateCell.textContent = request.createdAt
-        ? new Date(request.createdAt).toLocaleString()
-        : "-";
-      const status =
-        request.status === "approving" ? "processing" : request.status;
-      const statusBadge = document.createElement("span");
-      statusBadge.className = `request-status request-status-${status || "pending"}`;
-      statusBadge.textContent = status || "pending";
-      statusCell.appendChild(statusBadge);
-      if (request.status === "pending") {
-        const approveButton = document.createElement("button");
-        const rejectButton = document.createElement("button");
-        approveButton.type = "button";
-        approveButton.className = "btn btn-sm btn-success me-2";
-        approveButton.textContent = "Approve";
-        rejectButton.type = "button";
-        rejectButton.className = "btn btn-sm btn-outline-danger";
-        rejectButton.textContent = "Reject";
-        approveButton.addEventListener("click", () =>
-          handleRoomRequestDecision(request, "approve", [
-            approveButton,
-            rejectButton,
-          ]),
-        );
-        rejectButton.addEventListener("click", () =>
-          handleRoomRequestDecision(request, "reject", [
-            approveButton,
-            rejectButton,
-          ]),
-        );
-        actionCell.append(approveButton, rejectButton);
-      } else if (
-        currentRoomRequestView === "history" &&
-        ["approved", "rejected"].includes(request.status)
-      ) {
-        const deleteButton = document.createElement("button");
-        deleteButton.type = "button";
-        deleteButton.className = "btn btn-sm btn-outline-danger";
-        deleteButton.textContent = "Delete";
-        deleteButton.addEventListener("click", () =>
-          handleDeleteRoomRequest(request, deleteButton),
-        );
-        actionCell.appendChild(deleteButton);
-      } else {
-        actionCell.textContent = request.approvedRoomId
-          ? `Room ${request.approvedRoomId}`
+    ...visibleRequests
+      .slice(firstRequestIndex, firstRequestIndex + ROOM_REQUESTS_PER_PAGE)
+      .map((request) => {
+        const row = document.createElement("tr");
+        const singerCell = document.createElement("td");
+        const roomCell = document.createElement("td");
+        const dateCell = document.createElement("td");
+        const statusCell = document.createElement("td");
+        const actionCell = document.createElement("td");
+        singerCell.textContent = request.username || "Performer";
+        roomCell.textContent = request.roomId || "Unknown room";
+        dateCell.textContent = request.createdAt
+          ? new Date(request.createdAt).toLocaleString()
           : "-";
-      }
-      row.append(singerCell, roomCell, dateCell, statusCell, actionCell);
-      return row;
-    }),
+        const status =
+          request.status === "approving" ? "processing" : request.status;
+        const statusBadge = document.createElement("span");
+        statusBadge.className = `request-status request-status-${status || "pending"}`;
+        statusBadge.textContent = status || "pending";
+        statusCell.appendChild(statusBadge);
+        if (request.status === "pending") {
+          const approveButton = document.createElement("button");
+          const rejectButton = document.createElement("button");
+          approveButton.type = "button";
+          approveButton.className = "btn btn-sm btn-success me-2";
+          approveButton.textContent = "Approve";
+          rejectButton.type = "button";
+          rejectButton.className = "btn btn-sm btn-outline-danger";
+          rejectButton.textContent = "Reject";
+          approveButton.addEventListener("click", () =>
+            handleRoomRequestDecision(request, "approve", [
+              approveButton,
+              rejectButton,
+            ]),
+          );
+          rejectButton.addEventListener("click", () =>
+            handleRoomRequestDecision(request, "reject", [
+              approveButton,
+              rejectButton,
+            ]),
+          );
+          actionCell.append(approveButton, rejectButton);
+        } else if (
+          currentRoomRequestView === "history" &&
+          ["approved", "rejected"].includes(request.status)
+        ) {
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "btn btn-sm btn-outline-danger";
+          deleteButton.textContent = "Delete";
+          deleteButton.addEventListener("click", () =>
+            handleDeleteRoomRequest(request, deleteButton),
+          );
+          actionCell.appendChild(deleteButton);
+        } else {
+          actionCell.textContent = request.approvedRoomId
+            ? `Room ${request.approvedRoomId}`
+            : "-";
+        }
+        row.append(singerCell, roomCell, dateCell, statusCell, actionCell);
+        return row;
+      }),
   );
 }
 
 function selectRoomRequestView(view) {
   currentRoomRequestView = view === "history" ? "history" : "pending";
+  currentRoomRequestPage = 1;
   document.querySelectorAll("[data-room-request-filter]").forEach((button) => {
     button.setAttribute(
       "aria-pressed",
       String(button.dataset.roomRequestFilter === currentRoomRequestView),
     );
   });
-  renderRoomRequests(
-    [
-      ...Array.from(roomRequestsByRoom.values()).flat(),
-      ...allRoomRequests,
-    ].filter(
-      (request, index, requests) =>
-        requests.findIndex((item) => item.id === request.id) === index,
+  renderCurrentRoomRequests();
+}
+
+function renderCurrentRoomRequests() {
+  const requestsById = new Map(
+    [...Array.from(roomRequestsByRoom.values()).flat(), ...allRoomRequests].map(
+      (request) => [request.id, request],
     ),
   );
+  renderRoomRequests(Array.from(requestsById.values()));
 }
 
 async function handleDeleteRoomRequest(request, button) {
@@ -971,6 +1024,9 @@ async function handleRoomRequestDecision(request, decision, buttons) {
 
 function renderKaraokeRooms() {
   const tableBody = document.getElementById("roomsTableBody");
+  const pagination = document.getElementById("karaokeRoomsPagination");
+  const previousButton = document.getElementById("previousKaraokeRoomsPage");
+  const nextButton = document.getElementById("nextKaraokeRoomsPage");
   const totalDevices = new Set(Array.from(roomDeviceIds.values()).flat()).size;
 
   document.getElementById("totalKaraokeRooms").textContent = String(
@@ -981,63 +1037,82 @@ function renderKaraokeRooms() {
   renderDashboard();
 
   if (karaokeRooms.length === 0) {
+    currentKaraokeRoomPage = 1;
+    pagination.hidden = true;
     tableBody.innerHTML =
       '<tr><td colspan="5" class="text-center text-white-50">No rooms created yet.</td></tr>';
     return;
   }
 
+  const pageCount = Math.ceil(karaokeRooms.length / KARAOKE_ROOMS_PER_PAGE);
+  currentKaraokeRoomPage = Math.min(
+    Math.max(1, currentKaraokeRoomPage),
+    pageCount,
+  );
+  pagination.hidden = pageCount <= 1;
+  previousButton.disabled = currentKaraokeRoomPage === 1;
+  nextButton.disabled = currentKaraokeRoomPage === pageCount;
+  document.getElementById("currentKaraokeRoomsPage").textContent = String(
+    currentKaraokeRoomPage,
+  );
+  document.getElementById("totalKaraokeRoomsPages").textContent =
+    String(pageCount);
+  const firstRoomIndex = (currentKaraokeRoomPage - 1) * KARAOKE_ROOMS_PER_PAGE;
+
   tableBody.replaceChildren(
-    ...karaokeRooms.map((room) => {
-      const row = document.createElement("tr");
-      const nameCell = document.createElement("td");
-      const codeCell = document.createElement("td");
-      const devicesCell = document.createElement("td");
-      const statusCell = document.createElement("td");
-      const actionCell = document.createElement("td");
-      nameCell.textContent = room.name;
-      codeCell.textContent = room.id;
-      const deviceCount = roomDeviceCounts.get(room.id) || 0;
-      devicesCell.textContent = `${deviceCount} / ${KaraokeSessions.MAX_DEVICES}`;
-      const statusBadge = document.createElement("span");
-      const roomStatus =
-        deviceCount >= KaraokeSessions.MAX_DEVICES
-          ? "full"
-          : deviceCount > 0
-            ? "occupied"
-            : "available";
-      statusBadge.className = `account-state room-state-${roomStatus}`;
-      statusBadge.textContent = roomStatus;
-      statusCell.appendChild(statusBadge);
-      const renameButton = document.createElement("button");
-      renameButton.type = "button";
-      renameButton.className = "btn btn-sm btn-outline-light me-2";
-      renameButton.textContent = "Rename";
-      renameButton.addEventListener("click", () =>
-        handleRenameRoom(room, renameButton),
-      );
-      actionCell.appendChild(renameButton);
-      if (room.id === "main") {
-        const defaultLabel = document.createElement("span");
-        defaultLabel.textContent = "Default room";
-        actionCell.appendChild(defaultLabel);
-      } else {
-        const deleteButton = document.createElement("button");
-        deleteButton.type = "button";
-        deleteButton.className = "btn btn-sm btn-outline-danger";
-        deleteButton.textContent = "Delete";
-        deleteButton.disabled = deviceCount > 0;
-        deleteButton.title =
-          deviceCount > 0
-            ? "Disconnect all phones before deleting this room"
-            : `Delete ${room.name}`;
-        deleteButton.addEventListener("click", () =>
-          handleDeleteRoom(room, deleteButton),
+    ...karaokeRooms
+      .slice(firstRoomIndex, firstRoomIndex + KARAOKE_ROOMS_PER_PAGE)
+      .map((room) => {
+        const row = document.createElement("tr");
+        const nameCell = document.createElement("td");
+        const codeCell = document.createElement("td");
+        const devicesCell = document.createElement("td");
+        const statusCell = document.createElement("td");
+        const actionCell = document.createElement("td");
+        nameCell.textContent = room.name;
+        codeCell.textContent = room.id;
+        const deviceCount = roomDeviceCounts.get(room.id) || 0;
+        devicesCell.textContent = `${deviceCount} / ${KaraokeSessions.MAX_DEVICES}`;
+        const statusBadge = document.createElement("span");
+        const roomStatus =
+          deviceCount >= KaraokeSessions.MAX_DEVICES
+            ? "full"
+            : deviceCount > 0
+              ? "occupied"
+              : "available";
+        statusBadge.className = `account-state room-state-${roomStatus}`;
+        statusBadge.textContent = roomStatus;
+        statusCell.appendChild(statusBadge);
+        const renameButton = document.createElement("button");
+        renameButton.type = "button";
+        renameButton.className = "btn btn-sm btn-outline-light me-2";
+        renameButton.textContent = "Rename";
+        renameButton.addEventListener("click", () =>
+          handleRenameRoom(room, renameButton),
         );
-        actionCell.appendChild(deleteButton);
-      }
-      row.append(nameCell, codeCell, devicesCell, statusCell, actionCell);
-      return row;
-    }),
+        actionCell.appendChild(renameButton);
+        if (room.id === "main") {
+          const defaultLabel = document.createElement("span");
+          defaultLabel.textContent = "Default room";
+          actionCell.appendChild(defaultLabel);
+        } else {
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "btn btn-sm btn-outline-danger";
+          deleteButton.textContent = "Delete";
+          deleteButton.disabled = deviceCount > 0;
+          deleteButton.title =
+            deviceCount > 0
+              ? "Disconnect all phones before deleting this room"
+              : `Delete ${room.name}`;
+          deleteButton.addEventListener("click", () =>
+            handleDeleteRoom(room, deleteButton),
+          );
+          actionCell.appendChild(deleteButton);
+        }
+        row.append(nameCell, codeCell, devicesCell, statusCell, actionCell);
+        return row;
+      }),
   );
 }
 
