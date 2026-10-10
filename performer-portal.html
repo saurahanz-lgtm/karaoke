@@ -750,7 +750,12 @@
         <h3>Search & Reserve</h3>
         <form id="searchForm">
           <div class="searchbox">
-            <input id="searchInput" placeholder="Search..." />
+            <input
+              id="searchInput"
+              type="search"
+              enterkeyhint="search"
+              placeholder="Search..."
+            />
             <button type="submit" class="searchbtn">🔍</button>
           </div>
         </form>
@@ -1465,6 +1470,15 @@
         if (searchForm) {
           searchForm.removeEventListener("submit", handleSearch);
           searchForm.addEventListener("submit", handleSearch);
+        }
+        const searchInput = document.getElementById("searchInput");
+        if (searchInput) {
+          searchInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.keyCode === 13) {
+              event.preventDefault();
+              handleSearch(event);
+            }
+          });
         }
         document
           .getElementById("resultsContainer")
