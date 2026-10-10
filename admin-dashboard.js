@@ -42,8 +42,8 @@ const roomDeviceIds = new Map();
 const roomMemberListeners = new Map();
 const roomRequestListeners = new Map();
 const roomRequestsByRoom = new Map();
-const knownPendingRoomRequestIds = new Map();
 let knownPendingGlobalRoomRequestIds = new Set();
+let allRoomRequests = [];
 let stopListeningToAllRoomRequests = null;
 let roomRequestApprovalAudioContext = null;
 let pendingRoomRequestApprovalId = null;
@@ -319,7 +319,6 @@ function initializeRoomManagement() {
             stopListening();
             roomRequestListeners.delete(roomId);
             roomRequestsByRoom.delete(roomId);
-            knownPendingRoomRequestIds.delete(roomId);
           }
         });
 
@@ -341,21 +340,6 @@ function initializeRoomManagement() {
             const stopListening = KaraokeSessions.listenRoomRequests(
               room.id,
               (requests) => {
-                const pendingIds = new Set(
-                  requests
-                    .filter((request) => request.status === "pending")
-                    .map((request) => request.id),
-                );
-                const previousPendingIds = knownPendingRoomRequestIds.get(
-                  room.id,
-                );
-                if (
-                  previousPendingIds &&
-                  [...pendingIds].some((id) => !previousPendingIds.has(id))
-                ) {
-                  playRequestNotificationSound();
-                }
-                knownPendingRoomRequestIds.set(room.id, pendingIds);
                 roomRequestsByRoom.set(room.id, requests);
                 renderRoomRequests(
                   Array.from(roomRequestsByRoom.values()).flat(),
@@ -375,7 +359,6 @@ function initializeRoomManagement() {
                 .map((request) => request.id),
             );
             if (
-              knownPendingGlobalRoomRequestIds.size > 0 &&
               [...pendingIds].some(
                 (id) => !knownPendingGlobalRoomRequestIds.has(id),
               )
@@ -383,6 +366,7 @@ function initializeRoomManagement() {
               playRequestNotificationSound();
             }
             knownPendingGlobalRoomRequestIds = pendingIds;
+            allRoomRequests = requests;
             const deduplicatedRequests = Array.from(
               new Map(
                 [
@@ -728,8 +712,7 @@ function updateAdminRequestNotifications() {
         view: "users",
         createdAt: request.createdAt || 0,
       })),
-    ...Array.from(roomRequestsByRoom.values())
-      .flat()
+    ...allRoomRequests
       .filter((request) => request.status === "pending")
       .map((request) => ({
         label: `Room request from ${request.username || "singer"} (${request.roomId || "unknown room"})`,
