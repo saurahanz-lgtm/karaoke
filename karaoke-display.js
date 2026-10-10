@@ -380,13 +380,9 @@ async function requestKaraokeDisplayRoomApproval(anchorRoomId) {
     if (approvedRoom) {
       hideKaraokeDisplayRoomRequestStatus();
       activateKaraokeRoom(approvedRoom.id);
-    } else {
-      showKaraokeDisplayRoomRequestStatus(
-        "Room approved",
-        "The new room is being added to the karaoke display...",
-      );
+      return;
     }
-    return;
+    localStorage.removeItem(KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY);
   }
   if (
     existingRequest?.status === "rejected" ||
