@@ -502,7 +502,7 @@ function renderPasswordResetRequests() {
         request.deliveryStatus === "awaiting_approval"
           ? "Awaiting approval"
           : request.deliveryStatus === "sent"
-            ? "Accepted by Firebase"
+            ? "Accepted; check Inbox/Spam"
             : request.deliveryStatus === "auth/user-not-found"
               ? "Email not linked to an account"
               : request.deliveryStatus === "auth/operation-not-allowed"
@@ -559,10 +559,16 @@ async function handlePasswordResetDecision(requestId, decision, button) {
   try {
     if (decision === "approve") {
       await KaraokeAccountAuth.approvePasswordResetRequest(requestId);
-      showNotification("Firebase accepted the reset email request.", "success");
+      showNotification(
+        "Reset email accepted by Firebase. Check Inbox, Spam/Junk, Promotions, and All Mail.",
+        "success",
+      );
     } else if (decision === "resend") {
       await KaraokeAccountAuth.resendPasswordResetRequest(requestId);
-      showNotification("Firebase accepted the resend request.", "success");
+      showNotification(
+        "Resend accepted by Firebase. Check Inbox, Spam/Junk, Promotions, and All Mail.",
+        "success",
+      );
     } else {
       await KaraokeAccountAuth.rejectPasswordResetRequest(requestId);
       showNotification("Password reset request rejected.", "warning");
