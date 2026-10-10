@@ -793,7 +793,7 @@ async function handleAccountRequestDecision(request, decision, buttons) {
       error.message === "ACCOUNT_ALREADY_EXISTS"
         ? "That username is already in use. The requester has been notified."
         : error.message === "REQUEST_EMAIL_REQUIRED"
-          ? "A valid recovery email is required to approve this account."
+          ? "A valid account email is required to approve this account."
           : error.message === "REQUEST_ALREADY_RESOLVED"
             ? "This account request has already been handled."
             : "Could not update the account request. Check the Firebase connection.";
@@ -2234,7 +2234,7 @@ async function handleAddUser(e) {
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    showNotification("Enter a valid recovery email address.", "warning");
+    showNotification("Enter a valid account email address.", "warning");
     return;
   }
 
@@ -2367,7 +2367,7 @@ function displayUsers() {
           <td>${escapeHtml(user.joined || "-")}</td>
           <td class="account-actions">
                     <button class="table-action" type="button" data-account-action="edit" data-user-id="${escapeHtml(user.id)}" aria-label="Edit ${safeUsername}" title="Edit account"><i class="bi bi-pencil-square"></i></button>
-                    <button class="table-action" type="button" data-account-action="password" data-user-id="${escapeHtml(user.id)}" aria-label="Reset password for ${safeUsername}" title="Reset password"><i class="bi bi-key"></i></button>
+                    ${user.authUid ? "" : `<button class="table-action" type="button" data-account-action="password" data-user-id="${escapeHtml(user.id)}" aria-label="Change password for ${safeUsername}" title="Change password"><i class="bi bi-key"></i></button>`}
                     <button class="table-action" type="button" data-account-action="toggle" data-user-id="${escapeHtml(user.id)}" aria-label="${isDisabled ? "Enable" : "Disable"} ${safeUsername}" title="${isDisabled ? "Enable" : "Disable"} account"><i class="bi ${isDisabled ? "bi-unlock" : "bi-lock"}"></i></button>
                     <button class="table-action" type="button" data-account-action="logout" data-user-id="${escapeHtml(user.id)}" aria-label="Log out ${safeUsername}" title="Log out account" ${loggedInUser?.username === user.username ? "disabled" : ""}><i class="bi bi-box-arrow-right"></i></button>
                     <button class="table-action table-action-danger" type="button" data-account-action="delete" data-user-id="${escapeHtml(user.id)}" aria-label="Delete ${safeUsername}" title="Delete account"><i class="bi bi-trash3"></i></button>
@@ -2643,12 +2643,12 @@ async function saveUserChanges() {
   }
 
   if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-    showNotification("Enter a valid recovery email address.", "warning");
+    showNotification("Enter a valid account email address.", "warning");
     return;
   }
   if (user.authUid && newPassword) {
     showNotification(
-      "Use the account reset action to change this Firebase password.",
+      "Password changes are unavailable for Firebase-linked accounts.",
       "warning",
     );
     return;

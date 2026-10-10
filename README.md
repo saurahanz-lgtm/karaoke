@@ -240,7 +240,7 @@ Account requests and email-linked sign-in use Firebase Authentication. Before de
 
 1. In Firebase Console, open **Authentication → Sign-in method** and enable **Email/Password**.
 2. In **Authentication → Settings → Authorized domains**, add `sdkaraoke.vercel.app` if it is not listed.
-3. Back up the Realtime Database before deployment. Existing accounts can be linked by signing in with their current credentials and entering an email, or by adding the email in Admin → User Management → Edit Account.
+3. Back up the Realtime Database before deployment. Existing accounts can be linked by adding an email in Admin → User Management → Edit Account.
 4. New account requests and accounts created by an administrator require an email. Account request approval provisions Firebase Authentication and sends a verification message.
    The existing Realtime Database access rules must allow the login page to read/write user account metadata and account requests. Review those rules before production use; client-side role checks alone are not authorization.
 

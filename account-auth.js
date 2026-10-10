@@ -99,26 +99,6 @@
     }
 
     if (account.password !== password) throw new Error("INVALID_CREDENTIALS");
-
-    const email = global
-      .prompt(
-        "Add your email to secure your account and enable password reset:",
-      )
-      ?.trim()
-      .toLowerCase();
-    if (!email) throw new Error("EMAIL_REQUIRED");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new Error("INVALID_EMAIL");
-    }
-
-    await ensureEmailAvailable(email, account.username);
-    const uid = await createIdentity(email, password);
-    const credential = await authClient.signInWithEmailAndPassword(
-      email,
-      password,
-    );
-    if (credential.user.uid !== uid) throw new Error("ACCOUNT_LINK_MISMATCH");
-    await saveAccountLink(account, email, uid);
     return account;
   }
 

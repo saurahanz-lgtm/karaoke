@@ -158,7 +158,7 @@
       if (!accountAuth) throw new Error("AUTH_UNAVAILABLE");
       if (!request.email) {
         const email = global
-          .prompt(`Enter a recovery email for ${request.username}:`)
+          .prompt(`Enter an account email for ${request.username}:`)
           ?.trim()
           .toLowerCase();
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
