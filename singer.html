@@ -384,6 +384,32 @@
         transform: scale(0.98);
       }
 
+      .song-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .song-actions .favorite-btn {
+        flex: 0 0 48px;
+        background: #374151;
+        color: #facc15;
+        font-size: 1.35rem;
+      }
+
+      .song-actions .favorite-btn.is-favorite {
+        background: #4b3c12;
+      }
+
+      .song-actions .song-item-btn {
+        flex: 1;
+        border-radius: 6px;
+      }
+
+      .favorites-toggle {
+        margin-top: 12px;
+        width: 100%;
+      }
+
       #resultsContainer {
         margin-top: 1rem;
       }
@@ -633,6 +659,14 @@
             <button type="submit" class="searchbtn">🔍</button>
           </div>
         </form>
+        <button
+          id="favoritesToggleButton"
+          class="searchbtn favorites-toggle"
+          type="button"
+          onclick="toggleFavoritesView()"
+        >
+          ☆ Saved favorites (0)
+        </button>
         <div id="resultsContainer"></div>
       </div>
 
@@ -687,6 +721,8 @@
       // ===== SINGER PAGE STATE =====
       let searchResults = [];
       let searchFallbackMessage = "";
+      let favoriteSongs = [];
+      let showingFavoriteSongs = false;
       let audioPlayer;
       let allSongs = [];
       let reservedSongs = [];
@@ -725,6 +761,138 @@
             ? "Song reservations are unavailable while the TV is disabled"
             : "Reserve this song";
         });
+      }
+
+      function getFavoritesStorageKey() {
+        return `karaoke_favorite_songs_${loggedInUser?.username || "guest"}`;
+      }
+
+      function loadFavoriteSongs() {
+        try {
+          const stored = JSON.parse(
+            localStorage.getItem(getFavoritesStorageKey()) || "[]",
+          );
+          favoriteSongs = Array.isArray(stored)
+            ? stored.filter((song) => song?.videoId)
+            : [];
+        } catch (error) {
+          favoriteSongs = [];
+        }
+        updateFavoritesToggle();
+      }
+
+      function saveFavoriteSongs() {
+        localStorage.setItem(
+          getFavoritesStorageKey(),
+          JSON.stringify(favoriteSongs),
+        );
+        updateFavoritesToggle();
+      }
+
+      function updateFavoritesToggle() {
+        const button = document.getElementById("favoritesToggleButton");
+        if (!button) return;
+        button.textContent = showingFavoriteSongs
+          ? "Back to search results"
+          : `☆ Saved favorites (${favoriteSongs.length})`;
+        button.setAttribute("aria-pressed", String(showingFavoriteSongs));
+      }
+
+      function toggleFavoritesView() {
+        showingFavoriteSongs = !showingFavoriteSongs;
+        updateFavoritesToggle();
+        if (showingFavoriteSongs) {
+          displayFavoriteSongs();
+        } else if (searchResults.length) {
+          displaySearchResults(
+            searchResults,
+            loggedInUser?.username || "Guest",
+          );
+        } else {
+          document.getElementById("resultsContainer").innerHTML = "";
+        }
+      }
+
+      function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (character) => {
+          const entities = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+          return entities[character];
+        });
+      }
+
+      function isFavoriteSong(videoId) {
+        return favoriteSongs.some((song) => song.videoId === videoId);
+      }
+
+      function createSongActionsMarkup(song) {
+        const title = escapeHTML(song.title);
+        const artist = escapeHTML(song.artist);
+        const videoId = escapeHTML(song.videoId);
+        const thumbnail = escapeHTML(song.thumbnail || "");
+        const isFavorite = isFavoriteSong(song.videoId);
+        return `
+          <div class="song-actions">
+            <button
+              class="favorite-btn${isFavorite ? " is-favorite" : ""}"
+              type="button"
+              data-action="favorite"
+              data-title="${title}"
+              data-artist="${artist}"
+              data-video-id="${videoId}"
+              data-thumbnail="${thumbnail}"
+              aria-label="${isFavorite ? "Remove from" : "Add to"} favorites"
+              aria-pressed="${isFavorite}"
+              title="${isFavorite ? "Remove from" : "Add to"} favorites"
+            >${isFavorite ? "★" : "☆"}</button>
+            <button
+              class="song-item-btn"
+              type="button"
+              data-action="reserve"
+              data-title="${title}"
+              data-artist="${artist}"
+              data-video-id="${videoId}"
+            >Reserve</button>
+          </div>`;
+      }
+
+      function handleSongAction(event) {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        const { action, title, artist, videoId, thumbnail } = button.dataset;
+        if (action === "favorite") {
+          const existingIndex = favoriteSongs.findIndex(
+            (song) => song.videoId === videoId,
+          );
+          if (existingIndex >= 0) {
+            favoriteSongs.splice(existingIndex, 1);
+          } else {
+            favoriteSongs.push({ title, artist, videoId, thumbnail });
+          }
+          saveFavoriteSongs();
+          if (showingFavoriteSongs) displayFavoriteSongs();
+          else if (searchResults.length) {
+            displaySearchResults(
+              searchResults,
+              loggedInUser?.username || "Guest",
+            );
+          }
+          return;
+        }
+        if (action === "reserve") {
+          requestSong(
+            title,
+            artist,
+            videoId,
+            loggedInUser?.username || "",
+            button,
+          );
+        }
       }
 
       function updateTVDisplayAvailability(settings = {}) {
@@ -1191,6 +1359,10 @@
           searchForm.removeEventListener("submit", handleSearch);
           searchForm.addEventListener("submit", handleSearch);
         }
+        document
+          .getElementById("resultsContainer")
+          .addEventListener("click", handleSongAction);
+        loadFavoriteSongs();
 
         // Initialize page data
         loadAllSongs();
@@ -1361,6 +1533,8 @@
 
         try {
           searchResults = await performSearch(searchQuery);
+          showingFavoriteSongs = false;
+          updateFavoritesToggle();
           const userName = loggedInUser ? loggedInUser.username : "Guest";
           displaySearchResults(searchResults, userName);
         } catch (error) {
@@ -1493,11 +1667,9 @@
                     <div class="song-item">
                         ${thumbnailMarkup}
                         <div class="song-info">
-                            <div class="song-title">${song.title}</div>
-                            <div class="song-artist">🎤 ${song.artist}</div>
-                            <button class="song-item-btn" onclick="requestSong('${song.title.replace(/'/g, "\\'")}', '${song.artist.replace(/'/g, "\\'")}', '${song.videoId}', '${userName}', this)">
-                                Reserve
-                            </button>
+                    <div class="song-title">${escapeHTML(song.title)}</div>
+                    <div class="song-artist">🎤 ${escapeHTML(song.artist)}</div>
+                    ${createSongActionsMarkup(song)}
                         </div>
                     </div>
                 `;
@@ -1558,7 +1730,7 @@
             "danger",
           );
           btn.disabled = false;
-          btn.textContent = "✓ Select";
+          btn.textContent = "Reserve";
         }
       }
 
@@ -1639,11 +1811,37 @@
       function successCallback(btn, title) {
         setTimeout(() => {
           showAlert(`✅ "${title}" added to Reserved Songs!`, "success");
-          document.getElementById("searchInput").value = "";
-          document.getElementById("resultsContainer").innerHTML = "";
           btn.disabled = false;
-          btn.textContent = "✓ Select";
+          btn.textContent = "Reserve";
+          if (!showingFavoriteSongs) {
+            document.getElementById("searchInput").value = "";
+            document.getElementById("resultsContainer").innerHTML = "";
+          }
         }, 500);
+      }
+
+      function displayFavoriteSongs() {
+        const container = document.getElementById("resultsContainer");
+        if (!favoriteSongs.length) {
+          container.innerHTML =
+            '<div class="alert alert-custom">No saved favorites yet. Tap ☆ on a song to save it.</div>';
+          return;
+        }
+
+        let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">Saved favorites (${favoriteSongs.length})</h3>`;
+        favoriteSongs.forEach((song) => {
+          html += `
+            <div class="song-item">
+              ${getSearchResultThumbnailMarkup(song)}
+              <div class="song-info">
+                <div class="song-title">${escapeHTML(song.title)}</div>
+                <div class="song-artist">🎤 ${escapeHTML(song.artist)}</div>
+                ${createSongActionsMarkup(song)}
+              </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+        applyTVControlAvailability();
       }
 
       // Show alert
