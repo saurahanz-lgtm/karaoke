@@ -513,7 +513,7 @@
       </form>
     </div>
 
-    <!-- Singer Page (Moved to separate singer.html file) -->
+    <!-- Singer page is served from singer-portal.html. -->
 
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
@@ -547,10 +547,10 @@
       // Initialize Firebase check
       useSingerFirebase = isSingerFirebaseConfigured();
 
-      // Show singer page and hide home - NOW REDIRECTS TO singer.html
+      // Singer navigation redirects to singer-portal.html.
       // (See validateSingerLogin function)
 
-      // ===== SINGER PAGE FUNCTIONS (Now in singer.html) =====
+      // ===== SINGER PAGE FUNCTIONS (Now in singer-portal.html) =====
 
       // Handle search form submission
       async function handleSearch(e) {
@@ -1090,7 +1090,7 @@
           }
           selectSingerRoom(roomId);
           if (localStorage.getItem("karaoke_logged_in_user")) {
-            window.location.href = `singer.html?room=${encodeURIComponent(roomId)}`;
+            window.location.href = `singer-portal.html?room=${encodeURIComponent(roomId)}`;
             return;
           }
           document.getElementById("singerUsername").focus();
@@ -1157,7 +1157,7 @@
               stopRoomQrScanner();
 
               if (localStorage.getItem("karaoke_logged_in_user")) {
-                window.location.href = `singer.html?room=${encodeURIComponent(roomId)}`;
+                window.location.href = `singer-portal.html?room=${encodeURIComponent(roomId)}`;
               } else {
                 document.getElementById("singerUsername").focus();
               }
@@ -1413,7 +1413,7 @@
                 console.warn("Firebase logout failed:", err.message),
               );
 
-            // Note: User status updates are handled by admin.js
+            // Note: User status updates are handled by admin-dashboard.js
             // Avoid modifying users array from login page to prevent data loss
           } catch (e) {
             console.warn("Firebase error:", e.message);
@@ -1613,7 +1613,7 @@
                   "karaoke_logged_in_user",
                   JSON.stringify(adminUser),
                 );
-                window.location.href = "admin.html";
+                window.location.href = "admin-dashboard.html";
               });
             });
           } else {
@@ -1714,7 +1714,7 @@
                     JSON.stringify(singerUser),
                   );
                   closeLoginModal();
-                  window.location.href = `singer.html?room=${encodeURIComponent(roomId)}`;
+                  window.location.href = `singer-portal.html?room=${encodeURIComponent(roomId)}`;
                 });
               },
             );

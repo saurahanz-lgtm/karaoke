@@ -703,7 +703,7 @@ function initializeTVDisplay() {
     }
   });
 
-  // Listen for storage changes from other tabs/windows (real-time sync with singer.html)
+  // Listen for storage changes from other tabs/windows (real-time sync with singer-portal.html)
   window.addEventListener("storage", function (e) {
     if (e.key === "karaoke_queue" || e.key === "karaoke_current_song") {
       console.log("📡 Storage change detected from other tab:", e.key);

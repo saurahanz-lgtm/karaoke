@@ -1062,7 +1062,7 @@ function watchRoomRequestForSinger() {
         roomApprovalNavigationStarted = true;
         status.textContent = "Approved! Connecting you to your new room...";
         const soundStarted = playRoomRequestApprovalSound(requestId);
-        const url = new URL("singer.html", window.location.href);
+        const url = new URL("singer-portal.html", window.location.href);
         url.searchParams.set("room", request.approvedRoomId);
         window.setTimeout(
           () => window.location.replace(url.toString()),

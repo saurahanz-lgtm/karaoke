@@ -1,5 +1,17 @@
 {
   "buildCommand": "",
   "installCommand": "",
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "redirects": [
+    {
+      "source": "/singer.html",
+      "destination": "/singer-portal.html",
+      "permanent": true
+    },
+    {
+      "source": "/admin.html",
+      "destination": "/admin-dashboard.html",
+      "permanent": true
+    }
+  ]
 }

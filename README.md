@@ -5,8 +5,9 @@
 Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 
 **All three major integrations are complete:**
+
 1. ✅ Vercel Deployment
-2. ✅ Firebase Integration  
+2. ✅ Firebase Integration
 3. ✅ YouTube API Embedding
 
 ---
@@ -14,15 +15,18 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 ## 📚 Documentation Files
 
 ### YouTube API Documentation
+
 - **[YOUTUBE_API_EMBEDDED.md](YOUTUBE_API_EMBEDDED.md)** - Summary of YouTube integration (START HERE)
 - **[YOUTUBE_API_SETUP.md](YOUTUBE_API_SETUP.md)** - Complete YouTube API setup guide
 - **[YOUTUBE_API_KEY_MANAGEMENT.md](YOUTUBE_API_KEY_MANAGEMENT.md)** - API key management & security
 - **[YOUTUBE_INTEGRATION_COMPLETE.md](YOUTUBE_INTEGRATION_COMPLETE.md)** - Integration overview
 
 ### Firebase Documentation
+
 - **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)** - Firebase configuration guide
 
 ### Project Files
+
 - **[package.json](package.json)** - Project dependencies
 - **[vercel.json](vercel.json)** - Vercel deployment config
 
@@ -31,15 +35,17 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 ## 🎯 What Works Now
 
 ### ✅ Singer Page (User Interface)
+
 - Search for karaoke songs
 - View YouTube search results
 - Request songs to queue
 - See reserved songs
 - Preview with audio
 
-**Access:** https://sdkaraoke.vercel.app/singer.html
+**Access:** https://sdkaraoke.vercel.app/singer-portal.html
 
 ### ✅ TV Display (Performance Screen)
+
 - Shows current song playing
 - Embedded YouTube player
 - Auto-plays videos
@@ -50,15 +56,17 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 **Access:** https://sdkaraoke.vercel.app/tv-display.html
 
 ### ✅ Admin Panel (Management)
+
 - View and manage users
 - Control queue
 - Play/pause/skip videos
 - Delete queue
 - User authentication
 
-**Access:** https://sdkaraoke.vercel.app/admin.html
+**Access:** https://sdkaraoke.vercel.app/admin-dashboard.html
 
 ### ✅ Home Page
+
 - Role selection (Admin/Singer)
 - Login/registration
 - Responsive design
@@ -70,36 +78,40 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 ## 🔑 Key Features Implemented
 
 ### YouTube API Features
-| Feature | Status | Details |
-|---------|--------|---------|
-| Video Search | ✅ | Real-time YouTube search with karaoke videos |
-| Embedded Player | ✅ | Full YouTube IFrame player with controls |
-| Auto-play | ✅ | Videos auto-play when set as "Now Playing" |
-| Queue Management | ✅ | Automatic progression through queue |
-| Player Controls | ✅ | Play, pause, stop, volume, fullscreen |
-| Video Metadata | ✅ | Duration, views, likes, thumbnail |
-| Fallback Data | ✅ | Demo songs if API fails |
-| Error Handling | ✅ | Graceful degradation with error messages |
 
-### Firebase Features  
-| Feature | Status | Details |
-|---------|--------|---------|
-| SDK Loaded | ✅ | Firebase SDKs included in all pages |
-| Config Created | ✅ | firebase-config.js ready for credentials |
-| Database Ready | ✅ | Awaiting credentials |
-| Auth Ready | ✅ | Firebase Auth SDK loaded |
+| Feature          | Status | Details                                      |
+| ---------------- | ------ | -------------------------------------------- |
+| Video Search     | ✅     | Real-time YouTube search with karaoke videos |
+| Embedded Player  | ✅     | Full YouTube IFrame player with controls     |
+| Auto-play        | ✅     | Videos auto-play when set as "Now Playing"   |
+| Queue Management | ✅     | Automatic progression through queue          |
+| Player Controls  | ✅     | Play, pause, stop, volume, fullscreen        |
+| Video Metadata   | ✅     | Duration, views, likes, thumbnail            |
+| Fallback Data    | ✅     | Demo songs if API fails                      |
+| Error Handling   | ✅     | Graceful degradation with error messages     |
+
+### Firebase Features
+
+| Feature        | Status | Details                                  |
+| -------------- | ------ | ---------------------------------------- |
+| SDK Loaded     | ✅     | Firebase SDKs included in all pages      |
+| Config Created | ✅     | firebase-config.js ready for credentials |
+| Database Ready | ✅     | Awaiting credentials                     |
+| Auth Ready     | ✅     | Firebase Auth SDK loaded                 |
 
 ---
 
 ## 🚀 Deployment Information
 
 ### Live Application
+
 - **URL:** https://sdkaraoke.vercel.app
 - **Provider:** Vercel (Hobby plan)
 - **Status:** ✅ Active and accessible
 - **Custom Domain:** Can be added via Vercel settings
 
 ### Deployment Method
+
 ```bash
 # Deploy with:
 vercel --prod
@@ -112,6 +124,7 @@ vercel status
 ```
 
 ### Environment
+
 - **Build:** Node.js static site
 - **Framework:** Vanilla HTML/CSS/JavaScript
 - **APIs:** YouTube Data API v3, Firebase Realtime Database
@@ -122,26 +135,31 @@ vercel status
 ## 🔧 Configuration Files
 
 ### youtube-api.js
+
 **Location:** Root directory  
 **Size:** 11.7 KB  
 **Purpose:** YouTube API wrapper library  
 **Contains:**
+
 - Search function
 - Player controls
 - URL utilities
 - Error handling
 
 ### firebase-config.js
+
 **Location:** Root directory  
 **Status:** ✅ Template ready
 **Needs:** Your Firebase credentials
 **How to update:**
+
 1. Create Firebase project
 2. Copy config from Firebase Console
 3. Replace placeholders in firebase-config.js
 4. Redeploy
 
 ### vercel.json
+
 **Location:** Root directory  
 **Purpose:** Vercel deployment configuration
 **Settings:** Public directories, routes, environment variables
@@ -152,7 +170,7 @@ vercel status
 
 ```
 Frontend Layer:
-├── HTML5 (index.html, admin.html, singer.html, tv-display.html)
+├── HTML5 (index.html, admin-dashboard.html, singer-portal.html, tv-display.html)
 ├── CSS3 (styles.css)
 ├── JavaScript (Vanilla - no frameworks)
 │
@@ -176,6 +194,7 @@ Third-party Services:
 ## 🎬 How to Use Each Component
 
 ### For Singers 🎤
+
 ```
 1. Visit: https://sdkaraoke.vercel.app
 2. Select "Singer" role
@@ -188,6 +207,7 @@ Third-party Services:
 ```
 
 ### For Admin 👨‍💼
+
 ```
 1. Visit: https://sdkaraoke.vercel.app
 2. Select "Admin" role
@@ -200,6 +220,7 @@ Third-party Services:
 ```
 
 ### For TV Display Screen 📺
+
 ```
 1. Open in separate browser/device: tv-display.html
 2. Keep fullscreen while singers perform
@@ -214,17 +235,20 @@ Third-party Services:
 ## 🔐 Security & API Usage
 
 ### API Keys
+
 - **YouTube API Key:** `AIzaSyAVq2Rno7lN9xilCpUzgOJMKSZCCqB96jQ`
 - **Status:** Active key
 - **Quota:** 10,000 units/day free
 - **Recommendation:** Create personal key for production
 
 ### Data Security
+
 - **User passwords:** Stored in localStorage (dev) or Firebase (production)
 - **Queue data:** Stored in localStorage (dev) or Firebase (production)
 - **API key:** Visible in code (frontend) - acceptable for internal use
 
 ### For Production
+
 1. Create personal YouTube API key
 2. Use environment variables for secrets
 3. Implement backend API proxy
@@ -237,18 +261,21 @@ Third-party Services:
 ## 📈 Monitoring & Maintenance
 
 ### API Usage Monitoring
+
 - Google Cloud Console → Quotas
 - Check daily YouTube API usage
 - Monitor for quota overages
 - Set up email alerts
 
 ### Deployment Monitoring
+
 - Vercel Dashboard → Analytics
 - Check deployment status
 - View build logs
 - Monitor traffic
 
 ### Error Tracking
+
 - Browser console (F12)
 - Firebase error logs
 - YouTube API error responses
@@ -259,27 +286,35 @@ Third-party Services:
 ## ❓ FAQ
 
 ### Q: Can I use this with my own YouTube videos?
+
 **A:** Yes! You can search for any YouTube content or manually add video IDs.
 
 ### Q: What if the YouTube API quota is exceeded?
+
 **A:** The app automatically falls back to demo karaoke songs. Real searches will resume tomorrow.
 
 ### Q: How do I add Firebase functionality?
+
 **A:** See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for complete instructions.
 
 ### Q: Can I add a custom domain?
+
 **A:** Yes! Via Vercel dashboard → Settings → Domains
 
 ### Q: How do I restrict API key to my domain?
+
 **A:** Google Cloud Console → APIs → YouTube Data API v3 → Credentials → Restrict key to your domain
 
 ### Q: Is it free to deploy?
+
 **A:** Yes! Vercel hobby plan is free with unlimited deployments.
 
 ### Q: Can I use this with Spotify instead of YouTube?
+
 **A:** Yes, but you'd need to replace youtube-api.js with Spotify API wrapper.
 
 ### Q: How do I backup my data?
+
 **A:** Use Firebase automatic backups or export from Firebase Console.
 
 ---
@@ -287,13 +322,14 @@ Third-party Services:
 ## 🔄 Workflow Examples
 
 ### Complete Karaoke Session Flow
+
 ```
 1. Singer arrives
-2. Opens singer.html
+2. Opens singer-portal.html
 3. Searches for "Shape of You"
 4. Requests song
 5. Goes to waiting area
-6. Admin opens admin.html
+6. Admin opens admin-dashboard.html
 7. Sees request from singer
 8. Clicks "Play Now"
 9. TV display auto-plays YouTube video
@@ -305,6 +341,7 @@ Third-party Services:
 ```
 
 ### Setup New Environment
+
 ```
 1. Fork or clone repository
 2. Deploy to Vercel (automatic)
@@ -322,17 +359,20 @@ Third-party Services:
 ## 📚 Quick Links
 
 ### Internal Documentation
+
 - [YouTube API Setup](YOUTUBE_API_SETUP.md)
 - [YouTube API Keys](YOUTUBE_API_KEY_MANAGEMENT.md)
 - [Firebase Setup](FIREBASE_SETUP.md)
 
 ### External Resources
+
 - [YouTube API Docs](https://developers.google.com/youtube/v3)
 - [Firebase Docs](https://firebase.google.com/docs)
 - [Vercel Docs](https://vercel.com/docs)
 - [HTML5 Reference](https://developer.mozilla.org/en-US/docs/Web/HTML)
 
 ### Useful Tools
+
 - [Google Cloud Console](https://console.cloud.google.com/)
 - [Firebase Console](https://console.firebase.google.com/)
 - [Vercel Dashboard](https://vercel.com/dashboard)
@@ -343,6 +383,7 @@ Third-party Services:
 ## ✨ Summary
 
 **Your SDkaraoke application is:**
+
 - ✅ Deployed and live
 - ✅ YouTube search functional
 - ✅ Video player working
@@ -352,6 +393,7 @@ Third-party Services:
 - ✅ Production ready
 
 **Next recommendations:**
+
 1. Test all features thoroughly
 2. Create personal YouTube API key
 3. Configure Firebase database
@@ -365,6 +407,7 @@ Third-party Services:
 ## 📞 Support
 
 For issues or questions:
+
 1. Check relevant documentation file
 2. Review troubleshooting sections
 3. Check browser console (F12)
