@@ -410,6 +410,74 @@
         width: 100%;
       }
 
+      .favorite-song-item {
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+      }
+
+      .favorite-song-item .song-thumbnail {
+        width: 112px;
+        height: 72px;
+        border-radius: 5px;
+      }
+
+      .favorite-song-item .song-info {
+        min-width: 0;
+        padding: 4px 8px;
+      }
+
+      .favorite-song-item .song-title {
+        overflow-wrap: anywhere;
+      }
+
+      .favorite-song-item .song-artist {
+        margin-bottom: 8px;
+      }
+
+      .favorite-song-item .song-actions {
+        justify-content: flex-end;
+      }
+
+      .favorite-song-item .song-actions .favorite-btn {
+        flex-basis: 40px;
+        padding: 7px;
+      }
+
+      .favorite-song-item .song-actions .song-item-btn {
+        flex: 0 1 120px;
+        width: auto;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+      }
+
+      .favorites-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        margin: 12px 0 4px;
+        color: white;
+        font-size: 0.9rem;
+      }
+
+      .favorites-page-btn {
+        width: auto !important;
+        padding: 8px 12px !important;
+        border-radius: 6px !important;
+        background: #374151 !important;
+        font-size: 0.9rem !important;
+      }
+
+      .favorites-page-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
       #resultsContainer {
         margin-top: 1rem;
       }
@@ -426,6 +494,32 @@
         }
         .song-artist {
           font-size: 0.8rem;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .favorite-song-item {
+          grid-template-columns: 76px minmax(0, 1fr);
+          gap: 6px;
+          padding: 6px;
+        }
+
+        .favorite-song-item .song-thumbnail {
+          width: 76px;
+          height: 56px;
+        }
+
+        .favorite-song-item .song-info {
+          padding: 2px 4px;
+        }
+
+        .favorite-song-item .song-actions .favorite-btn {
+          flex-basis: 36px;
+        }
+
+        .favorite-song-item .song-actions .song-item-btn {
+          flex-basis: 96px;
+          padding: 7px 8px;
         }
       }
 
@@ -723,6 +817,7 @@
       let searchFallbackMessage = "";
       let favoriteSongs = [];
       let showingFavoriteSongs = false;
+      let currentFavoritePage = 1;
       let audioPlayer;
       let allSongs = [];
       let reservedSongs = [];
@@ -811,6 +906,11 @@
         } else {
           document.getElementById("resultsContainer").innerHTML = "";
         }
+      }
+
+      function changeFavoritePage(pageOffset) {
+        currentFavoritePage += pageOffset;
+        displayFavoriteSongs();
       }
 
       function escapeHTML(value) {
@@ -1833,10 +1933,21 @@
           return;
         }
 
+        const pageSize = 5;
+        const pageCount = Math.ceil(favoriteSongs.length / pageSize);
+        currentFavoritePage = Math.max(
+          1,
+          Math.min(currentFavoritePage, pageCount),
+        );
+        const firstSongIndex = (currentFavoritePage - 1) * pageSize;
+        const pageSongs = favoriteSongs.slice(
+          firstSongIndex,
+          firstSongIndex + pageSize,
+        );
         let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">Saved favorites (${favoriteSongs.length})</h3>`;
-        favoriteSongs.forEach((song) => {
+        pageSongs.forEach((song) => {
           html += `
-            <div class="song-item">
+            <div class="song-item favorite-song-item">
               ${getSearchResultThumbnailMarkup(song)}
               <div class="song-info">
                 <div class="song-title">${escapeHTML(song.title)}</div>
@@ -1845,6 +1956,24 @@
               </div>
             </div>`;
         });
+        if (pageCount > 1) {
+          html += `
+            <nav class="favorites-pagination" aria-label="Favorite songs pages">
+              <button
+                class="favorites-page-btn"
+                type="button"
+                onclick="changeFavoritePage(-1)"
+                ${currentFavoritePage === 1 ? "disabled" : ""}
+              >Previous</button>
+              <span>Page ${currentFavoritePage} of ${pageCount}</span>
+              <button
+                class="favorites-page-btn"
+                type="button"
+                onclick="changeFavoritePage(1)"
+                ${currentFavoritePage === pageCount ? "disabled" : ""}
+              >Next</button>
+            </nav>`;
+        }
         container.innerHTML = html;
         applyTVControlAvailability();
       }
