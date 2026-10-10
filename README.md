@@ -243,10 +243,7 @@ Password recovery uses Firebase Authentication. Before deploying this flow:
 3. Back up the Realtime Database before deployment. Existing accounts can be linked by signing in with their current credentials and entering an email, or by adding the email in Admin → User Management → Edit Account.
 4. New account requests and accounts created by an administrator require an email. Account request approval provisions Firebase Authentication and sends a verification message.
 5. Forgot Password first asks for the username, then the registered email. Admin → User Management → Password Reset Requests shows both and offers **Approve & send link** or **Reject**. Approval sends the Firebase reset link only if username, email, and linked Auth account all match.
-6. To open the branded password form, go to **Authentication → Templates → Password reset → Edit → Customize action URL** and set it to `https://sdkaraoke.vercel.app/reset-password.html`.
-7. Save the template and use a newly generated reset email to test it. Previously generated reset links keep their old Firebase handler URL.
-
-The custom page validates Firebase's one-time reset code, lets the user choose a new password, and links back to sign-in. The reset email contains a secure link; the system never emails a plain-text password.
+6. Keep the Firebase Password reset template on its default action handler. The reset email contains a secure link; the system never emails a plain-text password.
 
 The existing Realtime Database access rules must allow the login page to read/write user account metadata and reset requests. Review those rules before production use; client-side role checks alone are not authorization.
 
