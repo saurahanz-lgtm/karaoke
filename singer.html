@@ -873,6 +873,7 @@
             favoriteSongs.splice(existingIndex, 1);
           } else {
             favoriteSongs.push({ title, artist, videoId, thumbnail });
+            showingFavoriteSongs = true;
           }
           saveFavoriteSongs();
           if (showingFavoriteSongs) displayFavoriteSongs();
