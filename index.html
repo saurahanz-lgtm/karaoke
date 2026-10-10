@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -302,7 +302,7 @@
               >Manage accounts, rooms, and display settings</span
             >
           </button>
-          <button class="role-btn" onclick="openSingerLogin()">
+          <button class="role-btn" onclick="openPerformerLogin()">
             <span class="role-icon" aria-hidden="true"
               ><i class="bi bi-music-note-list"></i
             ></span>
@@ -355,7 +355,7 @@
       </form>
     </div>
 
-    <!-- Singer Login Modal -->
+    <!-- Performer Login Modal -->
     <div id="singerLoginModal" class="login-modal-custom">
       <div class="login-title">Performer Sign In</div>
       <div id="performerSignInOptions">
@@ -386,7 +386,7 @@
               <input
                 type="text"
                 id="manualRoomId"
-                placeholder="Enter the Room ID shown on the TV"
+                placeholder="Enter the Room ID shown on the Karaoke Display"
                 autocomplete="off"
               />
             </div>
@@ -394,7 +394,7 @@
               type="button"
               class="login-btn login-btn-submit"
               id="useRoomIdButton"
-              onclick="useSingerRoomId()"
+              onclick="usePerformerRoomId()"
             >
               Continue
             </button>
@@ -403,7 +403,11 @@
             Scan the room QR code to connect to a karaoke room.
           </p>
         </div>
-        <form id="singerLoginForm" onsubmit="validateSingerLogin(event)" hidden>
+        <form
+          id="singerLoginForm"
+          onsubmit="validatePerformerLogin(event)"
+          hidden
+        >
           <div class="login-form-group">
             <label>Username</label>
             <input
@@ -513,22 +517,22 @@
       </form>
     </div>
 
-    <!-- Singer page is served from singer-portal.html. -->
+    <!-- Performer portal is served from performer-portal.html. -->
 
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-      // ===== SINGER PAGE STATE =====
+      // ===== PERFORMER PORTAL STATE =====
       let searchResults = [];
       let audioPlayer;
       let allSongs = [];
       let reservedSongs = [];
-      let useSingerFirebase = false;
+      let usePerformerFirebase = false;
       let roomQrScanner = null;
       let roomQrHandled = false;
 
       // Check if Firebase is properly configured
-      function isSingerFirebaseConfigured() {
+      function isPerformerFirebaseConfigured() {
         try {
           if (
             typeof firebase !== "undefined" &&
@@ -545,12 +549,12 @@
       }
 
       // Initialize Firebase check
-      useSingerFirebase = isSingerFirebaseConfigured();
+      usePerformerFirebase = isPerformerFirebaseConfigured();
 
-      // Singer navigation redirects to singer-portal.html.
-      // (See validateSingerLogin function)
+      // Performer navigation redirects to performer-portal.html.
+      // (See validatePerformerLogin function)
 
-      // ===== SINGER PAGE FUNCTIONS (Now in singer-portal.html) =====
+      // ===== PERFORMER PORTAL FUNCTIONS (Now in performer-portal.html) =====
 
       // Handle search form submission
       async function handleSearch(e) {
@@ -901,8 +905,8 @@
         }
       }
 
-      // Update singer activity
-      function updateSingerActivity() {
+      // Update performer activity
+      function updatePerformerActivity() {
         const singerName = localStorage.getItem("karaoke_user_name");
         if (!singerName) return;
 
@@ -1036,17 +1040,17 @@
         document.getElementById("adminName").focus();
       }
 
-      // Open Singer Login Modal
-      function openSingerLogin() {
+      // Open Performer Login Modal
+      function openPerformerLogin() {
         document.getElementById("loginOverlay").classList.add("show");
         document.getElementById("singerLoginModal").classList.add("show");
-        const roomId = updateSingerRoomLoginState();
+        const roomId = updatePerformerRoomLoginState();
         document
           .getElementById(roomId ? "singerUsername" : "scanRoomQrButton")
           .focus();
       }
 
-      function updateSingerRoomLoginState(roomId) {
+      function updatePerformerRoomLoginState(roomId) {
         const selectedRoomId = roomId ?? KaraokeSessions.getRoomIdFromUrl();
         const hasRoom = Boolean(selectedRoomId);
         document.getElementById("singerLoginForm").hidden = !hasRoom;
@@ -1063,16 +1067,17 @@
         stopRoomQrScanner();
         document.getElementById("manualRoomEntry").hidden = false;
         document.getElementById("roomQrStatus").textContent =
-          "Enter the Room ID shown on the TV.";
+          "Enter the Room ID shown on the Karaoke Display.";
         document.getElementById("manualRoomId").focus();
       }
 
-      async function useSingerRoomId() {
+      async function usePerformerRoomId() {
         const roomId = document.getElementById("manualRoomId").value.trim();
         const status = document.getElementById("roomQrStatus");
         const button = document.getElementById("useRoomIdButton");
         if (!roomId) {
-          status.textContent = "Enter the Room ID shown on the TV.";
+          status.textContent =
+            "Enter the Room ID shown on the Karaoke Display.";
           return;
         }
 
@@ -1088,9 +1093,9 @@
               "Room ID not found. Check the ID and try again.";
             return;
           }
-          selectSingerRoom(roomId);
+          selectPerformerRoom(roomId);
           if (localStorage.getItem("karaoke_logged_in_user")) {
-            window.location.href = `singer-portal.html?room=${encodeURIComponent(roomId)}`;
+            window.location.href = `performer-portal.html?room=${encodeURIComponent(roomId)}`;
             return;
           }
           document.getElementById("singerUsername").focus();
@@ -1103,11 +1108,11 @@
         }
       }
 
-      function selectSingerRoom(roomId) {
+      function selectPerformerRoom(roomId) {
         const loginUrl = new URL(window.location.href);
         loginUrl.searchParams.set("room", roomId);
         window.history.replaceState(null, "", loginUrl);
-        updateSingerRoomLoginState(roomId);
+        updatePerformerRoomLoginState(roomId);
       }
 
       function getScannedRoomId(decodedText) {
@@ -1136,7 +1141,7 @@
         reader.hidden = false;
         button.disabled = true;
         status.textContent =
-          "Allow camera access and point it at the TV QR code.";
+          "Allow camera access and point it at the Karaoke Display QR code.";
         roomQrScanner = new Html5Qrcode("roomQrReader");
 
         try {
@@ -1153,11 +1158,11 @@
               }
 
               roomQrHandled = true;
-              selectSingerRoom(roomId);
+              selectPerformerRoom(roomId);
               stopRoomQrScanner();
 
               if (localStorage.getItem("karaoke_logged_in_user")) {
-                window.location.href = `singer-portal.html?room=${encodeURIComponent(roomId)}`;
+                window.location.href = `performer-portal.html?room=${encodeURIComponent(roomId)}`;
               } else {
                 document.getElementById("singerUsername").focus();
               }
@@ -1630,12 +1635,12 @@
         });
       }
 
-      // Validate Singer Login
-      function validateSingerLogin(event) {
+      // Validate Performer Login
+      function validatePerformerLogin(event) {
         event.preventDefault();
         const roomId = KaraokeSessions.getRoomIdFromUrl();
         if (!roomId) {
-          updateSingerRoomLoginState();
+          updatePerformerRoomLoginState();
           document.getElementById("scanRoomQrButton").focus();
           return;
         }
@@ -1653,7 +1658,7 @@
         if (singerLoginInProgress) return;
         singerLoginInProgress = true;
 
-        console.log("👤 Singer login attempt:", singerUsername);
+        console.log("👤 Performer login attempt:", singerUsername);
 
         // Try to get users from Firebase first with a fresh load
         forceReloadUsersForLogin(function (users, loadError) {
@@ -1674,7 +1679,10 @@
             // Check if user is disabled
             if (singerUser.disabled) {
               singerLoginInProgress = false;
-              console.log("❌ Singer user is disabled:", singerUser.username);
+              console.log(
+                "❌ Performer user is disabled:",
+                singerUser.username,
+              );
               alert(
                 "❌ Your account has been disabled.\n\nPlease contact an administrator.",
               );
@@ -1682,7 +1690,7 @@
               return;
             }
 
-            console.log("✅ Singer user found:", singerUser.username);
+            console.log("✅ Performer user found:", singerUser.username);
 
             // CHECK: Is this user already logged in from another device? (CHECK FIREBASE)
             checkIfLoggedInElsewhere(
@@ -1714,13 +1722,13 @@
                     JSON.stringify(singerUser),
                   );
                   closeLoginModal();
-                  window.location.href = `singer-portal.html?room=${encodeURIComponent(roomId)}`;
+                  window.location.href = `performer-portal.html?room=${encodeURIComponent(roomId)}`;
                 });
               },
             );
           } else {
             singerLoginInProgress = false;
-            console.log("❌ Singer user not found or password incorrect");
+            console.log("❌ Performer user not found or password incorrect");
             const failure = recordFailedLogin("singer", singerUsername);
             alert(
               failure.lockedUntil

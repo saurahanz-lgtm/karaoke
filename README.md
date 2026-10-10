@@ -34,7 +34,7 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 
 ## 🎯 What Works Now
 
-### ✅ Singer Page (User Interface)
+### ✅ Performer Portal
 
 - Search for karaoke songs
 - View YouTube search results
@@ -42,9 +42,9 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 - See reserved songs
 - Preview with audio
 
-**Access:** https://sdkaraoke.vercel.app/singer-portal.html
+**Access:** https://sdkaraoke.vercel.app/performer-portal.html
 
-### ✅ TV Display (Performance Screen)
+### ✅ Karaoke Display
 
 - Shows current song playing
 - Embedded YouTube player
@@ -53,7 +53,7 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 - Fullscreen mode
 - Auto-skips to next song
 
-**Access:** https://sdkaraoke.vercel.app/tv-display.html
+**Access:** https://sdkaraoke.vercel.app/karaoke-display.html
 
 ### ✅ Admin Panel (Management)
 
@@ -67,7 +67,7 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 
 ### ✅ Home Page
 
-- Role selection (Admin/Singer)
+- Role selection (Admin/Performer)
 - Login/registration
 - Responsive design
 
@@ -170,7 +170,7 @@ vercel status
 
 ```
 Frontend Layer:
-├── HTML5 (index.html, admin-dashboard.html, singer-portal.html, tv-display.html)
+├── HTML5 (index.html, admin-dashboard.html, performer-portal.html, karaoke-display.html)
 ├── CSS3 (styles.css)
 ├── JavaScript (Vanilla - no frameworks)
 │
@@ -193,17 +193,17 @@ Third-party Services:
 
 ## 🎬 How to Use Each Component
 
-### For Singers 🎤
+### For Performers 🎤
 
 ```
 1. Visit: https://sdkaraoke.vercel.app
-2. Select "Singer" role
-3. Go to Singer page
+2. Select "Karaoke Performer" role
+3. Open the Performer Portal
 4. Search for song (e.g., "Bohemian Rhapsody")
 5. See YouTube results
 6. Click "Request Song"
 7. Wait for admin to play your song
-8. Song appears on TV display
+8. Song appears on the Karaoke Display
 ```
 
 ### For Admin 👨‍💼
@@ -214,15 +214,15 @@ Third-party Services:
 3. Login with admin credentials
 4. View queue of requested songs
 5. Click "Play" on a song
-6. Song displays on TV with YouTube player
+6. Song displays on the Karaoke Display with the YouTube player
 7. Use YouTube controls to manage playback
 8. Skip to next when done
 ```
 
-### For TV Display Screen 📺
+### For the Karaoke Display 📺
 
 ```
-1. Open in separate browser/device: tv-display.html
+1. Open in a separate browser/device: karaoke-display.html
 2. Keep fullscreen while singers perform
 3. Shows current song with YouTube video
 4. Auto-plays when admin sets song
@@ -324,16 +324,16 @@ Third-party Services:
 ### Complete Karaoke Session Flow
 
 ```
-1. Singer arrives
-2. Opens singer-portal.html
+1. Performer arrives
+2. Opens performer-portal.html
 3. Searches for "Shape of You"
 4. Requests song
 5. Goes to waiting area
 6. Admin opens admin-dashboard.html
-7. Sees request from singer
+7. Sees request from a performer
 8. Clicks "Play Now"
-9. TV display auto-plays YouTube video
-10. Singer performs along
+9. Karaoke Display auto-plays the YouTube video
+10. Performer sings along
 11. Video auto-ends
 12. Admin clicks "Next Song"
 13. Next requested song plays

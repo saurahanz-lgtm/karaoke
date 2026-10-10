@@ -97,7 +97,7 @@ body {
   letter-spacing: 1px;
 }
 
-/* ===== TV SCREEN STYLES ===== */
+/* ===== KARAOKE DISPLAY STYLES ===== */
 .now-playing-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
@@ -684,7 +684,7 @@ body {
   }
 }
 
-/* TV Display */
+/* Karaoke Display */
 .now-playing-card {
   padding: 20px !important;
 }
@@ -697,7 +697,7 @@ body {
   font-size: 1.3rem !important;
 }
 
-.song-singer-large {
+.song-performer-large {
   font-size: 1rem !important;
 }
 
@@ -709,7 +709,7 @@ body {
   font-size: 1.8rem !important;
 }
 
-.singer-name-display {
+.performer-name-display {
   font-size: 2rem !important;
   gap: 10px;
 }
@@ -718,7 +718,7 @@ body {
   font-size: 2rem !important;
 }
 
-.center-singer-name {
+.center-performer-name {
   top: 45%;
 }
 
@@ -740,7 +740,7 @@ body {
   font-size: 0.65rem;
 }
 
-.reserve-item-singer {
+.reserve-item-performer {
   font-size: 0.6rem;
 }
 
@@ -776,7 +776,7 @@ button[onclick="deleteQueue()"] {
   font-size: 1rem !important;
 }
 
-.video-song-singer {
+.video-song-performer {
   font-size: 0.8rem !important;
 }
 
@@ -1647,7 +1647,7 @@ body.admin-page {
   --action-border: rgba(59, 106, 255, 0.45);
   --action-background: linear-gradient(140deg, #103b9d, #111b5d);
 }
-.action-tv {
+.action-display {
   --action-border: rgba(0, 190, 179, 0.38);
   --action-background: linear-gradient(140deg, #075856, #0c3654);
 }
@@ -1758,7 +1758,7 @@ body.admin-page {
   display: flex;
   gap: 6px;
 }
-.account-filters .singer-filter {
+.account-filters .performer-filter {
   padding: 7px 11px;
   border: 1px solid rgba(106, 133, 205, 0.23);
   border-radius: 7px;
@@ -1767,7 +1767,7 @@ body.admin-page {
   font-size: 10px;
   font-weight: 500;
 }
-.account-filters .singer-filter[aria-pressed="true"] {
+.account-filters .performer-filter[aria-pressed="true"] {
   border-color: rgba(112, 94, 255, 0.48);
   color: #fff;
   background: rgba(87, 73, 201, 0.28);
@@ -2021,7 +2021,7 @@ body.admin-page {
   padding-top: 2px;
 }
 
-.admin-page .tv-control-card {
+.admin-page .display-control-card {
   padding: 24px;
   border: 1px solid rgba(97, 119, 237, 0.36);
   border-radius: 11px;
@@ -2032,50 +2032,50 @@ body.admin-page {
   );
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.17);
 }
-.admin-page .tv-control-info h3 {
+.admin-page .display-control-info h3 {
   color: #d5c2ff;
   font-size: 17px;
 }
-.admin-page .tv-control-info p {
+.admin-page .display-control-info p {
   color: #a6b6db;
 }
-.admin-page .tv-status {
+.admin-page .display-status {
   padding: 7px 12px;
   border-radius: 20px;
   font-size: 11px;
 }
-.admin-page .tv-announcement-control {
+.admin-page .display-announcement-control {
   width: min(100%, 480px);
   margin-top: 16px;
 }
-.admin-page .tv-announcement-control .form-label {
+.admin-page .display-announcement-control .form-label {
   margin-bottom: 6px;
   color: #d9e3fb;
   font-size: 11px;
   font-weight: 600;
 }
-.admin-page .tv-announcement-control .form-select,
-.admin-page .tv-announcement-control .form-control {
+.admin-page .display-announcement-control .form-select,
+.admin-page .display-announcement-control .form-control {
   border-color: rgba(110, 137, 232, 0.38);
   color: #edf2ff;
   background-color: #081533;
   font-size: 11px;
 }
-.admin-page .tv-announcement-control .form-control {
+.admin-page .display-announcement-control .form-control {
   margin-top: 8px;
   resize: vertical;
 }
-.admin-page .tv-announcement-preview {
+.admin-page .display-announcement-preview {
   margin: 8px 0 0;
   color: #b5c4e3;
   font-size: 10px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
-.admin-page .tv-announcement-control [hidden] {
+.admin-page .display-announcement-control [hidden] {
   display: none;
 }
-.admin-page .tv-btn {
+.admin-page .display-btn {
   border-radius: 7px;
   font-size: 11px;
 }
@@ -2140,7 +2140,7 @@ body.admin-page {
   background: rgba(38, 113, 219, 0.2);
 }
 .admin-page .btn-success:disabled,
-.admin-page .tv-btn:disabled {
+.admin-page .display-btn:disabled {
   opacity: 0.55;
 }
 .admin-page .modal-content {
@@ -2451,13 +2451,13 @@ body.admin-page {
   .admin-page .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .admin-page .tv-control-card {
+  .admin-page .display-control-card {
     padding: 17px;
   }
-  .admin-page .tv-control-buttons {
+  .admin-page .display-control-buttons {
     width: 100%;
   }
-  .admin-page .tv-btn {
+  .admin-page .display-btn {
     flex: 1;
     white-space: normal;
   }
@@ -2479,8 +2479,8 @@ body.admin-page {
 }
 
 body.home-page,
-body.singer-page,
-body.tv-page {
+body.performer-page,
+body.karaoke-display-page {
   color: var(--karaoke-text);
   background:
     radial-gradient(
@@ -2528,7 +2528,7 @@ body.tv-page {
 }
 
 .home-page .alert-custom,
-.singer-page .alert-custom {
+.performer-page .alert-custom {
   border-color: rgba(121, 120, 236, 0.48) !important;
   color: #d7d5ff !important;
   background: rgba(57, 55, 138, 0.24) !important;
@@ -2612,20 +2612,20 @@ body.tv-page {
   background: rgba(74, 92, 137, 0.22);
 }
 
-.singer-page .container-main {
+.performer-page .container-main {
   color: var(--karaoke-text);
 }
 
-.singer-page .header h1,
-.singer-page .header h1 .sd-text,
-.singer-page #userDisplayName,
-.singer-page .volume-value,
-.singer-page .footer-social-title {
+.performer-page .header h1,
+.performer-page .header h1 .sd-text,
+.performer-page #userDisplayName,
+.performer-page .volume-value,
+.performer-page .footer-social-title {
   color: #b9a4ff !important;
   text-shadow: 0 0 16px rgba(118, 40, 241, 0.32);
 }
 
-.singer-page .card-ui {
+.performer-page .card-ui {
   border: 1px solid var(--karaoke-panel-border) !important;
   border-radius: 11px;
   background: linear-gradient(
@@ -2636,25 +2636,25 @@ body.tv-page {
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2) !important;
 }
 
-.singer-page .room-capacity-notice {
+.performer-page .room-capacity-notice {
   border-color: rgba(101, 123, 239, 0.48) !important;
   background: rgba(63, 66, 166, 0.2) !important;
   color: #dbe2ff;
 }
 
-.singer-page .controls button:disabled,
-.singer-page .volume-slider:disabled,
-.singer-page .song-item-btn:disabled,
-.singer-page .refresh.is-disabled {
+.performer-page .controls button:disabled,
+.performer-page .volume-slider:disabled,
+.performer-page .song-item-btn:disabled,
+.performer-page .refresh.is-disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
-.singer-page .refresh.is-disabled {
+.performer-page .refresh.is-disabled {
   pointer-events: none;
 }
 
-.singer-page .tv-availability-notice {
+.performer-page .display-availability-notice {
   padding: 11px 13px;
   margin-bottom: 14px;
   border: 1px solid rgba(240, 173, 78, 0.6);
@@ -2665,57 +2665,57 @@ body.tv-page {
   line-height: 1.5;
 }
 
-.singer-page .tv-availability-notice[hidden] {
+.performer-page .display-availability-notice[hidden] {
   display: none;
 }
 
-.singer-page .controls .play,
-.singer-page .song-item button,
-.singer-page .searchbtn,
-.singer-page .volume-slider::-webkit-slider-thumb,
-.singer-page .volume-slider::-moz-range-thumb {
+.performer-page .controls .play,
+.performer-page .song-item button,
+.performer-page .searchbtn,
+.performer-page .volume-slider::-webkit-slider-thumb,
+.performer-page .volume-slider::-moz-range-thumb {
   border-color: transparent;
   color: #fff;
   background: var(--karaoke-gradient) !important;
   box-shadow: 0 5px 16px rgba(74, 66, 195, 0.28);
 }
 
-.singer-page .controls .play:hover,
-.singer-page .song-item button:hover,
-.singer-page .searchbtn:hover {
+.performer-page .controls .play:hover,
+.performer-page .song-item button:hover,
+.performer-page .searchbtn:hover {
   filter: brightness(1.13);
 }
 
-.singer-page .controls .pause,
-.singer-page .controls .gray {
+.performer-page .controls .pause,
+.performer-page .controls .gray {
   color: #e0e8ff;
   background: linear-gradient(125deg, #40578d, #344a78) !important;
 }
 
-.singer-page .controls .stop,
-.singer-page .disconnect {
+.performer-page .controls .stop,
+.performer-page .disconnect {
   color: #fff;
   background: linear-gradient(125deg, #bd397a, #773bb4) !important;
 }
 
-.singer-page .volume-control,
-.singer-page .song-item {
+.performer-page .volume-control,
+.performer-page .song-item {
   border: 1px solid rgba(97, 124, 218, 0.3);
   background: rgba(26, 42, 91, 0.58) !important;
 }
 
-.singer-page .song-item:hover {
+.performer-page .song-item:hover {
   border-color: rgba(143, 116, 255, 0.55);
   box-shadow: 0 8px 25px rgba(69, 68, 178, 0.24);
 }
 
-.singer-page .refresh {
+.performer-page .refresh {
   border: 1px solid rgba(97, 124, 218, 0.34);
   color: #dfe8ff;
   background: #17264f !important;
 }
 
-.singer-page .searchbox input {
+.performer-page .searchbox input {
   border: 1px solid rgba(110, 137, 232, 0.38) !important;
   border-radius: 7px;
   outline: 0;
@@ -2723,28 +2723,28 @@ body.tv-page {
   background: #081533 !important;
 }
 
-.singer-page .searchbox input::placeholder {
+.performer-page .searchbox input::placeholder {
   color: #8294bd;
 }
 
-.singer-page .footer-section {
+.performer-page .footer-section {
   border-top: 0;
   background: transparent !important;
 }
 
-.singer-page .footer-title {
+.performer-page .footer-title {
   background: linear-gradient(110deg, #bba9ff, #78aaff) !important;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent !important;
   background-clip: text;
 }
 
-body.tv-page {
+body.karaoke-display-page {
   overflow: hidden;
   font-family: "DM Sans", sans-serif !important;
 }
 
-.tv-page .tv-container {
+.karaoke-display-page .display-container {
   background: radial-gradient(
     ellipse at 50% 0%,
     rgba(39, 51, 124, 0.18),
@@ -2753,40 +2753,40 @@ body.tv-page {
   background-color: var(--karaoke-bg);
 }
 
-.tv-page #nextSongDisplay,
-.tv-page #connectionStatus {
+.karaoke-display-page #nextSongDisplay,
+.karaoke-display-page #connectionStatus {
   border: 1px solid rgba(111, 137, 225, 0.32);
   border-radius: 10px;
   background: rgba(8, 20, 49, 0.9) !important;
   color: var(--karaoke-text);
 }
 
-.tv-page .active-room-display {
+.karaoke-display-page .active-room-display {
   border: 1px solid rgba(111, 137, 225, 0.34);
   border-radius: 8px;
   background: rgba(8, 20, 49, 0.92);
   color: var(--karaoke-text);
 }
 
-.tv-page #fullscreenBtn {
+.karaoke-display-page #fullscreenBtn {
   border: 1px solid rgba(166, 143, 255, 0.35);
   background: var(--karaoke-gradient) !important;
 }
 
-.tv-page #fullscreenBtn:hover {
+.karaoke-display-page #fullscreenBtn:hover {
   box-shadow: 0 10px 28px rgba(88, 70, 203, 0.35);
 }
 
-.tv-page #clearQueueBtn {
+.karaoke-display-page #clearQueueBtn {
   background: linear-gradient(125deg, #bd397a, #773bb4) !important;
 }
 
-.tv-page #clearQueueBtn:hover {
+.karaoke-display-page #clearQueueBtn:hover {
   box-shadow: 0 10px 28px rgba(164, 50, 127, 0.32);
 }
 
-.tv-page #noSongMessage,
-.tv-page #bootupSplash {
+.karaoke-display-page #noSongMessage,
+.karaoke-display-page #bootupSplash {
   background: radial-gradient(
     ellipse at 50% 35%,
     rgba(66, 53, 147, 0.22),
@@ -2795,34 +2795,34 @@ body.tv-page {
   background-color: #07112d !important;
 }
 
-.tv-page #connectionStatus.connected,
-.tv-page #connectionStatus.connected .status-indicator,
-.tv-page .bootup-status-dot {
+.karaoke-display-page #connectionStatus.connected,
+.karaoke-display-page #connectionStatus.connected .status-indicator,
+.karaoke-display-page .bootup-status-dot {
   color: var(--karaoke-teal);
   background-color: var(--karaoke-teal);
 }
 
-.tv-page #connectionStatus.disconnected,
-.tv-page #connectionStatus.disconnected .status-indicator {
+.karaoke-display-page #connectionStatus.disconnected,
+.karaoke-display-page #connectionStatus.disconnected .status-indicator {
   color: var(--karaoke-danger);
   background-color: var(--karaoke-danger);
 }
 
-.tv-page #exitFullscreenBtn {
+.karaoke-display-page #exitFullscreenBtn {
   border: 1px solid rgba(111, 137, 225, 0.34) !important;
   background: rgba(8, 20, 49, 0.92) !important;
 }
 
-.tv-page #splashScreen > div {
+.karaoke-display-page #splashScreen > div {
   background: linear-gradient(145deg, #0d1940, #060f29) !important;
   font-family: "DM Sans", sans-serif !important;
 }
 
-.tv-page #splashScreen h2 {
+.karaoke-display-page #splashScreen h2 {
   color: var(--karaoke-danger) !important;
 }
 
-.tv-page #splashScreen p {
+.karaoke-display-page #splashScreen p {
   color: #aab8d8 !important;
 }
 

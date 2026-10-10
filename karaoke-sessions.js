@@ -17,14 +17,14 @@
     return firebase.database();
   }
 
-  async function assertTVDisplayEnabled() {
+  async function assertKaraokeDisplayEnabled() {
     const snapshot = await database().ref("tvControl").once("value");
     const settings = snapshot.val() || {};
     if (settings.enabled === false) {
-      const error = new Error("TV_DISPLAY_DISABLED");
+      const error = new Error("KARAOKE_DISPLAY_DISABLED");
       error.announcement =
         settings.announcement ||
-        "The TV display is temporarily unavailable. Please check back soon.";
+        "The karaoke display is temporarily unavailable. Please check back soon.";
       throw error;
     }
   }
@@ -45,7 +45,7 @@
   }
 
   function getJoinUrl(roomId) {
-    const url = new URL("singer-portal.html", global.location.href);
+    const url = new URL("performer-portal.html", global.location.href);
     url.search = new URLSearchParams({ room: roomId }).toString();
     return url.toString();
   }
@@ -283,7 +283,7 @@
     const requestRef = roomRef(roomId, "roomRequests").push();
     const request = {
       id: requestRef.key,
-      username: String(username || "Singer")
+      username: String(username || "Performer")
         .trim()
         .slice(0, 40),
       roomId: String(roomId || "").slice(0, 128),
@@ -625,7 +625,7 @@
   }
 
   async function addSong(roomId, song) {
-    await assertTVDisplayEnabled();
+    await assertKaraokeDisplayEnabled();
     const result = await roomRef(roomId).transaction((current) => {
       const room = current || {};
       const queue = normalizeQueue(room.queue);
@@ -647,7 +647,7 @@
   }
 
   async function claimNextSong(roomId) {
-    await assertTVDisplayEnabled();
+    await assertKaraokeDisplayEnabled();
     return roomRef(roomId).transaction((current) => {
       const room = current || {};
       if (room.currentSong?.videoId) return undefined;
@@ -663,7 +663,7 @@
   }
 
   async function advanceToNextSong(roomId) {
-    await assertTVDisplayEnabled();
+    await assertKaraokeDisplayEnabled();
     return roomRef(roomId).transaction((current) => {
       const room = current || {};
       const queue = normalizeQueue(room.queue);
@@ -680,7 +680,7 @@
   }
 
   async function sendControl(roomId, command, payload = {}) {
-    await assertTVDisplayEnabled();
+    await assertKaraokeDisplayEnabled();
     return roomRef(roomId, "control").update({
       ...payload,
       command,

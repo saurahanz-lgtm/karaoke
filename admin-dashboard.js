@@ -247,9 +247,9 @@ document.addEventListener("DOMContentLoaded", function () {
     console.warn("BroadcastChannel not supported:", error.message);
   }
 
-  // Load TV display status on page load
-  initializeTVAnnouncementControls();
-  loadTVDisplayStatus();
+  // Load karaoke display status on page load
+  initializeKaraokeDisplayAnnouncementControls();
+  loadKaraokeDisplayStatus();
 });
 
 function setAdminView(viewName) {
@@ -276,7 +276,7 @@ function setAdminView(viewName) {
   const viewCopy = {
     dashboard: ["Dashboard", "A live overview of your karaoke system."],
     users: ["User Management", "Manage registered accounts and access."],
-    tv: ["TV Display Control", "Manage the shared karaoke screen."],
+    display: ["Karaoke Display Control", "Manage the shared display."],
     rooms: ["Karaoke Rooms", "Monitor rooms and connected singers."],
     requests: ["Room Requests", "Review requests waiting for approval."],
     addUser: ["Add New User", "Create an account for your karaoke system."],
@@ -695,7 +695,7 @@ function updateAdminRequestNotifications() {
       .flat()
       .filter((request) => request.status === "pending")
       .map((request) => ({
-        label: `Room request from ${request.username || "singer"} (${request.roomId || "unknown room"})`,
+        label: `Room request from ${request.username || "performer"} (${request.roomId || "unknown room"})`,
         view: "requests",
         createdAt: request.createdAt || 0,
       })),
@@ -788,7 +788,7 @@ function renderRoomRequests(requests) {
       const dateCell = document.createElement("td");
       const statusCell = document.createElement("td");
       const actionCell = document.createElement("td");
-      singerCell.textContent = request.username || "Singer";
+      singerCell.textContent = request.username || "Performer";
       roomCell.textContent = request.roomId || "Unknown room";
       dateCell.textContent = request.createdAt
         ? new Date(request.createdAt).toLocaleString()
@@ -841,18 +841,18 @@ async function handleRoomRequestDecision(request, decision, buttons) {
       await KaraokeSessions.approveRoomRequest(
         request.roomId,
         request.id,
-        `${request.username || "Singer"}'s Room`,
+        `${request.username || "Performer"}'s Room`,
       );
       playRequestNotificationSound();
       showNotification(
-        `Room approved for ${request.username || "singer"}.`,
+        `Room approved for ${request.username || "performer"}.`,
         "success",
       );
     } else {
       await KaraokeSessions.rejectRoomRequest(request.roomId, request.id);
       playRequestNotificationSound();
       showNotification(
-        `Room request from ${request.username || "singer"} rejected.`,
+        `Room request from ${request.username || "performer"} rejected.`,
         "warning",
       );
     }
@@ -1004,7 +1004,7 @@ function checkAuthentication() {
       if (isRoomRequestConfirmation) {
         document.getElementById("adminDashboard").hidden = true;
         document.getElementById("roomRequestConfirmation").hidden = false;
-        watchRoomRequestForSinger();
+        watchRoomRequestForPerformer();
         return false;
       }
       window.location.href = "index.html";
@@ -1028,7 +1028,7 @@ function checkAuthentication() {
   }
 }
 
-function watchRoomRequestForSinger() {
+function watchRoomRequestForPerformer() {
   const params = new URLSearchParams(window.location.search);
   const roomId = params.get("room");
   const requestId = params.get("request");
@@ -1062,7 +1062,7 @@ function watchRoomRequestForSinger() {
         roomApprovalNavigationStarted = true;
         status.textContent = "Approved! Connecting you to your new room...";
         const soundStarted = playRoomRequestApprovalSound(requestId);
-        const url = new URL("singer-portal.html", window.location.href);
+        const url = new URL("performer-portal.html", window.location.href);
         url.searchParams.set("room", request.approvedRoomId);
         window.setTimeout(
           () => window.location.replace(url.toString()),
@@ -2378,7 +2378,7 @@ function isUserOnline(user) {
 }
 
 // Filter singers by status
-function filterSingers(filter) {
+function filterPerformers(filter) {
   currentFilter = filter;
   currentUserPage = 1;
   document.getElementById("singerListContainer").hidden = false;
@@ -2400,7 +2400,7 @@ function updateFilterButtons() {
   );
 }
 
-// Update user activity when they interact with singer page
+// Update user activity when they interact with performer portal
 function updateUserActivity() {
   const singerName = localStorage.getItem("karaoke_user_name");
   if (singerName) {
@@ -2629,65 +2629,68 @@ function showNotification(message, type = "info") {
     setTimeout(() => alert.remove(), 300);
   }, 3000);
 }
-// ===== TV DISPLAY CONTROL FUNCTIONS =====
+// ===== KARAOKE DISPLAY CONTROL FUNCTIONS =====
 
-const TV_ANNOUNCEMENT_TEMPLATES = {
+const KARAOKE_DISPLAY_ANNOUNCEMENT_TEMPLATES = {
   maintenance:
     "The karaoke system is under maintenance. Please check back soon.",
   systemUpdate:
     "We are updating the karaoke system. Singing will be available again shortly.",
   temporarilyUnavailable:
-    "The TV display is temporarily unavailable. Please try again later.",
-  privateEvent: "The TV display is reserved for a private event.",
+    "The karaoke display is temporarily unavailable. Please try again later.",
+  privateEvent: "The karaoke display is reserved for a private event.",
 };
 
-function getTVAnnouncementFromControls() {
+function getKaraokeDisplayAnnouncementFromControls() {
   const selectedTemplate = document.getElementById(
-    "tvAnnouncementTemplate",
+    "displayAnnouncementTemplate",
   ).value;
   if (selectedTemplate === "custom") {
     return (
-      document.getElementById("tvAnnouncementCustom").value.trim() ||
-      TV_ANNOUNCEMENT_TEMPLATES.maintenance
+      document.getElementById("displayAnnouncementCustom").value.trim() ||
+      KARAOKE_DISPLAY_ANNOUNCEMENT_TEMPLATES.maintenance
     );
   }
   return (
-    TV_ANNOUNCEMENT_TEMPLATES[selectedTemplate] ||
-    TV_ANNOUNCEMENT_TEMPLATES.maintenance
+    KARAOKE_DISPLAY_ANNOUNCEMENT_TEMPLATES[selectedTemplate] ||
+    KARAOKE_DISPLAY_ANNOUNCEMENT_TEMPLATES.maintenance
   );
 }
 
-function updateTVAnnouncementPreview() {
-  const template = document.getElementById("tvAnnouncementTemplate");
-  const customMessage = document.getElementById("tvAnnouncementCustom");
+function updateKaraokeDisplayAnnouncementPreview() {
+  const template = document.getElementById("displayAnnouncementTemplate");
+  const customMessage = document.getElementById("displayAnnouncementCustom");
   customMessage.hidden = template.value !== "custom";
-  document.getElementById("tvAnnouncementPreview").textContent =
-    `TV message: ${getTVAnnouncementFromControls()}`;
+  document.getElementById("displayAnnouncementPreview").textContent =
+    `Display message: ${getKaraokeDisplayAnnouncementFromControls()}`;
 }
 
-function initializeTVAnnouncementControls() {
-  const template = document.getElementById("tvAnnouncementTemplate");
-  const customMessage = document.getElementById("tvAnnouncementCustom");
+function initializeKaraokeDisplayAnnouncementControls() {
+  const template = document.getElementById("displayAnnouncementTemplate");
+  const customMessage = document.getElementById("displayAnnouncementCustom");
   template.addEventListener("change", () => {
-    updateTVAnnouncementPreview();
-    if (template.value !== "custom") disableTVDisplay();
+    updateKaraokeDisplayAnnouncementPreview();
+    if (template.value !== "custom") disableKaraokeDisplay();
   });
-  customMessage.addEventListener("input", updateTVAnnouncementPreview);
+  customMessage.addEventListener(
+    "input",
+    updateKaraokeDisplayAnnouncementPreview,
+  );
   customMessage.addEventListener("change", () => {
-    updateTVAnnouncementPreview();
+    updateKaraokeDisplayAnnouncementPreview();
     if (template.value === "custom" && customMessage.value.trim()) {
-      disableTVDisplay();
+      disableKaraokeDisplay();
     }
   });
-  updateTVAnnouncementPreview();
+  updateKaraokeDisplayAnnouncementPreview();
 }
 
-function setTVAnnouncementControls(announcement) {
-  const matchingTemplate = Object.entries(TV_ANNOUNCEMENT_TEMPLATES).find(
-    ([, message]) => message === announcement,
-  );
-  const template = document.getElementById("tvAnnouncementTemplate");
-  const customMessage = document.getElementById("tvAnnouncementCustom");
+function setKaraokeDisplayAnnouncementControls(announcement) {
+  const matchingTemplate = Object.entries(
+    KARAOKE_DISPLAY_ANNOUNCEMENT_TEMPLATES,
+  ).find(([, message]) => message === announcement);
+  const template = document.getElementById("displayAnnouncementTemplate");
+  const customMessage = document.getElementById("displayAnnouncementCustom");
   if (announcement && !matchingTemplate) {
     template.value = "custom";
     customMessage.value = announcement;
@@ -2695,14 +2698,14 @@ function setTVAnnouncementControls(announcement) {
     template.value = matchingTemplate?.[0] || "";
     customMessage.value = "";
   }
-  updateTVAnnouncementPreview();
+  updateKaraokeDisplayAnnouncementPreview();
 }
 
-// Load TV display status from Firebase
-function loadTVDisplayStatus() {
+// Load karaoke display status from Firebase
+function loadKaraokeDisplayStatus() {
   if (typeof firebase === "undefined" || !firebase.database) {
     console.warn("⚠️ Firebase not available");
-    updateTVStatusUI(true); // Default to enabled
+    updateKaraokeDisplayStatusUI(true); // Default to enabled
     return;
   }
 
@@ -2715,44 +2718,50 @@ function loadTVDisplayStatus() {
         (snapshot) => {
           const settings = snapshot.val() || {};
           const isEnabled = settings.enabled !== false;
-          console.log("📺 TV Display Status Loaded from Firebase:", isEnabled);
-          setTVAnnouncementControls(settings.announcement || "");
-          updateTVStatusUI(isEnabled);
+          console.log(
+            "📺 Karaoke Display Status Loaded from Firebase:",
+            isEnabled,
+          );
+          setKaraokeDisplayAnnouncementControls(settings.announcement || "");
+          updateKaraokeDisplayStatusUI(isEnabled);
         },
         (err) => {
-          console.error("❌ Firebase error loading TV status:", err.message);
+          console.error(
+            "❌ Firebase error loading display status:",
+            err.message,
+          );
         },
       );
   } catch (e) {
     console.error("Firebase exception:", e.message);
-    updateTVStatusUI(true);
+    updateKaraokeDisplayStatusUI(true);
   }
 }
 
-// Update UI to reflect TV status
-function updateTVStatusUI(isEnabled) {
-  const statusElement = document.getElementById("tvStatus");
-  const enableBtn = document.getElementById("enableTVBtn");
-  const disableBtn = document.getElementById("disableTVBtn");
+// Update UI to reflect display status
+function updateKaraokeDisplayStatusUI(isEnabled) {
+  const statusElement = document.getElementById("displayStatus");
+  const enableBtn = document.getElementById("enableDisplayBtn");
+  const disableBtn = document.getElementById("disableDisplayBtn");
 
   if (statusElement) {
     if (isEnabled) {
-      statusElement.textContent = "TV Display Enabled";
-      statusElement.className = "tv-status tv-status-enabled";
+      statusElement.textContent = "Karaoke Display Enabled";
+      statusElement.className = "display-status display-status-enabled";
       if (enableBtn) enableBtn.disabled = true;
       if (disableBtn) disableBtn.disabled = false;
     } else {
-      statusElement.textContent = "TV Display Disabled";
-      statusElement.className = "tv-status tv-status-disabled";
+      statusElement.textContent = "Karaoke Display Disabled";
+      statusElement.className = "display-status display-status-disabled";
       if (enableBtn) enableBtn.disabled = false;
       if (disableBtn) disableBtn.disabled = true;
     }
   }
 }
 
-// Enable TV Display
-function enableTVDisplay() {
-  console.log("🟢 Enabling TV Display...");
+// Enable Karaoke Display
+function enableKaraokeDisplay() {
+  console.log("🟢 Enabling Karaoke Display...");
 
   if (typeof firebase === "undefined" || !firebase.database) {
     alert("❌ Firebase not available. Please check your connection.");
@@ -2766,13 +2775,13 @@ function enableTVDisplay() {
       .ref("tvControl")
       .update({ enabled: true, announcement: null })
       .then(() => {
-        console.log("✅ TV Display Enabled via Firebase");
-        setTVAnnouncementControls("");
-        updateTVStatusUI(true);
-        showNotification("✅ TV Display has been ENABLED", "success");
+        console.log("✅ Karaoke Display Enabled via Firebase");
+        setKaraokeDisplayAnnouncementControls("");
+        updateKaraokeDisplayStatusUI(true);
+        showNotification("✅ Karaoke Display has been ENABLED", "success");
       })
       .catch((err) => {
-        console.error("❌ Error enabling TV:", err.message);
+        console.error("❌ Error enabling display:", err.message);
         if (err.code === "PERMISSION_DENIED") {
           showNotification(
             "❌ Firebase Permission Denied - Check database rules",
@@ -2780,7 +2789,7 @@ function enableTVDisplay() {
           );
         } else {
           showNotification(
-            "❌ Failed to enable TV Display: " + err.message,
+            "❌ Failed to enable Karaoke Display: " + err.message,
             "danger",
           );
         }
@@ -2791,9 +2800,9 @@ function enableTVDisplay() {
   }
 }
 
-// Disable TV Display
-function disableTVDisplay() {
-  console.log("🔴 Disabling TV Display...");
+// Disable Karaoke Display
+function disableKaraokeDisplay() {
+  console.log("🔴 Disabling Karaoke Display...");
 
   if (typeof firebase === "undefined" || !firebase.database) {
     alert("❌ Firebase not available. Please check your connection.");
@@ -2802,18 +2811,18 @@ function disableTVDisplay() {
   }
 
   try {
-    const announcement = getTVAnnouncementFromControls();
+    const announcement = getKaraokeDisplayAnnouncementFromControls();
     firebase
       .database()
       .ref("tvControl")
       .update({ enabled: false, announcement })
       .then(() => {
-        console.log("✅ TV Display Disabled via Firebase");
-        updateTVStatusUI(false);
-        showNotification("✅ TV Display has been DISABLED", "warning");
+        console.log("✅ Karaoke Display Disabled via Firebase");
+        updateKaraokeDisplayStatusUI(false);
+        showNotification("✅ Karaoke Display has been DISABLED", "warning");
       })
       .catch((err) => {
-        console.error("❌ Error disabling TV:", err.message);
+        console.error("❌ Error disabling display:", err.message);
         if (err.code === "PERMISSION_DENIED") {
           showNotification(
             "❌ Firebase Permission Denied - Check database rules",
@@ -2821,7 +2830,7 @@ function disableTVDisplay() {
           );
         } else {
           showNotification(
-            "❌ Failed to disable TV Display: " + err.message,
+            "❌ Failed to disable Karaoke Display: " + err.message,
             "danger",
           );
         }

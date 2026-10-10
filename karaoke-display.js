@@ -1,4 +1,4 @@
-/* ===== TV DISPLAY LOGIC ===== */
+/* ===== KARAOKE DISPLAY LOGIC ===== */
 
 // Add CSS for animations
 const style = document.createElement("style");
@@ -50,24 +50,24 @@ let stopListeningToRoomVolume = null;
 let stopListeningToRoomMuted = null;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
-let tvDisplayEnabled = true;
-let tvDisabledAnnouncement = "";
-let tvAvailabilityListenerAttached = false;
-const TV_ROOM_REQUEST_STORAGE_KEY = "karaoke_tv_room_request_v1";
-let stopListeningToTVRoomRequest = null;
-let activeTVRoomRequestKey = null;
+let karaokeDisplayEnabled = true;
+let displayUnavailableAnnouncement = "";
+let displayAvailabilityListenerAttached = false;
+const KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY = "karaoke_tv_room_request_v1";
+let stopListeningToKaraokeDisplayRoomRequest = null;
+let activeKaraokeDisplayRoomRequestKey = null;
 let tvRoomRequestPollTimer = null;
 
 // SCORING SYSTEM
 let songStartTime = null;
 let hasSinging = false;
-let currentSingerName = "";
+let currentPerformerName = "";
 let songDurationMs = 0;
 
-// Mark that someone is singing (can be called from singer.js or other pages)
+// Mark that a performer is singing (can be called from the performer portal)
 function markSinging() {
   hasSinging = true;
-  console.log(`🎤 Singing marked for ${currentSingerName}`);
+  console.log(`🎤 Singing marked for ${currentPerformerName}`);
 }
 
 function hideBootupSplash() {
@@ -172,7 +172,7 @@ function activateKaraokeRoom(roomId) {
     roomId,
     {
       onQueue: (queue) => {
-        if (!tvDisplayEnabled) return;
+        if (!karaokeDisplayEnabled) return;
         tvQueue = queue;
         firebaseReady = true;
         if (queue.length && (!currentSong || !currentSong.videoId)) {
@@ -193,7 +193,7 @@ function activateKaraokeRoom(roomId) {
         checkBootupCompletion();
       },
       onCurrentSong: (song) => {
-        if (!tvDisplayEnabled) return;
+        if (!karaokeDisplayEnabled) return;
         if (!song?.videoId) {
           clearCurrentSongPlayback();
           return;
@@ -217,13 +217,13 @@ function activateKaraokeRoom(roomId) {
   });
 }
 
-async function chooseInitialTVRoomId(rooms, globalActiveRoomId) {
+async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
   const requestedRoomId = KaraokeSessions.getRoomIdFromUrl();
   if (rooms.some((room) => room.id === requestedRoomId)) {
     return requestedRoomId;
   }
 
-  const requestState = readTVRoomRequestState();
+  const requestState = readKaraokeDisplayRoomRequestState();
   if (
     ["creating", "pending", "rejected", "missing"].includes(
       requestState?.status,
@@ -256,26 +256,29 @@ async function chooseInitialTVRoomId(rooms, globalActiveRoomId) {
   return preferredEmptyRoomId || emptyRooms[0]?.id || null;
 }
 
-function readTVRoomRequestState() {
+function readKaraokeDisplayRoomRequestState() {
   try {
     return JSON.parse(
-      localStorage.getItem(TV_ROOM_REQUEST_STORAGE_KEY) || "null",
+      localStorage.getItem(KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY) || "null",
     );
   } catch (error) {
-    console.warn("Could not read TV room request state:", error.message);
+    console.warn("Could not read display room request state:", error.message);
     return null;
   }
 }
 
-function saveTVRoomRequestState(state) {
+function saveKaraokeDisplayRoomRequestState(state) {
   try {
-    localStorage.setItem(TV_ROOM_REQUEST_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(
+      KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY,
+      JSON.stringify(state),
+    );
   } catch (error) {
-    console.warn("Could not save TV room request state:", error.message);
+    console.warn("Could not save display room request state:", error.message);
   }
 }
 
-function showTVRoomRequestStatus(title, message, rejected = false) {
+function showKaraokeDisplayRoomRequestStatus(title, message, rejected = false) {
   const splash = document.getElementById("splashScreen");
   if (!splash) return;
   splash.innerHTML = `
@@ -290,27 +293,27 @@ function showTVRoomRequestStatus(title, message, rejected = false) {
   splash.style.display = "flex";
 }
 
-function hideTVRoomRequestStatus() {
+function hideKaraokeDisplayRoomRequestStatus() {
   const splash = document.getElementById("splashScreen");
   if (!splash) return;
   splash.style.display = "none";
   splash.replaceChildren();
 }
 
-function listenToTVRoomRequest(state) {
+function listenToKaraokeDisplayRoomRequest(state) {
   const listenerKey = `${state.anchorRoomId}:${state.requestId}`;
-  if (activeTVRoomRequestKey === listenerKey) return;
-  stopListeningToTVRoomRequest?.();
-  activeTVRoomRequestKey = listenerKey;
-  stopListeningToTVRoomRequest = KaraokeSessions.listenRoomRequest(
+  if (activeKaraokeDisplayRoomRequestKey === listenerKey) return;
+  stopListeningToKaraokeDisplayRoomRequest?.();
+  activeKaraokeDisplayRoomRequestKey = listenerKey;
+  stopListeningToKaraokeDisplayRoomRequest = KaraokeSessions.listenRoomRequest(
     state.anchorRoomId,
     state.requestId,
     async (request) => {
-      const currentState = readTVRoomRequestState() || state;
+      const currentState = readKaraokeDisplayRoomRequestState() || state;
       if (!request) {
         currentState.status = "missing";
-        saveTVRoomRequestState(currentState);
-        showTVRoomRequestStatus(
+        saveKaraokeDisplayRoomRequestState(currentState);
+        showKaraokeDisplayRoomRequestStatus(
           "Room request unavailable",
           "The request could not be found. Please contact the administrator.",
           true,
@@ -318,10 +321,10 @@ function listenToTVRoomRequest(state) {
       } else if (request.status === "approved" && request.approvedRoomId) {
         currentState.status = "approved";
         currentState.approvedRoomId = request.approvedRoomId;
-        saveTVRoomRequestState(currentState);
-        showTVRoomRequestStatus(
+        saveKaraokeDisplayRoomRequestState(currentState);
+        showKaraokeDisplayRoomRequestStatus(
           "Room approved",
-          "Connecting this TV display to the new room...",
+          "Connecting this karaoke display to the new room...",
         );
         const roomSnapshot = await firebase
           .database()
@@ -332,33 +335,33 @@ function listenToTVRoomRequest(state) {
         if (!karaokeRooms.some((item) => item.id === request.approvedRoomId)) {
           karaokeRooms.push({ ...room, id: request.approvedRoomId });
         }
-        hideTVRoomRequestStatus();
+        hideKaraokeDisplayRoomRequestStatus();
         activateKaraokeRoom(request.approvedRoomId);
       } else if (request.status === "rejected") {
         currentState.status = "rejected";
-        saveTVRoomRequestState(currentState);
-        showTVRoomRequestStatus(
+        saveKaraokeDisplayRoomRequestState(currentState);
+        showKaraokeDisplayRoomRequestStatus(
           "Room request rejected",
           "The administrator could not open another room. Please contact them for assistance.",
           true,
         );
       } else if (request.status === "approving") {
-        showTVRoomRequestStatus(
+        showKaraokeDisplayRoomRequestStatus(
           "Preparing your room",
           "The administrator approved the request. A new room is being prepared...",
         );
       } else {
         currentState.status = "pending";
-        saveTVRoomRequestState(currentState);
-        showTVRoomRequestStatus(
+        saveKaraokeDisplayRoomRequestState(currentState);
+        showKaraokeDisplayRoomRequestStatus(
           "Waiting for approval",
           "No unoccupied room is available. A request was sent to the administrator.",
         );
       }
     },
     (error) => {
-      console.error("Could not follow TV room request:", error.message);
-      showTVRoomRequestStatus(
+      console.error("Could not follow display room request:", error.message);
+      showKaraokeDisplayRoomRequestStatus(
         "Waiting for approval",
         "The room request was sent, but its status cannot be checked right now.",
       );
@@ -366,10 +369,10 @@ function listenToTVRoomRequest(state) {
   );
 }
 
-async function requestTVRoomApproval(anchorRoomId) {
-  const existingRequest = readTVRoomRequestState();
+async function requestKaraokeDisplayRoomApproval(anchorRoomId) {
+  const existingRequest = readKaraokeDisplayRoomRequestState();
   if (existingRequest?.status === "pending" && existingRequest.requestId) {
-    listenToTVRoomRequest(existingRequest);
+    listenToKaraokeDisplayRoomRequest(existingRequest);
     return;
   }
   if (existingRequest?.status === "approved") {
@@ -377,12 +380,12 @@ async function requestTVRoomApproval(anchorRoomId) {
       (room) => room.id === existingRequest.approvedRoomId,
     );
     if (approvedRoom) {
-      hideTVRoomRequestStatus();
+      hideKaraokeDisplayRoomRequestStatus();
       activateKaraokeRoom(approvedRoom.id);
     } else {
-      showTVRoomRequestStatus(
+      showKaraokeDisplayRoomRequestStatus(
         "Room approved",
-        "The new room is being added to the TV display...",
+        "The new room is being added to the karaoke display...",
       );
     }
     return;
@@ -391,7 +394,7 @@ async function requestTVRoomApproval(anchorRoomId) {
     existingRequest?.status === "rejected" ||
     existingRequest?.status === "missing"
   ) {
-    showTVRoomRequestStatus(
+    showKaraokeDisplayRoomRequestStatus(
       "Room request rejected",
       "The administrator could not open another room. Please contact them for assistance.",
       true,
@@ -399,36 +402,36 @@ async function requestTVRoomApproval(anchorRoomId) {
     return;
   }
   if (existingRequest?.status === "creating") {
-    showTVRoomRequestStatus(
+    showKaraokeDisplayRoomRequestStatus(
       "Sending request",
       "A room request is being sent to the administrator...",
     );
     if (!tvRoomRequestPollTimer) {
       tvRoomRequestPollTimer = setInterval(() => {
-        const latestRequest = readTVRoomRequestState();
+        const latestRequest = readKaraokeDisplayRoomRequestState();
         if (latestRequest?.status === "pending" && latestRequest.requestId) {
           clearInterval(tvRoomRequestPollTimer);
           tvRoomRequestPollTimer = null;
-          listenToTVRoomRequest(latestRequest);
+          listenToKaraokeDisplayRoomRequest(latestRequest);
         } else if (!latestRequest) {
           clearInterval(tvRoomRequestPollTimer);
           tvRoomRequestPollTimer = null;
-          requestTVRoomApproval(anchorRoomId);
+          requestKaraokeDisplayRoomApproval(anchorRoomId);
         } else if (
           latestRequest.status === "creating" &&
           Date.now() - latestRequest.createdAt > 30000
         ) {
           clearInterval(tvRoomRequestPollTimer);
           tvRoomRequestPollTimer = null;
-          localStorage.removeItem(TV_ROOM_REQUEST_STORAGE_KEY);
-          requestTVRoomApproval(anchorRoomId);
+          localStorage.removeItem(KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY);
+          requestKaraokeDisplayRoomApproval(anchorRoomId);
         }
       }, 500);
     }
     return;
   }
   if (!anchorRoomId) {
-    showTVRoomRequestStatus(
+    showKaraokeDisplayRoomRequestStatus(
       "Waiting for approval",
       "No room is available. Waiting for the administrator to add one.",
     );
@@ -440,14 +443,14 @@ async function requestTVRoomApproval(anchorRoomId) {
     anchorRoomId,
     createdAt: Date.now(),
   };
-  saveTVRoomRequestState(creatingState);
-  showTVRoomRequestStatus(
+  saveKaraokeDisplayRoomRequestState(creatingState);
+  showKaraokeDisplayRoomRequestStatus(
     "Sending request",
     "No unoccupied room is available. Sending a request to the administrator...",
   );
   try {
     const request = await KaraokeSessions.createRoomRequest(
-      "TV Display",
+      "Karaoke Display",
       anchorRoomId,
     );
     const pendingState = {
@@ -456,12 +459,12 @@ async function requestTVRoomApproval(anchorRoomId) {
       requestId: request.id,
       createdAt: request.createdAt,
     };
-    saveTVRoomRequestState(pendingState);
-    listenToTVRoomRequest(pendingState);
+    saveKaraokeDisplayRoomRequestState(pendingState);
+    listenToKaraokeDisplayRoomRequest(pendingState);
   } catch (error) {
-    localStorage.removeItem(TV_ROOM_REQUEST_STORAGE_KEY);
-    console.error("Could not request another TV room:", error.message);
-    showTVRoomRequestStatus(
+    localStorage.removeItem(KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY);
+    console.error("Could not request another display room:", error.message);
+    showKaraokeDisplayRoomRequestStatus(
       "Room request failed",
       "Could not send the room request. Check the connection and reload this page.",
       true,
@@ -480,7 +483,7 @@ function initializeKaraokeRooms() {
         if (!rooms.some((room) => room.id === activeKaraokeRoomId)) {
           if (!initialRoomSelectionInProgress) {
             initialRoomSelectionInProgress = true;
-            chooseInitialTVRoomId(rooms, activeRoomId)
+            chooseInitialKaraokeDisplayRoomId(rooms, activeRoomId)
               .then((roomId) => {
                 if (
                   roomId &&
@@ -488,11 +491,16 @@ function initializeKaraokeRooms() {
                 ) {
                   activateKaraokeRoom(roomId);
                 } else if (!roomId) {
-                  requestTVRoomApproval(activeRoomId || rooms[0]?.id || null);
+                  requestKaraokeDisplayRoomApproval(
+                    activeRoomId || rooms[0]?.id || null,
+                  );
                 }
               })
               .catch((error) =>
-                console.warn("Could not select the TV room:", error.message),
+                console.warn(
+                  "Could not select the display room:",
+                  error.message,
+                ),
               )
               .finally(() => {
                 initialRoomSelectionInProgress = false;
@@ -515,7 +523,7 @@ function initializeKaraokeRooms() {
 }
 
 function handleRoomControl(control) {
-  if (!tvDisplayEnabled || !control?.command) return;
+  if (!karaokeDisplayEnabled || !control?.command) return;
   console.log("📱 Room control command received:", control.command);
 
   switch (control.command) {
@@ -556,28 +564,28 @@ function handleRoomControl(control) {
   }
 }
 
-// Initialize TV display
+// Initialize karaoke display
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("📺 [1/7] TV Display DOMContentLoaded");
+  console.log("📺 [1/7] Karaoke Display DOMContentLoaded");
   console.log("🔍 DEBUG: window.YT =", typeof window.YT);
   console.log("🔍 DEBUG: window.firebase =", typeof window.firebase);
 
-  // Check if TV is enabled before initializing
-  checkTVEnabled(function (isEnabled) {
-    tvDisplayEnabled = isEnabled;
+  // Check if the display is enabled before initializing
+  checkKaraokeDisplayEnabled(function (isEnabled) {
+    karaokeDisplayEnabled = isEnabled;
     if (!isEnabled) {
-      console.warn("⚠️ TV Display is DISABLED");
-      showTVDisabledMessage(tvDisabledAnnouncement);
+      console.warn("⚠️ Karaoke Display is DISABLED");
+      showKaraokeDisplayUnavailableMessage(displayUnavailableAnnouncement);
       return;
     }
 
-    // TV is enabled, proceed with normal initialization
-    initializeTVDisplay();
+    // the display is enabled, proceed with normal initialization
+    initializeKaraokeDisplay();
   });
 });
 
-// Initialize TV Display (after checking if enabled)
-function initializeTVDisplay() {
+// Initialize Karaoke Display (after checking if enabled)
+function initializeKaraokeDisplay() {
   // Debug Firebase config
   try {
     const config = firebase.app().options;
@@ -614,7 +622,9 @@ function initializeTVDisplay() {
   console.log("🔍 DEBUG: useFirebase =", useFirebase);
 
   if (!useFirebase) {
-    console.error("❌ Firebase not configured - TV Display requires Firebase");
+    console.error(
+      "❌ Firebase not configured - Karaoke Display requires Firebase",
+    );
     return;
   }
 
@@ -655,7 +665,7 @@ function initializeTVDisplay() {
   // Check connection status every 2 seconds (less frequent)
   setInterval(checkPhoneConnection, 2000);
 
-  // Listen for TV disable status changes in real-time
+  // Listen for display availability changes in real time
   if (typeof firebase !== "undefined" && firebase.database) {
     try {
       firebase
@@ -665,16 +675,16 @@ function initializeTVDisplay() {
           const settings = snapshot.val() || {};
           const isEnabled = settings.enabled !== false;
           console.log(
-            "📺 TV Status Changed:",
+            "🎤 Karaoke Display status changed:",
             isEnabled ? "ENABLED" : "DISABLED",
           );
 
           if (!isEnabled) {
-            tvDisplayEnabled = false;
-            tvDisabledAnnouncement =
+            karaokeDisplayEnabled = false;
+            displayUnavailableAnnouncement =
               settings.announcement ||
-              "The TV display is temporarily unavailable. Please check back soon.";
-            console.warn("⚠️ TV Display has been DISABLED by admin");
+              "The karaoke display is temporarily unavailable. Please check back soon.";
+            console.warn("⚠️ Karaoke Display has been DISABLED by admin");
             stopListeningToRoom?.();
             stopListeningToRoom = null;
             stopListeningToMembers?.();
@@ -684,15 +694,15 @@ function initializeTVDisplay() {
             stopListeningToRoomMuted?.();
             stopListeningToRoomMuted = null;
             clearCurrentSongPlayback();
-            showTVDisabledMessage(tvDisabledAnnouncement);
-          } else if (!tvDisplayEnabled) {
-            tvDisplayEnabled = true;
+            showKaraokeDisplayUnavailableMessage(displayUnavailableAnnouncement);
+          } else if (!karaokeDisplayEnabled) {
+            karaokeDisplayEnabled = true;
             window.location.reload();
           }
         });
-      tvAvailabilityListenerAttached = true;
+      displayAvailabilityListenerAttached = true;
     } catch (e) {
-      console.warn("Error setting up TV status listener:", e.message);
+      console.warn("Error setting up display status listener:", e.message);
     }
   }
 
@@ -703,7 +713,7 @@ function initializeTVDisplay() {
     }
   });
 
-  // Listen for storage changes from other tabs/windows (real-time sync with singer-portal.html)
+  // Listen for storage changes from other tabs/windows (real-time sync with performer-portal.html)
   window.addEventListener("storage", function (e) {
     if (e.key === "karaoke_queue" || e.key === "karaoke_current_song") {
       console.log("📡 Storage change detected from other tab:", e.key);
@@ -712,7 +722,7 @@ function initializeTVDisplay() {
 
   // Listen for custom karaoke queue update events (same window only)
   window.addEventListener("karaoke-queue-updated", function (e) {
-    console.log("🎵 Queue updated from singer control:", e.detail);
+    console.log("🎵 Queue updated from performer portal:", e.detail);
     loadQueueData();
     displayQueue();
     checkAndPlayCurrentSong();
@@ -806,7 +816,7 @@ function initializeLegacyFirebaseListeners() {
 
       // Always update display when queue changes
       console.log(
-        "📺 Updating TV display - Queue has",
+        "📺 Updating karaoke display - Queue has",
         tvQueue.length,
         "songs",
       );
@@ -890,7 +900,7 @@ function initializeLegacyFirebaseListeners() {
     },
   );
 
-  // 🔥 Listen for control commands from singer page
+  // 🔥 Listen for control commands from performer portal
   db.ref("control").on(
     "value",
     (snapshot) => {
@@ -1111,7 +1121,7 @@ function createYouTubePlayer() {
     firebaseListenersSet,
   );
 
-  // Firebase listeners should already be initialized by initializeTVDisplay()
+  // Firebase listeners should already be initialized by initializeKaraokeDisplay()
   // No need to reinitialize here
   if (!firebaseListenersSet && useFirebase) {
     console.log(
@@ -1132,7 +1142,7 @@ function createYouTubePlayer() {
 
 // D. SINGLE ENTRY POINT (MOST IMPORTANT)
 function tryInitPlayback() {
-  if (!tvDisplayEnabled || !ytReady || !firebaseReady) {
+  if (!karaokeDisplayEnabled || !ytReady || !firebaseReady) {
     console.log(
       `⏳ Not ready yet: ytReady=${ytReady}, firebaseReady=${firebaseReady}`,
     );
@@ -1166,13 +1176,13 @@ function getFullscreenElement() {
 }
 
 function updateFullscreenUi() {
-  const tvContainer = document.querySelector(".tv-container");
+  const displayContainer = document.querySelector(".display-container");
   const fullscreenElement = getFullscreenElement();
   const isFullscreen =
-    fullscreenElement === tvContainer ||
-    tvContainer.classList.contains("fullscreen-fallback");
+    fullscreenElement === displayContainer ||
+    displayContainer.classList.contains("fullscreen-fallback");
 
-  tvContainer.classList.toggle("fullscreen-active", isFullscreen);
+  displayContainer.classList.toggle("fullscreen-active", isFullscreen);
   document.body.classList.toggle("fullscreen-ui-active", isFullscreen);
   document.getElementById("exitFullscreenBtn").hidden = !isFullscreen;
   if (!isFullscreen && fullscreenOrientationLocked) {
@@ -1193,8 +1203,8 @@ function lockLandscapeIfPortrait() {
   try {
     Promise.resolve(orientation.lock("landscape"))
       .then(() => {
-        const tvContainer = document.querySelector(".tv-container");
-        if (getFullscreenElement() === tvContainer) {
+        const displayContainer = document.querySelector(".display-container");
+        if (getFullscreenElement() === displayContainer) {
           fullscreenOrientationLocked = true;
         } else {
           orientation.unlock?.();
@@ -1209,11 +1219,11 @@ function lockLandscapeIfPortrait() {
 }
 
 function toggleFullscreen() {
-  const tvContainer = document.querySelector(".tv-container");
+  const displayContainer = document.querySelector(".display-container");
   const fullscreenElement = getFullscreenElement();
 
-  if (tvContainer.classList.contains("fullscreen-fallback")) {
-    tvContainer.classList.remove("fullscreen-fallback");
+  if (displayContainer.classList.contains("fullscreen-fallback")) {
+    displayContainer.classList.remove("fullscreen-fallback");
     updateFullscreenUi();
     return;
   }
@@ -1229,30 +1239,30 @@ function toggleFullscreen() {
   }
 
   const requestFullscreen =
-    tvContainer.requestFullscreen ||
-    tvContainer.webkitRequestFullscreen ||
-    tvContainer.mozRequestFullScreen ||
-    tvContainer.msRequestFullscreen;
+    displayContainer.requestFullscreen ||
+    displayContainer.webkitRequestFullscreen ||
+    displayContainer.mozRequestFullScreen ||
+    displayContainer.msRequestFullscreen;
   if (!requestFullscreen) {
-    tvContainer.classList.add("fullscreen-fallback");
+    displayContainer.classList.add("fullscreen-fallback");
     updateFullscreenUi();
     return;
   }
 
   try {
-    Promise.resolve(requestFullscreen.call(tvContainer))
+    Promise.resolve(requestFullscreen.call(displayContainer))
       .then(lockLandscapeIfPortrait)
       .catch((error) => {
         console.warn(
           "Native fullscreen unavailable; using display mode:",
           error,
         );
-        tvContainer.classList.add("fullscreen-fallback");
+        displayContainer.classList.add("fullscreen-fallback");
         updateFullscreenUi();
       });
   } catch (error) {
     console.warn("Native fullscreen unavailable; using display mode:", error);
-    tvContainer.classList.add("fullscreen-fallback");
+    displayContainer.classList.add("fullscreen-fallback");
     updateFullscreenUi();
   }
 }
@@ -1352,7 +1362,7 @@ function loadSong(song) {
   console.log(`📺 Now playing: ${song.title}`);
 }
 
-// Check if phone/singer page is connected
+// Check if phone/performer portal is connected
 let lastConnectionStatus = null;
 
 function checkPhoneConnection() {
@@ -1422,7 +1432,7 @@ function showNotification(message) {
   }, 3000);
 }
 
-// Generate QR code for singer page
+// Generate QR code for performer portal
 function generateQRCode() {
   // Skip if already generating
   if (qrCodeGenerated || typeof QRCode === "undefined") {
@@ -1534,17 +1544,17 @@ function clearCurrentSongPlayback() {
 
 // Display song information in lyrics section
 function displaySongInfo(song) {
-  const centerSingerName = document.getElementById("centerSingerName");
+  const centerPerformerName = document.getElementById("centerPerformerName");
 
-  if (!centerSingerName) return;
+  if (!centerPerformerName) return;
 
-  // Singer name display removed from center
-  centerSingerName.classList.remove("show");
-  centerSingerName.innerHTML = "";
+  // Performer name display removed from center
+  centerPerformerName.classList.remove("show");
+  centerPerformerName.innerHTML = "";
 }
 
 // Play video using YouTube iframe API
-function playVideo(videoId, title, artist, singer) {
+function playVideo(videoId, title, artist, performer) {
   const container = document.getElementById("videoPlayer");
 
   // Clear previous player
@@ -1553,7 +1563,7 @@ function playVideo(videoId, title, artist, singer) {
   // Initialize scoring for new song
   songStartTime = Date.now();
   hasSinging = false;
-  currentSingerName = singer || "Unknown Singer";
+  currentPerformerName = performer || "Unknown Performer";
   songDurationMs = 0;
 
   player = new YT.Player(container, {
@@ -1692,18 +1702,18 @@ function showScore() {
     if (score > 1000) score = 1000;
 
     console.log(
-      `🎤 ${currentSingerName} sang! Score: ${score} (Duration: ${songSeconds}s, Base: ${baseScore}, Bonus: ${bonus})`,
+      `🎤 ${currentPerformerName} sang! Score: ${score} (Duration: ${songSeconds}s, Base: ${baseScore}, Bonus: ${bonus})`,
     );
 
     // Display score modal
-    displayScoreModal(currentSingerName, score, true);
+    displayScoreModal(currentPerformerName, score, true);
   } else {
     // No singing detected - score is 0
     score = 0;
     console.log(`❌ No singing detected. Score: 0`);
 
     // Display zero score
-    displayScoreModal(currentSingerName, score, false);
+    displayScoreModal(currentPerformerName, score, false);
   }
 
   // Wait for score display before playing next song
@@ -1961,7 +1971,7 @@ function displayQueue() {
       }
       nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${songName}`;
       nextSongArtist.textContent = `Reserved by: ${nextSong.requestedBy}`;
-      console.log("📺 TV Display Queue Updated:", {
+      console.log("📺 Karaoke Display Queue Updated:", {
         count: tvQueue.length,
         currentSong: songName,
         reservedBy: nextSong.requestedBy,
@@ -1973,7 +1983,7 @@ function displayQueue() {
     } else {
       nextSongTitle.textContent = "No songs in queue";
       nextSongArtist.textContent = "-";
-      console.log("📺 TV Display Queue: Empty");
+      console.log("📺 Karaoke Display Queue: Empty");
     }
   } catch (e) {
     console.warn("Error displaying queue:", e.message);
@@ -2033,7 +2043,7 @@ function updateReserveList() {
   return;
 }
 
-// Function to add song to queue (called from singer page)
+// Function to add song to queue (called from performer portal)
 function addSongToQueue(title, artist, requestedBy) {
   if (!activeKaraokeRoomId) return;
   const newSong = {
@@ -2099,10 +2109,10 @@ function deleteQueue() {
     alert("✅ Queue cleared successfully!");
   }
 }
-// ===== TV ENABLED/DISABLED CONTROL =====
+// ===== KARAOKE DISPLAY AVAILABILITY CONTROL =====
 
-// Check if TV display is enabled
-function checkTVEnabled(callback) {
+// Check if karaoke display is enabled
+function checkKaraokeDisplayEnabled(callback) {
   if (typeof firebase === "undefined" || !firebase.database) {
     console.log("⚠️ Firebase not available, defaulting to enabled");
     callback(true);
@@ -2115,13 +2125,16 @@ function checkTVEnabled(callback) {
       .ref("tvControl")
       .once("value", (snapshot) => {
         const settings = snapshot.val() || {};
-        tvDisabledAnnouncement = settings.announcement || "";
+        displayUnavailableAnnouncement = settings.announcement || "";
         const isEnabled = settings.enabled !== false;
-        console.log("📺 TV Enabled Status from Firebase:", isEnabled);
+        console.log("🎤 Karaoke Display status from Firebase:", isEnabled);
         callback(isEnabled);
       })
       .catch((err) => {
-        console.error("❌ Firebase error checking TV status:", err.message);
+        console.error(
+          "❌ Firebase error checking display status:",
+          err.message,
+        );
         if (err.code === "PERMISSION_DENIED") {
           console.error(
             'Firebase Permission Denied - Update database rules to: { "rules": { ".read": true, ".write": true } }',
@@ -2135,20 +2148,22 @@ function checkTVEnabled(callback) {
   }
 }
 
-// Show TV disabled message
-function showTVDisabledMessage(announcement = tvDisabledAnnouncement) {
-  tvDisplayEnabled = false;
-  tvDisabledAnnouncement =
+// Show display unavailable message
+function showKaraokeDisplayUnavailableMessage(
+  announcement = displayUnavailableAnnouncement,
+) {
+  karaokeDisplayEnabled = false;
+  displayUnavailableAnnouncement =
     announcement ||
-    "The TV display is temporarily unavailable. Please check back soon.";
+    "The karaoke display is temporarily unavailable. Please check back soon.";
   const splashScreen = document.getElementById("splashScreen");
   if (splashScreen) {
     splashScreen.innerHTML = `
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; color: white; text-align: center; background: linear-gradient(135deg, #1a0a2e 0%, #0f0f1e 100%); padding: 20px; box-sizing: border-box; font-family: Arial, sans-serif;">
                 <div style="font-size: clamp(40px, 12vw, 100px); margin-bottom: clamp(15px, 5vw, 40px);">🔴</div>
-                <h1 style="font-size: clamp(1.5rem, 8vw, 3.5rem); font-weight: 700; margin: 0 0 clamp(10px, 3vw, 25px) 0; letter-spacing: 2px;">TV DISPLAY</h1>
+                <h1 style="font-size: clamp(1.5rem, 8vw, 3.5rem); font-weight: 700; margin: 0 0 clamp(10px, 3vw, 25px) 0; letter-spacing: 2px;">KARAOKE DISPLAY</h1>
                 <h2 style="font-size: clamp(1.2rem, 6vw, 2.5rem); font-weight: 500; margin: 0 0 clamp(8px, 2vw, 15px) 0; color: #ef4444;">TEMPORARILY UNAVAILABLE</h2>
-                <p id="tvDisabledAnnouncement" style="font-size: clamp(0.9rem, 3.5vw, 1.3rem); color: #d5d9e3; margin: clamp(15px, 3vw, 30px) auto 0; max-width: 90%; line-height: 1.6;"></p>
+                <p id="displayUnavailableAnnouncement" style="font-size: clamp(0.9rem, 3.5vw, 1.3rem); color: #d5d9e3; margin: clamp(15px, 3vw, 30px) auto 0; max-width: 90%; line-height: 1.6;"></p>
                 <p style="font-size: clamp(0.85rem, 3vw, 1.1rem); color: #999; margin: 14px auto 0; max-width: 90%; line-height: 1.6;">
                     Song reservations and playback are temporarily disabled.
                 </p>
@@ -2157,13 +2172,13 @@ function showTVDisabledMessage(announcement = tvDisabledAnnouncement) {
                 </div>
             </div>
         `;
-    document.getElementById("tvDisabledAnnouncement").textContent =
-      tvDisabledAnnouncement;
+    document.getElementById("displayUnavailableAnnouncement").textContent =
+      displayUnavailableAnnouncement;
     splashScreen.style.display = "flex";
   }
 
   if (
-    !tvAvailabilityListenerAttached &&
+    !displayAvailabilityListenerAttached &&
     typeof firebase !== "undefined" &&
     firebase.database
   ) {
@@ -2174,17 +2189,17 @@ function showTVDisabledMessage(announcement = tvDisabledAnnouncement) {
         .on("value", (snapshot) => {
           const settings = snapshot.val() || {};
           if (settings.enabled !== false) {
-            console.log("📺 TV has been re-enabled, reloading...");
+            console.log("📺 Karaoke Display restored, reloading...");
             setTimeout(() => {
               location.reload();
             }, 1000);
           } else if (settings.announcement) {
-            tvDisabledAnnouncement = settings.announcement;
-            const message = document.getElementById("tvDisabledAnnouncement");
-            if (message) message.textContent = tvDisabledAnnouncement;
+            displayUnavailableAnnouncement = settings.announcement;
+            const message = document.getElementById("displayUnavailableAnnouncement");
+            if (message) message.textContent = displayUnavailableAnnouncement;
           }
         });
-      tvAvailabilityListenerAttached = true;
+      displayAvailabilityListenerAttached = true;
     } catch (e) {
       console.warn("Error setting up listener:", e.message);
     }

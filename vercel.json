@@ -5,12 +5,27 @@
   "redirects": [
     {
       "source": "/singer.html",
-      "destination": "/singer-portal.html",
+      "destination": "/performer-portal.html",
+      "permanent": true
+    },
+    {
+      "source": "/singer-portal.html",
+      "destination": "/performer-portal.html",
       "permanent": true
     },
     {
       "source": "/admin.html",
       "destination": "/admin-dashboard.html",
+      "permanent": true
+    },
+    {
+      "source": "/tv-display.html",
+      "destination": "/karaoke-display.html",
+      "permanent": true
+    },
+    {
+      "source": "/tv-display.js",
+      "destination": "/karaoke-display.js",
       "permanent": true
     }
   ]

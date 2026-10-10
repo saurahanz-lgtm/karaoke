@@ -74,14 +74,14 @@
         margin-bottom: 18px;
       }
 
-      .singer-filters {
+      .performer-filters {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
         margin-bottom: 22px;
       }
 
-      .singer-filter {
+      .performer-filter {
         padding: 9px 16px;
         border: 1px solid rgba(102, 126, 234, 0.4);
         border-radius: 9px;
@@ -92,7 +92,7 @@
         transition: background 0.2s ease;
       }
 
-      .singer-filter:focus-visible,
+      .performer-filter:focus-visible,
       .admin-menu-toggle:focus-visible,
       .admin-menu-close:focus-visible,
       .admin-menu-nav-button:focus-visible {
@@ -175,8 +175,8 @@
         transform: translateY(0);
       }
 
-      /* TV Display Control Styles */
-      .tv-control-card {
+      /* Karaoke Display Control Styles */
+      .display-control-card {
         background: rgba(102, 126, 234, 0.1);
         border: 2px solid rgba(102, 126, 234, 0.3);
         border-radius: 12px;
@@ -189,26 +189,26 @@
         gap: clamp(15px, 3vw, 25px);
       }
 
-      .tv-control-info h3 {
+      .display-control-info h3 {
         color: #667eea;
         font-weight: 700;
         font-size: clamp(1.1rem, 2.5vw, 1.3rem);
         margin: 0 0 8px 0;
       }
 
-      .tv-control-info p {
+      .display-control-info p {
         color: #b0b0b0;
         font-size: clamp(0.85rem, 1.8vw, 0.95rem);
         margin: 0;
       }
 
-      .tv-control-buttons {
+      .display-control-buttons {
         display: flex;
         gap: clamp(8px, 1.5vw, 12px);
         flex-wrap: wrap;
       }
 
-      .tv-btn {
+      .display-btn {
         padding: clamp(10px, 1.5vw, 14px) clamp(20px, 3vw, 30px);
         border: none;
         border-radius: 8px;
@@ -219,35 +219,35 @@
         white-space: nowrap;
       }
 
-      .tv-btn-enable {
+      .display-btn-enable {
         background: linear-gradient(135deg, #22c55e, #16a34a);
         color: white;
       }
 
-      .tv-btn-enable:hover {
+      .display-btn-enable:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
       }
 
-      .tv-btn-enable:active {
+      .display-btn-enable:active {
         transform: translateY(0);
       }
 
-      .tv-btn-disable {
+      .display-btn-disable {
         background: linear-gradient(135deg, #ef4444, #dc2626);
         color: white;
       }
 
-      .tv-btn-disable:hover {
+      .display-btn-disable:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
       }
 
-      .tv-btn-disable:active {
+      .display-btn-disable:active {
         transform: translateY(0);
       }
 
-      .tv-status {
+      .display-status {
         display: inline-block;
         padding: 6px 14px;
         border-radius: 6px;
@@ -255,13 +255,13 @@
         font-size: clamp(0.8rem, 1.4vw, 0.9rem);
       }
 
-      .tv-status-enabled {
+      .display-status-enabled {
         background: rgba(34, 197, 94, 0.2);
         color: #22c55e;
         border: 1px solid rgba(34, 197, 94, 0.5);
       }
 
-      .tv-status-disabled {
+      .display-status-disabled {
         background: rgba(239, 68, 68, 0.2);
         color: #ef4444;
         border: 1px solid rgba(239, 68, 68, 0.5);
@@ -280,16 +280,16 @@
           grid-template-columns: 1fr;
         }
 
-        .tv-control-card {
+        .display-control-card {
           flex-direction: column;
           align-items: flex-start;
         }
 
-        .tv-control-buttons {
+        .display-control-buttons {
           width: 100%;
         }
 
-        .tv-btn {
+        .display-btn {
           flex: 1;
         }
 
@@ -305,8 +305,8 @@
   </head>
   <body class="admin-page">
     <main id="roomRequestConfirmation" class="admin-container" hidden>
-      <section class="tv-control-card" role="status">
-        <div class="tv-control-info">
+      <section class="display-control-card" role="status">
+        <div class="display-control-info">
           <h1>Room request sent</h1>
           <p id="roomRequestConfirmationStatus" aria-live="polite">
             The User Management team has been notified. Waiting for approval...
@@ -354,10 +354,10 @@
           <button
             class="admin-nav-link"
             type="button"
-            data-admin-view-target="tv"
-            aria-controls="tvControlSection"
+            data-admin-view-target="display"
+            aria-controls="displayControlSection"
           >
-            <i class="bi bi-display"></i><span>TV Display Control</span>
+            <i class="bi bi-display"></i><span>Karaoke Display Control</span>
           </button>
           <button
             class="admin-nav-link"
@@ -608,12 +608,12 @@
                   ><i class="bi bi-arrow-up-right action-arrow"></i>
                 </button>
                 <button
-                  class="quick-action action-tv"
+                  class="quick-action action-display"
                   type="button"
-                  data-admin-view-target="tv"
+                  data-admin-view-target="display"
                 >
                   <span><i class="bi bi-display"></i></span
-                  ><strong>TV Display Control</strong
+                  ><strong>Karaoke Display Control</strong
                   ><small>Manage the shared screen</small
                   ><i class="bi bi-arrow-up-right action-arrow"></i>
                 </button>
@@ -631,25 +631,25 @@
             </section>
           </section>
 
-          <!-- TV Display Control Section -->
+          <!-- Karaoke Display Control Section -->
           <section
-            id="tvControlSection"
-            data-admin-view="tv"
-            aria-labelledby="tvControlHeading"
+            id="displayControlSection"
+            data-admin-view="display"
+            aria-labelledby="displayControlHeading"
             hidden
           >
-            <div class="tv-control-card">
-              <div class="tv-control-info">
-                <h3 id="tvControlHeading">📺 TV DISPLAY CONTROL</h3>
-                <p>Manage TV display status and availability</p>
+            <div class="display-control-card">
+              <div class="display-control-info">
+                <h3 id="displayControlHeading">KARAOKE DISPLAY CONTROL</h3>
+                <p>Manage karaoke display status and availability</p>
                 <div style="margin-top: 12px">
-                  <span class="tv-status" id="tvStatus">🟢 ENABLED</span>
+                  <span class="display-status" id="displayStatus">🟢 ENABLED</span>
                 </div>
-                <div class="tv-announcement-control">
-                  <label class="form-label" for="tvAnnouncementTemplate">
-                    Message shown while TV is disabled
+                <div class="display-announcement-control">
+                  <label class="form-label" for="displayAnnouncementTemplate">
+                    Message shown while the display is unavailable
                   </label>
-                  <select class="form-select" id="tvAnnouncementTemplate">
+                  <select class="form-select" id="displayAnnouncementTemplate">
                     <option value="" selected disabled>
                       Choose an announcement
                     </option>
@@ -665,33 +665,33 @@
                   </select>
                   <textarea
                     class="form-control"
-                    id="tvAnnouncementCustom"
+                    id="displayAnnouncementCustom"
                     maxlength="180"
                     rows="2"
-                    placeholder="Write a short message for the TV display"
+                    placeholder="Write a short message for the karaoke display"
                     hidden
                   ></textarea>
                   <p
-                    class="tv-announcement-preview"
-                    id="tvAnnouncementPreview"
+                    class="display-announcement-preview"
+                    id="displayAnnouncementPreview"
                     aria-live="polite"
                   ></p>
                 </div>
               </div>
-              <div class="tv-control-buttons">
+              <div class="display-control-buttons">
                 <button
-                  class="tv-btn tv-btn-enable"
-                  onclick="enableTVDisplay()"
-                  id="enableTVBtn"
+                  class="display-btn display-btn-enable"
+                  onclick="enableKaraokeDisplay()"
+                  id="enableDisplayBtn"
                 >
-                  🟢 Enable TV
+                  🟢 Enable Display
                 </button>
                 <button
-                  class="tv-btn tv-btn-disable"
-                  onclick="disableTVDisplay()"
-                  id="disableTVBtn"
+                  class="display-btn display-btn-disable"
+                  onclick="disableKaraokeDisplay()"
+                  id="disableDisplayBtn"
                 >
-                  🔴 Disable TV
+                  🔴 Disable Display
                 </button>
               </div>
             </div>
@@ -804,7 +804,7 @@
                   style="background: linear-gradient(135deg, #b7791f, #975a16)"
                 >
                   <tr>
-                    <th>Singer</th>
+                    <th>Performer</th>
                     <th>Requested From</th>
                     <th>Requested</th>
                     <th>Status</th>
@@ -957,24 +957,24 @@
                   aria-label="Filter accounts by status"
                 >
                   <button
-                    class="singer-filter"
-                    onclick="filterSingers('total')"
+                    class="performer-filter"
+                    onclick="filterPerformers('total')"
                     id="filterTotal"
                     aria-pressed="true"
                   >
                     All accounts
                   </button>
                   <button
-                    class="singer-filter"
-                    onclick="filterSingers('online')"
+                    class="performer-filter"
+                    onclick="filterPerformers('online')"
                     id="filterOnline"
                     aria-pressed="false"
                   >
                     Online
                   </button>
                   <button
-                    class="singer-filter"
-                    onclick="filterSingers('offline')"
+                    class="performer-filter"
+                    onclick="filterPerformers('offline')"
                     id="filterOffline"
                     aria-pressed="false"
                   >
