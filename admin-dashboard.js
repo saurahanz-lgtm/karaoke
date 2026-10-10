@@ -27,6 +27,7 @@ let currentEditingUserId = null;
 let loggedInUser = null;
 let currentFilter = null;
 let currentUserPage = 1;
+let currentRoomRequestView = "pending";
 let currentAccountRequestView = "pending";
 let currentAccountRequestPage = 1;
 const USERS_PER_PAGE = 5;
@@ -185,6 +186,11 @@ document.addEventListener("DOMContentLoaded", function () {
         selectAccountRequestView(button.dataset.accountRequestFilter),
       );
     });
+  document.querySelectorAll("[data-room-request-filter]").forEach((button) => {
+    button.addEventListener("click", () =>
+      selectRoomRequestView(button.dataset.roomRequestFilter),
+    );
+  });
   document
     .getElementById("previousAccountRequestsPage")
     .addEventListener("click", () => {
@@ -205,15 +211,12 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Display initial users
-  displayUsers();
-  updateStats();
-
-  // Update admin activity every 30 seconds to keep them as Online
-  setInterval(updateAdminActivity, 30000);
-
-  // Validate admin session every 10 seconds to detect if logged in elsewhere
-  setInterval(validateAdminSession, 10000);
-
+  const requestsById = new Map(
+    [...Array.from(roomRequestsByRoom.values()).flat(), ...allRoomRequests].map(
+      (request) => [request.id, request],
+    ),
+  );
+  renderRoomRequests(Array.from(requestsById.values()));
   // Re-evaluate presence as activity timestamps age out, without reloading stale local data.
   setInterval(() => {
     displayUsers();
@@ -745,6 +748,7 @@ function updateAdminRequestNotifications() {
       button.textContent = request.label;
       button.addEventListener("click", () => {
         if (request.view === "users") selectAccountRequestView("pending");
+        if (request.view === "requests") selectRoomRequestView("pending");
         setAdminView(request.view);
         document.getElementById("adminRequestNotificationsPanel").hidden = true;
         toggle.setAttribute("aria-expanded", "false");
@@ -796,20 +800,27 @@ async function handleAccountRequestDecision(request, decision, buttons) {
 function renderRoomRequests(requests) {
   updateAdminRequestNotifications();
   const tableBody = document.getElementById("roomRequestsTableBody");
-  const pendingCount = requests.filter(
-    (request) => request.status === "pending",
+  const pendingCount = requests.filter((request) =>
+    ["pending", "approving"].includes(request.status),
+  ).length;
+  const historyCount = requests.filter((request) =>
+    ["approved", "rejected"].includes(request.status),
   ).length;
   document.getElementById("pendingRoomRequestCount").textContent =
-    `${pendingCount} pending · ${requests.length} total`;
+    `${pendingCount} pending · ${historyCount} history`;
 
-  if (requests.length === 0) {
-    tableBody.innerHTML =
-      '<tr><td colspan="5" class="text-center text-white-50">No room requests yet.</td></tr>';
+  const visibleRequests = requests.filter((request) =>
+    currentRoomRequestView === "history"
+      ? ["approved", "rejected"].includes(request.status)
+      : ["pending", "approving"].includes(request.status),
+  );
+  if (visibleRequests.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-white-50">No ${currentRoomRequestView === "history" ? "room request history" : "pending room requests"}.</td></tr>`;
     return;
   }
 
   tableBody.replaceChildren(
-    ...requests.map((request) => {
+    ...visibleRequests.map((request) => {
       const row = document.createElement("tr");
       const singerCell = document.createElement("td");
       const roomCell = document.createElement("td");
@@ -849,6 +860,18 @@ function renderRoomRequests(requests) {
           ]),
         );
         actionCell.append(approveButton, rejectButton);
+      } else if (
+        currentRoomRequestView === "history" &&
+        ["approved", "rejected"].includes(request.status)
+      ) {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "btn btn-sm btn-outline-danger";
+        deleteButton.textContent = "Delete";
+        deleteButton.addEventListener("click", () =>
+          handleDeleteRoomRequest(request, deleteButton),
+        );
+        actionCell.appendChild(deleteButton);
       } else {
         actionCell.textContent = request.approvedRoomId
           ? `Room ${request.approvedRoomId}`
@@ -858,6 +881,50 @@ function renderRoomRequests(requests) {
       return row;
     }),
   );
+}
+
+function selectRoomRequestView(view) {
+  currentRoomRequestView = view === "history" ? "history" : "pending";
+  document.querySelectorAll("[data-room-request-filter]").forEach((button) => {
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.roomRequestFilter === currentRoomRequestView),
+    );
+  });
+  renderRoomRequests(
+    [
+      ...Array.from(roomRequestsByRoom.values()).flat(),
+      ...allRoomRequests,
+    ].filter(
+      (request, index, requests) =>
+        requests.findIndex((item) => item.id === request.id) === index,
+    ),
+  );
+}
+
+async function handleDeleteRoomRequest(request, button) {
+  if (
+    !window.confirm(
+      `Delete the ${request.status} room request from "${request.username || "Performer"}"? This cannot be undone.`,
+    )
+  ) {
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    await KaraokeSessions.deleteRoomRequest(request.roomId, request.id);
+    showNotification("Room request deleted.", "info");
+  } catch (error) {
+    console.error("Could not delete room request:", error.message);
+    button.disabled = false;
+    showNotification(
+      error.message === "ROOM_REQUEST_NOT_DELETABLE"
+        ? "Only approved or rejected room requests can be deleted."
+        : "Could not delete the room request. Check the Firebase connection.",
+      "danger",
+    );
+  }
 }
 
 async function handleRoomRequestDecision(request, decision, buttons) {
@@ -937,8 +1004,18 @@ function renderKaraokeRooms() {
       statusBadge.className = `account-state room-state-${roomStatus}`;
       statusBadge.textContent = roomStatus;
       statusCell.appendChild(statusBadge);
+      const renameButton = document.createElement("button");
+      renameButton.type = "button";
+      renameButton.className = "btn btn-sm btn-outline-light me-2";
+      renameButton.textContent = "Rename";
+      renameButton.addEventListener("click", () =>
+        handleRenameRoom(room, renameButton),
+      );
+      actionCell.appendChild(renameButton);
       if (room.id === "main") {
-        actionCell.textContent = "Default room";
+        const defaultLabel = document.createElement("span");
+        defaultLabel.textContent = "Default room";
+        actionCell.appendChild(defaultLabel);
       } else {
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
@@ -958,6 +1035,30 @@ function renderKaraokeRooms() {
       return row;
     }),
   );
+}
+
+async function handleRenameRoom(room, button) {
+  const name = window.prompt("Enter the new room name:", room.name);
+  if (name === null || name.trim() === room.name) return;
+  if (!name.trim()) {
+    showNotification("Room name cannot be empty.", "warning");
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    await KaraokeSessions.renameRoom(room.id, name);
+    showNotification("Room renamed.", "success");
+  } catch (error) {
+    console.error("Could not rename karaoke room:", error.message);
+    button.disabled = false;
+    showNotification(
+      error.message === "ROOM_NOT_FOUND"
+        ? "That room no longer exists."
+        : "Could not rename room. Check the Firebase connection.",
+      "danger",
+    );
+  }
 }
 
 async function handleDeleteRoom(room, button) {

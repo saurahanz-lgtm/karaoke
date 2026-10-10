@@ -794,9 +794,33 @@
               >
                 📨 ROOM REQUESTS
               </h2>
-              <span class="text-white-50" id="pendingRoomRequestCount"
-                >0 pending</span
-              >
+              <div class="d-flex flex-wrap align-items-center gap-3">
+                <span class="text-white-50" id="pendingRoomRequestCount"
+                  >0 pending</span
+                >
+                <div
+                  class="account-request-filters"
+                  role="group"
+                  aria-label="Room request status"
+                >
+                  <button
+                    class="account-request-filter"
+                    type="button"
+                    data-room-request-filter="pending"
+                    aria-pressed="true"
+                  >
+                    Pending
+                  </button>
+                  <button
+                    class="account-request-filter"
+                    type="button"
+                    data-room-request-filter="history"
+                    aria-pressed="false"
+                  >
+                    History
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="table-responsive">
               <table class="table table-dark table-hover">

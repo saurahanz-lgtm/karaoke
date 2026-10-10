@@ -242,6 +242,20 @@
     throw new Error("ROOM_ID_GENERATION_FAILED");
   }
 
+  async function renameRoom(roomId, name) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    const roomName = String(name || "")
+      .trim()
+      .slice(0, 40);
+    if (!roomName) throw new Error("ROOM_NAME_REQUIRED");
+
+    const result = await database()
+      .ref(`${ROOM_LIST_PATH}/${roomId}`)
+      .transaction((room) => (room ? { ...room, name: roomName } : undefined));
+    if (!result.committed) throw new Error("ROOM_NOT_FOUND");
+    return { ...result.snapshot.val(), id: roomId };
+  }
+
   async function deleteRoom(roomId) {
     if (!roomId || roomId === "main") {
       throw new Error("DEFAULT_ROOM_PROTECTED");
@@ -410,6 +424,33 @@
           },
         });
       });
+  }
+
+  async function deleteRoomRequest(roomId, requestId) {
+    if (!roomId || !requestId) throw new Error("ROOM_REQUEST_REQUIRED");
+
+    const db = database();
+    const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
+    const claim = await requestRef.transaction((request) =>
+      ["approved", "rejected"].includes(request?.status)
+        ? { ...request, status: "deleting" }
+        : undefined,
+    );
+    if (!claim.committed) throw new Error("ROOM_REQUEST_NOT_DELETABLE");
+
+    try {
+      await db.ref().update({
+        [`${ROOM_DATA_PATH}/${roomId}/roomRequests/${requestId}`]: null,
+        [`${ROOM_REQUESTS_PATH}/${requestId}`]: null,
+      });
+    } catch (error) {
+      try {
+        await requestRef.set(claim.snapshot.val());
+      } catch (rollbackError) {
+        console.error("Could not restore room request:", rollbackError);
+      }
+      throw error;
+    }
   }
 
   function listenRoom(roomId, handlers, onError) {
@@ -752,6 +793,7 @@
     claimNextSong,
     createRoom,
     createRoomRequest,
+    deleteRoomRequest,
     deleteRoom,
     ensureDefaultRoom,
     getActiveRoomId,
@@ -771,6 +813,7 @@
     listenRoomRequests,
     listenVolume,
     roomRef,
+    renameRoom,
     approveRoomRequest,
     rejectRoomRequest,
     setRoomVolume,
