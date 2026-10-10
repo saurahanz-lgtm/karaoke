@@ -704,6 +704,14 @@ function updateAdminRequestNotifications() {
   const list = document.getElementById("adminRequestNotificationList");
   if (!count || !toggle || !emptyMessage || !list) return;
 
+  const roomRequests = Array.from(
+    new Map(
+      [
+        ...Array.from(roomRequestsByRoom.values()).flat(),
+        ...allRoomRequests,
+      ].map((request) => [request.id, request]),
+    ).values(),
+  );
   const pendingRequests = [
     ...accountRequests
       .filter((request) => request.status === "pending")
@@ -712,7 +720,7 @@ function updateAdminRequestNotifications() {
         view: "users",
         createdAt: request.createdAt || 0,
       })),
-    ...allRoomRequests
+    ...roomRequests
       .filter((request) => request.status === "pending")
       .map((request) => ({
         label: `Room request from ${request.username || "singer"} (${request.roomId || "unknown room"})`,
