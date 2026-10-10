@@ -1381,6 +1381,33 @@
       }
 
       function getLoginSetupErrorMessage(error) {
+        if (
+          error.code === "auth/configuration-not-found" ||
+          error.message === "CONFIGURATION_NOT_FOUND"
+        ) {
+          return "Firebase Authentication has not been set up for this project. The administrator must open Firebase Console → Authentication → Get started, then enable Email/Password sign-in.";
+        }
+        if (error.code === "auth/operation-not-allowed") {
+          return "Email/password sign-in is disabled. Ask the administrator to enable Email/Password in Firebase Authentication.";
+        }
+        if (error.code === "auth/unauthorized-domain") {
+          return "This website is not authorized for sign-in. Ask the administrator to add this domain in Firebase Authentication settings.";
+        }
+        if (error.code === "auth/invalid-api-key") {
+          return "Firebase sign-in is not configured correctly. Please contact the administrator.";
+        }
+        if (error.code === "auth/network-request-failed") {
+          return "Could not reach Firebase Authentication. Check the device date/time, network restrictions, or try another connection.";
+        }
+        if (error.code === "auth/too-many-requests") {
+          return "Too many sign-in attempts. Wait a while, then try again.";
+        }
+        if (
+          error.code === "PERMISSION_DENIED" ||
+          error.message === "PERMISSION_DENIED"
+        ) {
+          return "Firebase blocked access to this account. Ask the administrator to check the database rules.";
+        }
         if (error.message === "EMAIL_REQUIRED") {
           return "Add an email address to enable account recovery.";
         }
