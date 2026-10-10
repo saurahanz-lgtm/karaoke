@@ -345,8 +345,8 @@ function listenToKaraokeDisplayRoomRequest(state) {
         );
       } else if (request.status === "approving") {
         showKaraokeDisplayRoomRequestStatus(
-          "Preparing your room",
-          "The administrator approved the request. A new room is being prepared...",
+          "Waiting for approval",
+          "The administrator is processing your request. Please wait.",
         );
       } else {
         currentState.status = "pending";
@@ -401,8 +401,8 @@ async function requestKaraokeDisplayRoomApproval(anchorRoomId) {
   }
   if (existingRequest?.status === "creating") {
     showKaraokeDisplayRoomRequestStatus(
-      "Sending request",
-      "A room request is being sent to the administrator...",
+      "Waiting for approval",
+      "Your room request is being sent to the administrator...",
     );
     if (!tvRoomRequestPollTimer) {
       tvRoomRequestPollTimer = setInterval(() => {
@@ -443,7 +443,7 @@ async function requestKaraokeDisplayRoomApproval(anchorRoomId) {
   };
   saveKaraokeDisplayRoomRequestState(creatingState);
   showKaraokeDisplayRoomRequestStatus(
-    "Sending request",
+    "Waiting for approval",
     "No unoccupied room is available. Sending a request to the administrator...",
   );
   try {
