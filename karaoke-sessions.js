@@ -3,7 +3,7 @@
   const ROOM_DATA_PATH = "karaokeSessions";
   const ROOM_REQUESTS_PATH = "roomRequests";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
-  const MAX_DEVICES = 3;
+  const MAX_DEVICES = 1;
   const DEFAULT_ROOM_VOLUME = 70;
   const MEMBER_TIMEOUT_MS = 60000;
   const HEARTBEAT_INTERVAL_MS = 15000;
