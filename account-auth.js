@@ -166,7 +166,14 @@
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       throw new Error("INVALID_EMAIL");
     }
-    await auth().sendPasswordResetEmail(normalizedEmail);
+    const appHomeUrl = new URL(
+      "index.html",
+      new URL("./", global.location.href),
+    ).toString();
+    await auth().sendPasswordResetEmail(normalizedEmail, {
+      url: appHomeUrl,
+      handleCodeInApp: false,
+    });
   }
 
   async function approvePasswordResetRequest(id) {
