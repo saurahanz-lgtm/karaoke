@@ -793,7 +793,7 @@
         const button = document.getElementById("favoritesToggleButton");
         if (!button) return;
         button.textContent = showingFavoriteSongs
-          ? "Back to search results"
+          ? "Back to search"
           : `☆ Saved favorites (${favoriteSongs.length})`;
         button.setAttribute("aria-pressed", String(showingFavoriteSongs));
       }
@@ -882,6 +882,7 @@
           } else {
             favoriteSongs.push({ title, artist, videoId, thumbnail });
             showingFavoriteSongs = false;
+            searchResults = [];
             saveFavoriteSongs();
             document.getElementById("searchInput").value = "";
             document.getElementById("resultsContainer").innerHTML = "";
