@@ -452,7 +452,7 @@ function initializePasswordResetRequestListener() {
     !firebase.database
   ) {
     tableBody.innerHTML =
-      '<tr><td colspan="5" class="text-center text-white-50">Password reset request review is unavailable.</td></tr>';
+      '<tr><td colspan="6" class="text-center text-white-50">Password reset request review is unavailable.</td></tr>';
     return;
   }
 
@@ -464,7 +464,7 @@ function initializePasswordResetRequestListener() {
     (error) => {
       console.error("Password reset request listener failed:", error.message);
       tableBody.innerHTML =
-        '<tr><td colspan="5" class="text-center text-white-50">Could not load password reset requests.</td></tr>';
+        '<tr><td colspan="6" class="text-center text-white-50">Could not load password reset requests.</td></tr>';
     },
   );
 }
@@ -480,46 +480,60 @@ function renderPasswordResetRequests() {
 
   if (passwordResetRequests.length === 0) {
     tableBody.innerHTML =
-      '<tr><td colspan="5" class="text-center text-white-50">No password reset requests.</td></tr>';
+      '<tr><td colspan="6" class="text-center text-white-50">No password reset requests.</td></tr>';
     return;
   }
 
   tableBody.replaceChildren(
     ...passwordResetRequests.map((request) => {
       const row = document.createElement("tr");
+      const usernameCell = document.createElement("td");
       const emailCell = document.createElement("td");
       const requestedCell = document.createElement("td");
       const deliveryCell = document.createElement("td");
       const statusCell = document.createElement("td");
       const actionCell = document.createElement("td");
+      usernameCell.textContent = request.username || "-";
       emailCell.textContent = request.email || "-";
       requestedCell.textContent = request.requestedAt
         ? new Date(request.requestedAt).toLocaleString()
         : "-";
       deliveryCell.textContent =
-        request.deliveryStatus === "sent"
-          ? "Reset email sent"
-          : request.deliveryStatus === "auth/user-not-found"
-            ? "Email not linked to an account"
-            : request.deliveryStatus === "auth/operation-not-allowed"
-              ? "Email/Password sign-in is disabled"
-              : request.deliveryStatus || "Unknown";
+        request.deliveryStatus === "awaiting_approval"
+          ? "Awaiting approval"
+          : request.deliveryStatus === "sent"
+            ? "Reset email sent"
+            : request.deliveryStatus === "auth/user-not-found"
+              ? "Email not linked to an account"
+              : request.deliveryStatus === "auth/operation-not-allowed"
+                ? "Email/Password sign-in is disabled"
+                : request.deliveryStatus || "Unknown";
       statusCell.textContent = request.status || "pending";
       if (request.status === "pending") {
-        const reviewButton = document.createElement("button");
-        reviewButton.type = "button";
-        reviewButton.className = "btn btn-sm btn-outline-light";
-        reviewButton.textContent = "Mark reviewed";
-        reviewButton.addEventListener("click", () =>
-          handleReviewPasswordReset(request.id, reviewButton),
+        const approveButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.className = "btn btn-sm btn-success me-2";
+        approveButton.textContent = "Approve & send link";
+        approveButton.addEventListener("click", () =>
+          handlePasswordResetDecision(request.id, "approve", approveButton),
         );
-        actionCell.appendChild(reviewButton);
+        const rejectButton = document.createElement("button");
+        rejectButton.type = "button";
+        rejectButton.className = "btn btn-sm btn-outline-danger";
+        rejectButton.textContent = "Reject";
+        rejectButton.addEventListener("click", () =>
+          handlePasswordResetDecision(request.id, "reject", rejectButton),
+        );
+        actionCell.append(approveButton, rejectButton);
       } else {
-        actionCell.textContent = request.reviewedAt
-          ? new Date(request.reviewedAt).toLocaleString()
-          : "-";
+        actionCell.textContent = request.approvedAt
+          ? new Date(request.approvedAt).toLocaleString()
+          : request.reviewedAt
+            ? new Date(request.reviewedAt).toLocaleString()
+            : "-";
       }
       row.append(
+        usernameCell,
         emailCell,
         requestedCell,
         deliveryCell,
@@ -531,15 +545,31 @@ function renderPasswordResetRequests() {
   );
 }
 
-async function handleReviewPasswordReset(requestId, button) {
+async function handlePasswordResetDecision(requestId, decision, button) {
   button.disabled = true;
   try {
-    await KaraokeAccountAuth.markResetRequestReviewed(requestId);
-    showNotification("Password reset request marked as reviewed.", "success");
+    if (decision === "approve") {
+      await KaraokeAccountAuth.approvePasswordResetRequest(requestId);
+      showNotification(
+        "Reset approved. The reset link was emailed.",
+        "success",
+      );
+    } else {
+      await KaraokeAccountAuth.rejectPasswordResetRequest(requestId);
+      showNotification("Password reset request rejected.", "warning");
+    }
   } catch (error) {
-    console.error("Could not review password reset request:", error.message);
+    console.error("Could not resolve password reset request:", error.message);
     button.disabled = false;
-    showNotification("Could not update this request.", "danger");
+    const message =
+      error.message === "RESET_ACCOUNT_EMAIL_MISMATCH"
+        ? "Username or email does not match a linked account. Link the registered email in User Management first."
+        : error.message === "RESET_REQUEST_ALREADY_RESOLVED"
+          ? "This request has already been resolved."
+          : error.code === "auth/operation-not-allowed"
+            ? "Enable Email/Password in Firebase Authentication first."
+            : "Could not resolve this request. Check Firebase and try again.";
+    showNotification(message, "danger");
   }
 }
 

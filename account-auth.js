@@ -134,32 +134,104 @@
     };
   }
 
-  async function requestPasswordReset(email) {
+  async function requestPasswordReset(username, email) {
+    const normalizedUsername = String(username || "")
+      .trim()
+      .toLowerCase();
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
+    if (!normalizedUsername) throw new Error("USERNAME_REQUIRED");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new Error("INVALID_EMAIL");
+    }
+
+    await firebase
+      .database()
+      .ref(RESET_REQUESTS_PATH)
+      .push({
+        username: String(username).trim(),
+        normalizedUsername,
+        email: normalizedEmail,
+        requestedAt: Date.now(),
+        deliveryStatus: "awaiting_approval",
+        status: "pending",
+      });
+  }
+
+  async function sendPasswordResetEmail(email) {
     const normalizedEmail = String(email || "")
       .trim()
       .toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       throw new Error("INVALID_EMAIL");
     }
+    await auth().sendPasswordResetEmail(normalizedEmail);
+  }
 
-    let deliveryStatus = "sent";
+  async function approvePasswordResetRequest(id) {
+    const requestRef = firebase.database().ref(`${RESET_REQUESTS_PATH}/${id}`);
+    const claim = await requestRef.transaction((request) => {
+      const staleApproval =
+        request?.status === "sending" &&
+        Date.now() - (request.sendingAt || 0) > 2 * 60 * 1000;
+      return request?.status === "pending" || staleApproval
+        ? {
+            ...request,
+            status: "sending",
+            sendingAt: Date.now(),
+            deliveryStatus: "sending",
+          }
+        : undefined;
+    });
+    if (!claim.committed) {
+      throw new Error("RESET_REQUEST_ALREADY_RESOLVED");
+    }
+    const request = claim.snapshot.val();
+
     try {
-      await auth().sendPasswordResetEmail(normalizedEmail);
-    } catch (error) {
-      deliveryStatus = error.code || "failed";
-      if (error.code !== "auth/user-not-found") {
-        console.warn("Could not send password reset email:", error.message);
-      }
-    }
-
-    if (typeof firebase !== "undefined" && firebase.database) {
-      await firebase.database().ref(RESET_REQUESTS_PATH).push({
-        email: normalizedEmail,
-        requestedAt: Date.now(),
-        deliveryStatus,
-        status: "pending",
+      const usersSnapshot = await firebase
+        .database()
+        .ref(USERS_PATH)
+        .once("value");
+      const users = Object.values(usersSnapshot.val() || {});
+      const account = users.find(
+        (user) =>
+          user &&
+          (!request.normalizedUsername ||
+            String(user.username || "")
+              .trim()
+              .toLowerCase() === request.normalizedUsername) &&
+          String(user.email || "")
+            .trim()
+            .toLowerCase() === request.email &&
+          user.authUid,
+      );
+      if (!account) throw new Error("RESET_ACCOUNT_EMAIL_MISMATCH");
+      await sendPasswordResetEmail(account.email);
+      await requestRef.update({
+        status: "approved",
+        deliveryStatus: "sent",
+        approvedAt: Date.now(),
       });
+    } catch (error) {
+      await requestRef.update({
+        status: "pending",
+        deliveryStatus: error.code || "failed",
+        lastAttemptAt: Date.now(),
+      });
+      throw error;
     }
+  }
+
+  async function rejectPasswordResetRequest(id) {
+    const requestRef = firebase.database().ref(`${RESET_REQUESTS_PATH}/${id}`);
+    const result = await requestRef.transaction((request) =>
+      request?.status === "pending"
+        ? { ...request, status: "rejected", reviewedAt: Date.now() }
+        : undefined,
+    );
+    if (!result.committed) throw new Error("RESET_REQUEST_ALREADY_RESOLVED");
   }
 
   function listenResetRequests(callback, onError) {
@@ -185,9 +257,11 @@
 
   global.KaraokeAccountAuth = {
     authenticate,
+    approvePasswordResetRequest,
     listenResetRequests,
-    markResetRequestReviewed,
     provisionAccount,
+    rejectPasswordResetRequest,
     requestPasswordReset,
+    sendPasswordResetEmail,
   };
 })(window);

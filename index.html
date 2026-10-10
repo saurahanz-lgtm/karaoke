@@ -545,35 +545,65 @@
     <div id="forgotPasswordModal" class="login-modal-custom">
       <div class="login-title">Reset Password</div>
       <p>
-        Enter the email linked to your account. We’ll send a reset link if it
-        matches.
+        Submit your username and registered email for administrator approval.
       </p>
       <form id="passwordResetForm" onsubmit="submitPasswordReset(event)">
-        <div class="login-form-group">
-          <label for="passwordResetEmail">Email address</label>
-          <input
-            id="passwordResetEmail"
-            name="email"
-            type="email"
-            autocomplete="email"
-            placeholder="you@example.com"
-            required
-          />
+        <div id="passwordResetUsernameStep">
+          <div class="login-form-group">
+            <label for="passwordResetUsername">Username</label>
+            <input
+              id="passwordResetUsername"
+              name="username"
+              type="text"
+              autocomplete="username"
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+          <button
+            class="login-btn login-btn-submit"
+            type="button"
+            onclick="continuePasswordReset()"
+          >
+            Continue
+          </button>
+        </div>
+        <div id="passwordResetEmailStep" hidden>
+          <p>Account: <strong id="passwordResetUsernameDisplay"></strong></p>
+          <input id="passwordResetUsernameValue" type="hidden" />
+          <div class="login-form-group">
+            <label for="passwordResetEmail">Registered email address</label>
+            <input
+              id="passwordResetEmail"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div class="login-buttons">
+            <button type="submit" class="login-btn login-btn-submit">
+              Request approval
+            </button>
+            <button
+              type="button"
+              class="login-btn login-btn-cancel"
+              onclick="backToPasswordResetUsername()"
+            >
+              Back
+            </button>
+          </div>
         </div>
         <p id="passwordResetFeedback" role="status" aria-live="polite"></p>
-        <div class="login-buttons">
-          <button type="submit" class="login-btn login-btn-submit">
-            Send reset link
-          </button>
-          <button
-            type="button"
-            class="login-btn login-btn-cancel"
-            onclick="closeLoginModal()"
-          >
-            Cancel
-          </button>
-        </div>
       </form>
+      <button
+        type="button"
+        class="login-btn login-btn-cancel"
+        onclick="closeLoginModal()"
+      >
+        Cancel
+      </button>
     </div>
 
     <!-- Performer portal is served from performer-portal.html. -->
@@ -1118,8 +1148,36 @@
           document.getElementById(id).classList.remove("show"),
         );
         document.getElementById("forgotPasswordModal").classList.add("show");
+        document.getElementById("passwordResetForm").reset();
+        document.getElementById("passwordResetUsernameStep").hidden = false;
+        document.getElementById("passwordResetEmailStep").hidden = true;
         document.getElementById("passwordResetFeedback").textContent = "";
+        document.querySelector(
+          '#passwordResetEmailStep button[type="submit"]',
+        ).disabled = false;
+        document.getElementById("passwordResetUsername").focus();
+      }
+
+      function continuePasswordReset() {
+        const username = document
+          .getElementById("passwordResetUsername")
+          .value.trim();
+        if (!username) {
+          document.getElementById("passwordResetUsername").focus();
+          return;
+        }
+        document.getElementById("passwordResetUsernameValue").value = username;
+        document.getElementById("passwordResetUsernameDisplay").textContent =
+          username;
+        document.getElementById("passwordResetUsernameStep").hidden = true;
+        document.getElementById("passwordResetEmailStep").hidden = false;
         document.getElementById("passwordResetEmail").focus();
+      }
+
+      function backToPasswordResetUsername() {
+        document.getElementById("passwordResetEmailStep").hidden = true;
+        document.getElementById("passwordResetUsernameStep").hidden = false;
+        document.getElementById("passwordResetUsername").focus();
       }
 
       async function submitPasswordReset(event) {
@@ -1127,15 +1185,17 @@
         const form = document.getElementById("passwordResetForm");
         const button = form.querySelector('button[type="submit"]');
         const feedback = document.getElementById("passwordResetFeedback");
+        let submitted = false;
         button.disabled = true;
-        feedback.textContent = "Sending reset email...";
+        feedback.textContent = "Submitting your request...";
         try {
           await KaraokeAccountAuth.requestPasswordReset(
+            document.getElementById("passwordResetUsernameValue").value,
             document.getElementById("passwordResetEmail").value,
           );
           feedback.textContent =
-            "If an account is linked to that email, a password reset link has been sent.";
-          form.reset();
+            "Request submitted. If the username and email match your account, an administrator will approve it and send a password reset link.";
+          submitted = true;
         } catch (error) {
           console.error("Could not submit password reset:", error.message);
           feedback.textContent =
@@ -1143,7 +1203,7 @@
               ? "Enter a valid email address."
               : "Password reset is unavailable. Please contact the administrator.";
         } finally {
-          button.disabled = false;
+          button.disabled = submitted;
         }
       }
 
