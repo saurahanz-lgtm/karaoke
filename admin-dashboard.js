@@ -502,7 +502,7 @@ function renderPasswordResetRequests() {
         request.deliveryStatus === "awaiting_approval"
           ? "Awaiting approval"
           : request.deliveryStatus === "sent"
-            ? "Reset email sent"
+            ? "Accepted by Firebase"
             : request.deliveryStatus === "auth/user-not-found"
               ? "Email not linked to an account"
               : request.deliveryStatus === "auth/operation-not-allowed"
@@ -525,6 +525,15 @@ function renderPasswordResetRequests() {
           handlePasswordResetDecision(request.id, "reject", rejectButton),
         );
         actionCell.append(approveButton, rejectButton);
+      } else if (request.status === "approved") {
+        const resendButton = document.createElement("button");
+        resendButton.type = "button";
+        resendButton.className = "btn btn-sm btn-outline-light";
+        resendButton.textContent = "Resend link";
+        resendButton.addEventListener("click", () =>
+          handlePasswordResetDecision(request.id, "resend", resendButton),
+        );
+        actionCell.appendChild(resendButton);
       } else {
         actionCell.textContent = request.approvedAt
           ? new Date(request.approvedAt).toLocaleString()
@@ -550,10 +559,10 @@ async function handlePasswordResetDecision(requestId, decision, button) {
   try {
     if (decision === "approve") {
       await KaraokeAccountAuth.approvePasswordResetRequest(requestId);
-      showNotification(
-        "Reset approved. The reset link was emailed.",
-        "success",
-      );
+      showNotification("Firebase accepted the reset email request.", "success");
+    } else if (decision === "resend") {
+      await KaraokeAccountAuth.resendPasswordResetRequest(requestId);
+      showNotification("Firebase accepted the resend request.", "success");
     } else {
       await KaraokeAccountAuth.rejectPasswordResetRequest(requestId);
       showNotification("Password reset request rejected.", "warning");
@@ -566,9 +575,11 @@ async function handlePasswordResetDecision(requestId, decision, button) {
         ? "Username or email does not match a linked account. Link the registered email in User Management first."
         : error.message === "RESET_REQUEST_ALREADY_RESOLVED"
           ? "This request has already been resolved."
-          : error.code === "auth/operation-not-allowed"
-            ? "Enable Email/Password in Firebase Authentication first."
-            : "Could not resolve this request. Check Firebase and try again.";
+          : error.message === "RESET_REQUEST_NOT_APPROVED"
+            ? "Approve the reset request before resending its link."
+            : error.code === "auth/operation-not-allowed"
+              ? "Enable Email/Password in Firebase Authentication first."
+              : "Could not resolve this request. Check Firebase and try again.";
     showNotification(message, "danger");
   }
 }

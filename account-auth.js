@@ -234,6 +234,49 @@
     if (!result.committed) throw new Error("RESET_REQUEST_ALREADY_RESOLVED");
   }
 
+  async function resendPasswordResetRequest(id) {
+    const requestRef = firebase.database().ref(`${RESET_REQUESTS_PATH}/${id}`);
+    const requestSnapshot = await requestRef.once("value");
+    const request = requestSnapshot.val();
+    if (!request || request.status !== "approved") {
+      throw new Error("RESET_REQUEST_NOT_APPROVED");
+    }
+
+    const usersSnapshot = await firebase
+      .database()
+      .ref(USERS_PATH)
+      .once("value");
+    const users = Object.values(usersSnapshot.val() || {});
+    const account = users.find(
+      (user) =>
+        user &&
+        (!request.normalizedUsername ||
+          String(user.username || "")
+            .trim()
+            .toLowerCase() === request.normalizedUsername) &&
+        String(user.email || "")
+          .trim()
+          .toLowerCase() === request.email &&
+        user.authUid,
+    );
+    if (!account) throw new Error("RESET_ACCOUNT_EMAIL_MISMATCH");
+
+    try {
+      await sendPasswordResetEmail(account.email);
+      await requestRef.update({
+        deliveryStatus: "sent",
+        lastAttemptAt: Date.now(),
+        resendCount: (request.resendCount || 0) + 1,
+      });
+    } catch (error) {
+      await requestRef.update({
+        deliveryStatus: error.code || "failed",
+        lastAttemptAt: Date.now(),
+      });
+      throw error;
+    }
+  }
+
   function listenResetRequests(callback, onError) {
     const ref = firebase.database().ref(RESET_REQUESTS_PATH);
     const handler = (snapshot) => {
@@ -261,6 +304,7 @@
     listenResetRequests,
     provisionAccount,
     rejectPasswordResetRequest,
+    resendPasswordResetRequest,
     requestPasswordReset,
     sendPasswordResetEmail,
   };
