@@ -410,7 +410,7 @@
         width: 100%;
       }
 
-      .favorite-song-item {
+      .compact-song-item {
         display: grid;
         grid-template-columns: 112px minmax(0, 1fr);
         align-items: center;
@@ -420,35 +420,35 @@
         border-radius: 8px;
       }
 
-      .favorite-song-item .song-thumbnail {
+      .compact-song-item .song-thumbnail {
         width: 112px;
         height: 72px;
         border-radius: 5px;
       }
 
-      .favorite-song-item .song-info {
+      .compact-song-item .song-info {
         min-width: 0;
         padding: 4px 8px;
       }
 
-      .favorite-song-item .song-title {
+      .compact-song-item .song-title {
         overflow-wrap: anywhere;
       }
 
-      .favorite-song-item .song-artist {
+      .compact-song-item .song-artist {
         margin-bottom: 8px;
       }
 
-      .favorite-song-item .song-actions {
+      .compact-song-item .song-actions {
         justify-content: flex-end;
       }
 
-      .favorite-song-item .song-actions .favorite-btn {
+      .compact-song-item .song-actions .favorite-btn {
         flex-basis: 40px;
         padding: 7px;
       }
 
-      .favorite-song-item .song-actions .song-item-btn {
+      .compact-song-item .song-actions .song-item-btn {
         flex: 0 1 120px;
         width: auto;
         padding: 8px 12px;
@@ -498,26 +498,26 @@
       }
 
       @media (max-width: 480px) {
-        .favorite-song-item {
+        .compact-song-item {
           grid-template-columns: 76px minmax(0, 1fr);
           gap: 6px;
           padding: 6px;
         }
 
-        .favorite-song-item .song-thumbnail {
+        .compact-song-item .song-thumbnail {
           width: 76px;
           height: 56px;
         }
 
-        .favorite-song-item .song-info {
+        .compact-song-item .song-info {
           padding: 2px 4px;
         }
 
-        .favorite-song-item .song-actions .favorite-btn {
+        .compact-song-item .song-actions .favorite-btn {
           flex-basis: 36px;
         }
 
-        .favorite-song-item .song-actions .song-item-btn {
+        .compact-song-item .song-actions .song-item-btn {
           flex-basis: 96px;
           padding: 7px 8px;
         }
@@ -1769,7 +1769,7 @@
         results.forEach((song) => {
           const thumbnailMarkup = getSearchResultThumbnailMarkup(song);
           html += `
-                    <div class="song-item">
+                    <div class="song-item compact-song-item">
                         ${thumbnailMarkup}
                         <div class="song-info">
                     <div class="song-title">${escapeHTML(song.title)}</div>
@@ -1947,7 +1947,7 @@
         let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">Saved favorites (${favoriteSongs.length})</h3>`;
         pageSongs.forEach((song) => {
           html += `
-            <div class="song-item favorite-song-item">
+            <div class="song-item compact-song-item">
               ${getSearchResultThumbnailMarkup(song)}
               <div class="song-info">
                 <div class="song-title">${escapeHTML(song.title)}</div>
