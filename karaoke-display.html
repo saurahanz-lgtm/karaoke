@@ -57,7 +57,7 @@
         color: white;
       }
 
-      /* Display Container */
+      /* TV Container */
       .display-container {
         display: flex;
         flex-direction: column;
@@ -331,7 +331,7 @@
       }
 
       /* Center Performer Name */
-      .center-performer-name {
+      .center-singer-name {
         position: absolute;
         top: 50%;
         left: 50%;
@@ -346,7 +346,7 @@
         transition: opacity 0.3s ease;
       }
 
-      .center-performer-name.show {
+      .center-singer-name.show {
         opacity: 1;
       }
 
@@ -391,7 +391,7 @@
           font-size: 0.8rem;
         }
 
-        .center-performer-name {
+        .center-singer-name {
           font-size: 2rem;
         }
       }
@@ -691,7 +691,7 @@
       "
     ></div>
 
-    <div class="display-container">
+    <div class="tv-container">
       <!-- Video Player -->
       <div class="now-playing-section">
         <div class="now-playing-card">
@@ -700,7 +700,7 @@
             <strong>No song playing</strong>
             <span>Scan the QR code to request a song.</span>
           </div>
-          <div id="centerPerformerName" class="center-performer-name"></div>
+          <div id="centerPerformerName" class="center-singer-name"></div>
         </div>
       </div>
 

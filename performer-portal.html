@@ -666,12 +666,13 @@
       </div>
 
       <div
-        class="display-availability-notice"
+        class="tv-availability-notice"
         id="displayAvailabilityNotice"
         role="status"
         aria-live="polite"
         hidden
       ></div>
+      <div class="sr-only">Karaoke display status</div>
 
       <!-- PLAYER -->
       <div class="card-ui">
@@ -833,11 +834,11 @@
       let roomCurrentSong = null;
       let roomQueue = [];
       let karaokeDisplayEnabled = true;
-      let displayUnavailableAnnouncement = "";
+      let tvDisabledAnnouncement = "";
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
 
-      function applyDisplayControlAvailability() {
+      function applyTVControlAvailability() {
         const disabled = !karaokeDisplayEnabled;
         ["muteBtn", "playPauseBtn", "volumeSlider"].forEach((id) => {
           const control = document.getElementById(id);
@@ -1002,15 +1003,15 @@
 
       function updateKaraokeDisplayAvailability(settings = {}) {
         karaokeDisplayEnabled = settings.enabled !== false;
-        displayUnavailableAnnouncement =
+        tvDisabledAnnouncement =
           settings.announcement ||
           "The karaoke display is temporarily unavailable. Please check back soon.";
         const notice = document.getElementById("displayAvailabilityNotice");
         notice.hidden = karaokeDisplayEnabled;
         notice.textContent = karaokeDisplayEnabled
           ? ""
-          : `${displayUnavailableAnnouncement} Song reservations and playback are temporarily disabled.`;
-        applyDisplayControlAvailability();
+          : `${tvDisabledAnnouncement} Song reservations and playback are temporarily disabled.`;
+        applyTVControlAvailability();
       }
 
       function listenToKaraokeDisplayAvailability() {
@@ -1023,10 +1024,7 @@
             (snapshot) =>
               updateKaraokeDisplayAvailability(snapshot.val() || {}),
             (error) =>
-              console.warn(
-                "Could not check display availability:",
-                error.message,
-              ),
+              console.warn("Could not check TV availability:", error.message),
           );
       }
 
@@ -1076,7 +1074,7 @@
           return;
         }
 
-        console.log("🔍 Validating performer session...");
+        console.log("🔍 Validating singer session...");
 
         // Check Firebase to see if logged in user matches current device
         if (typeof firebase !== "undefined" && firebase.database) {
@@ -1171,7 +1169,7 @@
               event.data?.type === "user_logout" &&
               event.data?.username === loggedInUser.username
             ) {
-              console.log("🚪 Received forced logout for current performer");
+              console.log("🚪 Received forced logout for current singer");
               logoutFromPerformerSession();
             }
           });
@@ -1271,7 +1269,7 @@
           const message =
             error.message === "ROOM_NOT_FOUND"
               ? "This karaoke room no longer exists. Scan the QR code on the Karaoke Display again."
-              : "No active karaoke room found. Scan the QR code on the Karaoke Display to join.";
+              : "No active karaoke room found. Scan the QR code on the TV to join.";
           alert(message);
           window.location.href = "index.html";
           return;
@@ -1329,7 +1327,7 @@
                 firebase.database
               ) {
                 try {
-                  // Update only this performer's activity to avoid overwriting other users.
+                  // Update only this singer's activity to avoid overwriting other users.
                   firebase
                     .database()
                     .ref("users")
@@ -1404,7 +1402,7 @@
         const activityInterval = setInterval(updateActivityTimestamp, 5000);
         console.log("⏱️ Activity timer started");
 
-        // Validate performer session every 8 seconds to detect sign-in elsewhere
+        // Validate singer session every 8 seconds to detect if logged in elsewhere
         const sessionValidationInterval = setInterval(
           validatePerformerSession,
           8000,
@@ -1453,7 +1451,7 @@
           });
         }
 
-        // Populate performer name display
+        // Populate singer name display
         if (loggedInUser) {
           const userDisplayName = document.getElementById("userDisplayName");
           if (userDisplayName) {
@@ -1525,7 +1523,7 @@
         }
       }
 
-      // Disconnect performer
+      // Disconnect singer
       async function logoutFromPerformerSession() {
         const username = loggedInUser?.username;
         let clearSessionPromise = Promise.resolve();
@@ -1788,14 +1786,14 @@
         });
 
         container.innerHTML = html;
-        applyDisplayControlAvailability();
+        applyTVControlAvailability();
       }
 
       // Request song
       async function requestSong(title, artist, videoId, userName, btn) {
         if (!karaokeDisplayEnabled) {
           showAlert(
-            `${displayUnavailableAnnouncement} Song reservations are temporarily disabled.`,
+            `${tvDisabledAnnouncement} Song reservations are temporarily disabled.`,
             "danger",
           );
           return;
@@ -1835,9 +1833,9 @@
           console.error("Error requesting song:", error);
           showAlert(
             error.message === "KARAOKE_DISPLAY_DISABLED"
-              ? `${error.announcement || displayUnavailableAnnouncement} Song reservations are temporarily disabled.`
+              ? `${error.announcement || tvDisabledAnnouncement} Song reservations are temporarily disabled.`
               : error.message === "ROOM_FULL"
-                ? "This room is full. Join another room from the Karaoke Display."
+                ? "This room is full. Join another room from the TV."
                 : "Error adding song. Check your connection and try again.",
             "danger",
           );
@@ -1982,7 +1980,7 @@
             </nav>`;
         }
         container.innerHTML = html;
-        applyDisplayControlAvailability();
+        applyTVControlAvailability();
       }
 
       // Show alert
@@ -2115,7 +2113,7 @@
       // Reload player - restart current song on karaoke display
       function reloadPlayer() {
         if (!karaokeDisplayEnabled) {
-          showAlert(displayUnavailableAnnouncement, "danger");
+          showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
         animateRefreshButton();
@@ -2151,7 +2149,7 @@
       // Toggle play/pause on karaoke display
       function togglePlayPause() {
         if (!karaokeDisplayEnabled) {
-          showAlert(displayUnavailableAnnouncement, "danger");
+          showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
         console.log("⏯️ Play/Pause toggled");
@@ -2177,7 +2175,7 @@
       // Stop player - skip to next song on karaoke display
       function stopPlayer() {
         if (!karaokeDisplayEnabled) {
-          showAlert(displayUnavailableAnnouncement, "danger");
+          showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
         console.log("⏭️ Stop (skip) requested");
@@ -2203,7 +2201,7 @@
       // Toggle mute on karaoke display
       function toggleMute() {
         if (!karaokeDisplayEnabled) {
-          showAlert(displayUnavailableAnnouncement, "danger");
+          showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
         if (!activeKaraokeRoomId || !usePerformerFirebase) {
@@ -2256,7 +2254,7 @@
         button.setAttribute("aria-pressed", String(Boolean(playing)));
       }
 
-      // Update performer activity
+      // Update singer activity
       function updatePerformerActivity() {
         const singerName = localStorage.getItem("karaoke_user_name");
         if (!singerName) return;

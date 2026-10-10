@@ -518,6 +518,9 @@
     </div>
 
     <!-- Performer portal is served from performer-portal.html. -->
+    <script>
+      document.title = "SD Karaoke | Welcome";
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
@@ -905,7 +908,7 @@
         }
       }
 
-      // Update performer activity
+      // Update singer activity
       function updatePerformerActivity() {
         const singerName = localStorage.getItem("karaoke_user_name");
         if (!singerName) return;

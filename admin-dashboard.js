@@ -277,7 +277,7 @@ function setAdminView(viewName) {
     dashboard: ["Dashboard", "A live overview of your karaoke system."],
     users: ["User Management", "Manage registered accounts and access."],
     display: ["Karaoke Display Control", "Manage the shared display."],
-    rooms: ["Karaoke Rooms", "Monitor rooms and connected singers."],
+    rooms: ["Karaoke Rooms", "Monitor rooms and connected performers."],
     requests: ["Room Requests", "Review requests waiting for approval."],
     addUser: ["Add New User", "Create an account for your karaoke system."],
   }[viewName];
@@ -695,7 +695,7 @@ function updateAdminRequestNotifications() {
       .flat()
       .filter((request) => request.status === "pending")
       .map((request) => ({
-        label: `Room request from ${request.username || "performer"} (${request.roomId || "unknown room"})`,
+        label: `Room request from ${request.username || "singer"} (${request.roomId || "unknown room"})`,
         view: "requests",
         createdAt: request.createdAt || 0,
       })),
@@ -845,14 +845,14 @@ async function handleRoomRequestDecision(request, decision, buttons) {
       );
       playRequestNotificationSound();
       showNotification(
-        `Room approved for ${request.username || "performer"}.`,
+        `Room approved for ${request.username || "singer"}.`,
         "success",
       );
     } else {
       await KaraokeSessions.rejectRoomRequest(request.roomId, request.id);
       playRequestNotificationSound();
       showNotification(
-        `Room request from ${request.username || "performer"} rejected.`,
+        `Room request from ${request.username || "singer"} rejected.`,
         "warning",
       );
     }
@@ -2129,7 +2129,7 @@ function displayUsers() {
     pagination.hidden = true;
     tbody.innerHTML = "";
     emptyMessage.style.display = "block";
-    emptyMessage.innerHTML = `<p style="font-size: clamp(1rem, 2.5vw, 1.2rem); color: #999; opacity: 0.7;">No ${currentFilter === "online" ? "online" : currentFilter === "offline" ? "offline" : ""} singers found...</p>`;
+    emptyMessage.innerHTML = `<p style="font-size: clamp(1rem, 2.5vw, 1.2rem); color: #999; opacity: 0.7;">No ${currentFilter === "online" ? "online" : currentFilter === "offline" ? "offline" : ""} performers found...</p>`;
     return;
   }
 
@@ -2382,7 +2382,7 @@ function filterPerformers(filter) {
   currentFilter = filter;
   currentUserPage = 1;
   document.getElementById("singerListContainer").hidden = false;
-  console.log("🔍 Filtering singers by:", filter);
+  console.log("🔍 Filtering performers by:", filter);
   updateFilterButtons();
   displayUsers();
 }
@@ -2726,10 +2726,7 @@ function loadKaraokeDisplayStatus() {
           updateKaraokeDisplayStatusUI(isEnabled);
         },
         (err) => {
-          console.error(
-            "❌ Firebase error loading display status:",
-            err.message,
-          );
+          console.error("❌ Firebase error loading TV status:", err.message);
         },
       );
   } catch (e) {
@@ -2738,7 +2735,7 @@ function loadKaraokeDisplayStatus() {
   }
 }
 
-// Update UI to reflect display status
+// Update UI to reflect TV status
 function updateKaraokeDisplayStatusUI(isEnabled) {
   const statusElement = document.getElementById("displayStatus");
   const enableBtn = document.getElementById("enableDisplayBtn");
@@ -2781,7 +2778,7 @@ function enableKaraokeDisplay() {
         showNotification("✅ Karaoke Display has been ENABLED", "success");
       })
       .catch((err) => {
-        console.error("❌ Error enabling display:", err.message);
+        console.error("❌ Error enabling TV:", err.message);
         if (err.code === "PERMISSION_DENIED") {
           showNotification(
             "❌ Firebase Permission Denied - Check database rules",
@@ -2822,7 +2819,7 @@ function disableKaraokeDisplay() {
         showNotification("✅ Karaoke Display has been DISABLED", "warning");
       })
       .catch((err) => {
-        console.error("❌ Error disabling display:", err.message);
+        console.error("❌ Error disabling TV:", err.message);
         if (err.code === "PERMISSION_DENIED") {
           showNotification(
             "❌ Firebase Permission Denied - Check database rules",

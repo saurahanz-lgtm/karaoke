@@ -214,7 +214,7 @@ Third-party Services:
 3. Login with admin credentials
 4. View queue of requested songs
 5. Click "Play" on a song
-6. Song displays on the Karaoke Display with the YouTube player
+6. Song displays on TV with YouTube player
 7. Use YouTube controls to manage playback
 8. Skip to next when done
 ```
@@ -330,10 +330,10 @@ Third-party Services:
 4. Requests song
 5. Goes to waiting area
 6. Admin opens admin-dashboard.html
-7. Sees request from a performer
+7. Sees request from singer
 8. Clicks "Play Now"
 9. Karaoke Display auto-plays the YouTube video
-10. Performer sings along
+10. Performer performs along
 11. Video auto-ends
 12. Admin clicks "Next Song"
 13. Next requested song plays

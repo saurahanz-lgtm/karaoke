@@ -97,7 +97,7 @@ body {
   letter-spacing: 1px;
 }
 
-/* ===== KARAOKE DISPLAY STYLES ===== */
+/* ===== TV SCREEN STYLES ===== */
 .now-playing-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
@@ -697,7 +697,7 @@ body {
   font-size: 1.3rem !important;
 }
 
-.song-performer-large {
+.song-singer-large {
   font-size: 1rem !important;
 }
 
@@ -709,7 +709,7 @@ body {
   font-size: 1.8rem !important;
 }
 
-.performer-name-display {
+.singer-name-display {
   font-size: 2rem !important;
   gap: 10px;
 }
@@ -718,7 +718,7 @@ body {
   font-size: 2rem !important;
 }
 
-.center-performer-name {
+.center-singer-name {
   top: 45%;
 }
 
@@ -740,7 +740,7 @@ body {
   font-size: 0.65rem;
 }
 
-.reserve-item-performer {
+.reserve-item-singer {
   font-size: 0.6rem;
 }
 
@@ -776,7 +776,7 @@ button[onclick="deleteQueue()"] {
   font-size: 1rem !important;
 }
 
-.video-song-performer {
+.video-song-singer {
   font-size: 0.8rem !important;
 }
 
@@ -1758,7 +1758,7 @@ body.admin-page {
   display: flex;
   gap: 6px;
 }
-.account-filters .performer-filter {
+.account-filters .singer-filter {
   padding: 7px 11px;
   border: 1px solid rgba(106, 133, 205, 0.23);
   border-radius: 7px;
@@ -1767,7 +1767,7 @@ body.admin-page {
   font-size: 10px;
   font-weight: 500;
 }
-.account-filters .performer-filter[aria-pressed="true"] {
+.account-filters .singer-filter[aria-pressed="true"] {
   border-color: rgba(112, 94, 255, 0.48);
   color: #fff;
   background: rgba(87, 73, 201, 0.28);
