@@ -218,11 +218,6 @@ function activateKaraokeRoom(roomId) {
 }
 
 async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
-  const requestedRoomId = KaraokeSessions.getRoomIdFromUrl();
-  if (rooms.some((room) => room.id === requestedRoomId)) {
-    return requestedRoomId;
-  }
-
   const requestState = readKaraokeDisplayRoomRequestState();
   if (
     ["creating", "pending", "rejected", "missing"].includes(
@@ -238,6 +233,7 @@ async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
     return requestState.approvedRoomId;
   }
 
+  const requestedRoomId = KaraokeSessions.getRoomIdFromUrl();
   const roomCounts = new Map(
     await Promise.all(
       rooms.map(async (room) => [
@@ -250,9 +246,11 @@ async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
   const emptyRooms = rooms
     .filter((room) => (roomCounts.get(room.id) || 0) === 0)
     .sort((first, second) => (first.createdAt || 0) - (second.createdAt || 0));
-  const preferredEmptyRoomId = [savedRoomId, globalActiveRoomId].find(
-    (roomId) => emptyRooms.some((room) => room.id === roomId),
-  );
+  const preferredEmptyRoomId = [
+    requestedRoomId,
+    savedRoomId,
+    globalActiveRoomId,
+  ].find((roomId) => emptyRooms.some((room) => room.id === roomId));
   return preferredEmptyRoomId || emptyRooms[0]?.id || null;
 }
 
