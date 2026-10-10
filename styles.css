@@ -2728,8 +2728,8 @@ body.tv-page {
 }
 
 .singer-page .footer-section {
-  border-top-color: rgba(122, 126, 234, 0.22);
-  background: linear-gradient(145deg, #101b42, #08132d) !important;
+  border-top: 0;
+  background: transparent !important;
 }
 
 .singer-page .footer-title {
