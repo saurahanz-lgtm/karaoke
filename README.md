@@ -234,6 +234,18 @@ Third-party Services:
 
 ## 🔐 Security & API Usage
 
+### Password Recovery Setup
+
+Password recovery uses Firebase Authentication. Before deploying this flow:
+
+1. In Firebase Console, open **Authentication → Sign-in method** and enable **Email/Password**.
+2. In **Authentication → Settings → Authorized domains**, add `sdkaraoke.vercel.app` if it is not listed.
+3. Back up the Realtime Database before deployment. Existing accounts can be linked by signing in with their current credentials and entering an email, or by adding the email in Admin → User Management → Edit Account.
+4. New account requests and accounts created by an administrator require an email. Account request approval provisions Firebase Authentication and sends a verification message.
+5. Forgot Password sends the Firebase reset link and records the submitted address and delivery outcome in Admin → User Management → Password Reset Requests.
+
+The existing Realtime Database access rules must allow the login page to read/write user account metadata and reset requests. Review those rules before production use; client-side role checks alone are not authorization.
+
 ### API Keys
 
 - **YouTube API Key:** `AIzaSyAVq2Rno7lN9xilCpUzgOJMKSZCCqB96jQ`

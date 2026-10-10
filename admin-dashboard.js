@@ -36,6 +36,8 @@ let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
 let accountRequests = [];
 let stopListeningToAccountRequests = null;
+let passwordResetRequests = [];
+let stopListeningToPasswordResetRequests = null;
 const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
 let karaokeRooms = [];
 const roomDeviceCounts = new Map();
@@ -161,6 +163,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadUsers();
   initializePresenceListener();
   initializeAccountRequestListener();
+  initializePasswordResetRequestListener();
   initializeRoomManagement();
 
   // Add event listeners
@@ -412,7 +415,7 @@ function initializeAccountRequestListener() {
     !firebase.database
   ) {
     tableBody.innerHTML =
-      '<tr><td colspan="4" class="text-center text-white-50">Account request review is unavailable.</td></tr>';
+      '<tr><td colspan="5" class="text-center text-white-50">Account request review is unavailable.</td></tr>';
     return;
   }
 
@@ -436,9 +439,108 @@ function initializeAccountRequestListener() {
     (error) => {
       console.error("Account request listener failed:", error.message);
       tableBody.innerHTML =
-        '<tr><td colspan="4" class="text-center text-white-50">Could not load account requests.</td></tr>';
+        '<tr><td colspan="5" class="text-center text-white-50">Could not load account requests.</td></tr>';
     },
   );
+}
+
+function initializePasswordResetRequestListener() {
+  const tableBody = document.getElementById("passwordResetRequestsTableBody");
+  if (
+    !window.KaraokeAccountAuth ||
+    typeof firebase === "undefined" ||
+    !firebase.database
+  ) {
+    tableBody.innerHTML =
+      '<tr><td colspan="5" class="text-center text-white-50">Password reset request review is unavailable.</td></tr>';
+    return;
+  }
+
+  stopListeningToPasswordResetRequests = KaraokeAccountAuth.listenResetRequests(
+    (requests) => {
+      passwordResetRequests = requests;
+      renderPasswordResetRequests();
+    },
+    (error) => {
+      console.error("Password reset request listener failed:", error.message);
+      tableBody.innerHTML =
+        '<tr><td colspan="5" class="text-center text-white-50">Could not load password reset requests.</td></tr>';
+    },
+  );
+}
+
+function renderPasswordResetRequests() {
+  const tableBody = document.getElementById("passwordResetRequestsTableBody");
+  const pending = passwordResetRequests.filter(
+    (request) => request.status === "pending",
+  ).length;
+  document.getElementById("pendingPasswordResetCount").textContent =
+    `${pending} pending`;
+  updateAdminRequestNotifications();
+
+  if (passwordResetRequests.length === 0) {
+    tableBody.innerHTML =
+      '<tr><td colspan="5" class="text-center text-white-50">No password reset requests.</td></tr>';
+    return;
+  }
+
+  tableBody.replaceChildren(
+    ...passwordResetRequests.map((request) => {
+      const row = document.createElement("tr");
+      const emailCell = document.createElement("td");
+      const requestedCell = document.createElement("td");
+      const deliveryCell = document.createElement("td");
+      const statusCell = document.createElement("td");
+      const actionCell = document.createElement("td");
+      emailCell.textContent = request.email || "-";
+      requestedCell.textContent = request.requestedAt
+        ? new Date(request.requestedAt).toLocaleString()
+        : "-";
+      deliveryCell.textContent =
+        request.deliveryStatus === "sent"
+          ? "Reset email sent"
+          : request.deliveryStatus === "auth/user-not-found"
+            ? "Email not linked to an account"
+            : request.deliveryStatus === "auth/operation-not-allowed"
+              ? "Email/Password sign-in is disabled"
+              : request.deliveryStatus || "Unknown";
+      statusCell.textContent = request.status || "pending";
+      if (request.status === "pending") {
+        const reviewButton = document.createElement("button");
+        reviewButton.type = "button";
+        reviewButton.className = "btn btn-sm btn-outline-light";
+        reviewButton.textContent = "Mark reviewed";
+        reviewButton.addEventListener("click", () =>
+          handleReviewPasswordReset(request.id, reviewButton),
+        );
+        actionCell.appendChild(reviewButton);
+      } else {
+        actionCell.textContent = request.reviewedAt
+          ? new Date(request.reviewedAt).toLocaleString()
+          : "-";
+      }
+      row.append(
+        emailCell,
+        requestedCell,
+        deliveryCell,
+        statusCell,
+        actionCell,
+      );
+      return row;
+    }),
+  );
+}
+
+async function handleReviewPasswordReset(requestId, button) {
+  button.disabled = true;
+  try {
+    await KaraokeAccountAuth.markResetRequestReviewed(requestId);
+    showNotification("Password reset request marked as reviewed.", "success");
+  } catch (error) {
+    console.error("Could not review password reset request:", error.message);
+    button.disabled = false;
+    showNotification("Could not update this request.", "danger");
+  }
 }
 
 function renderAccountRequests() {
@@ -466,8 +568,8 @@ function renderAccountRequests() {
     pagination.hidden = true;
     tableBody.innerHTML =
       currentAccountRequestView === "history"
-        ? '<tr><td colspan="4" class="text-center text-white-50">No approved or rejected requests yet.</td></tr>'
-        : '<tr><td colspan="4" class="text-center text-white-50">No pending account requests.</td></tr>';
+        ? '<tr><td colspan="5" class="text-center text-white-50">No approved or rejected requests yet.</td></tr>'
+        : '<tr><td colspan="5" class="text-center text-white-50">No pending account requests.</td></tr>';
     return;
   }
 
@@ -495,6 +597,7 @@ function renderAccountRequests() {
       .map((request) => {
         const row = document.createElement("tr");
         const usernameCell = document.createElement("td");
+        const emailCell = document.createElement("td");
         const dateCell = document.createElement("td");
         const statusCell = document.createElement("td");
         const actionCell = document.createElement("td");
@@ -503,6 +606,7 @@ function renderAccountRequests() {
         actionGroup.className = "account-request-row-actions";
         actionButtons.className = "account-actions";
         usernameCell.textContent = request.username || "Unknown username";
+        emailCell.textContent = request.email || "-";
         dateCell.textContent = request.createdAt
           ? new Date(request.createdAt).toLocaleString()
           : "-";
@@ -587,7 +691,7 @@ function renderAccountRequests() {
           actionGroup.appendChild(actionButtons);
         }
         actionCell.appendChild(actionGroup);
-        row.append(usernameCell, dateCell, statusCell, actionCell);
+        row.append(usernameCell, emailCell, dateCell, statusCell, actionCell);
         return row;
       }),
   );
@@ -716,6 +820,13 @@ function updateAdminRequestNotifications() {
     ).values(),
   );
   const pendingRequests = [
+    ...passwordResetRequests
+      .filter((request) => request.status === "pending")
+      .map((request) => ({
+        label: `Password reset request for ${request.email || "unknown email"}`,
+        view: "users",
+        createdAt: request.requestedAt || 0,
+      })),
     ...accountRequests
       .filter((request) => request.status === "pending")
       .map((request) => ({
@@ -790,9 +901,11 @@ async function handleAccountRequestDecision(request, decision, buttons) {
     const message =
       error.message === "ACCOUNT_ALREADY_EXISTS"
         ? "That username is already in use. The requester has been notified."
-        : error.message === "REQUEST_ALREADY_RESOLVED"
-          ? "This account request has already been handled."
-          : "Could not update the account request. Check the Firebase connection.";
+        : error.message === "REQUEST_EMAIL_REQUIRED"
+          ? "A valid recovery email is required to approve this account."
+          : error.message === "REQUEST_ALREADY_RESOLVED"
+            ? "This account request has already been handled."
+            : "Could not update the account request. Check the Firebase connection.";
     showNotification(message, "danger");
   }
 }
@@ -1426,6 +1539,7 @@ function updateAdminActivity() {
     // User not found in users array, add them to the list if they're an admin
     if (loggedInUser.role === "admin") {
       const newAdminUser = {
+        ...loggedInUser,
         id: loggedInUser.id || Math.max(...users.map((u) => u.id || 0), 0) + 1,
         username: loggedInUser.username,
         password: loggedInUser.password || "",
@@ -1549,6 +1663,15 @@ async function logout() {
     }
 
     await clearSessionPromise;
+
+    if (typeof firebase !== "undefined" && firebase.auth) {
+      await firebase
+        .auth()
+        .signOut()
+        .catch((error) =>
+          console.warn("Firebase Auth sign-out failed:", error.message),
+        );
+    }
 
     // Clear from memory and storage
     loggedInUser = null;
@@ -1677,9 +1800,10 @@ function loadFromLocalStorage() {
       if (Array.isArray(parsedUsers) && parsedUsers.length > 0) {
         // Validate and normalize each user
         users = parsedUsers.map((u, idx) => ({
+          ...u,
           id: u.id || idx + 1,
           username: u.username || `user_${idx}`,
-          password: u.password || "temp123",
+          password: u.authUid ? null : u.password || "temp123",
           role: u.role || "user",
           joined: u.joined || new Date().toISOString().split("T")[0],
           lastActivity:
@@ -1833,9 +1957,10 @@ function syncUsersToFirebase() {
 
       // Ensure all users have proper format before syncing
       const sanitizedUsers = users.map((u) => ({
+        ...u,
         id: u.id || 0,
         username: u.username || "",
-        password: u.password || "",
+        password: u.authUid ? null : u.password || "",
         role: u.role || "user",
         joined: u.joined || new Date().toISOString().split("T")[0],
         lastActivity: u.lastActivity || 0,
@@ -1990,9 +2115,10 @@ function verifyAndSyncAllUsers() {
 
         // Step 2: Sync to Firebase
         const sanitizedUsers = localValidUsers.map((u) => ({
+          ...u,
           id: u.id || 0,
           username: u.username.trim(),
-          password: u.password || "",
+          password: u.authUid ? null : u.password || "",
           role: u.role || "user",
           joined: u.joined || new Date().toISOString().split("T")[0],
           lastActivity: u.lastActivity || 0,
@@ -2122,7 +2248,7 @@ function reloadUsersFromFirebase(callback) {
 }
 
 // Continue with adding user after reloading from Firebase
-function continueAddUser(username, password, role) {
+function continueAddUser(username, password, role, identity) {
   const passwordValidation = validatePassword(password);
   if (!passwordValidation.valid) {
     showNotification(passwordValidation.message, "warning");
@@ -2142,7 +2268,8 @@ function continueAddUser(username, password, role) {
   const newUser = {
     id: Math.max(...users.map((u) => u.id || 0), 0) + 1,
     username,
-    password,
+    password: identity ? null : password,
+    ...identity,
     role,
     joined: new Date().toISOString().split("T")[0],
     lastActivity: 0, // User starts as Offline until they log in
@@ -2197,7 +2324,7 @@ function validatePassword(password) {
 }
 
 // Handle add user form submission
-function handleAddUser(e) {
+async function handleAddUser(e) {
   e.preventDefault();
 
   if (loggedInUser?.role !== "admin") {
@@ -2207,10 +2334,25 @@ function handleAddUser(e) {
 
   const username = document.getElementById("userName").value.trim();
   const password = document.getElementById("userPassword").value.trim();
+  const email = document.getElementById("userEmail").value.trim().toLowerCase();
   const role = document.getElementById("userRole").value;
 
-  if (!username || !password || !role) {
+  if (!username || !password || !email || !role) {
     showNotification("Please fill in all fields", "warning");
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showNotification("Enter a valid recovery email address.", "warning");
+    return;
+  }
+
+  if (
+    users.some(
+      (user) => user.username.trim().toLowerCase() === username.toLowerCase(),
+    )
+  ) {
+    showNotification("Username already exists", "danger");
     return;
   }
 
@@ -2222,8 +2364,29 @@ function handleAddUser(e) {
     return;
   }
 
-  // Add user directly without Firebase reload (to avoid stale data)
-  continueAddUser(username, password, role);
+  const submitButton = document.querySelector(
+    '#addUserForm button[type="submit"]',
+  );
+  submitButton.disabled = true;
+  try {
+    const identity = await KaraokeAccountAuth.provisionAccount(
+      email,
+      password,
+      username,
+    );
+    continueAddUser(username, password, role, identity);
+  } catch (error) {
+    console.error("Could not create Firebase account:", error.message);
+    showNotification(
+      error.message === "EMAIL_ALREADY_LINKED" ||
+        error.code === "auth/email-already-in-use"
+        ? "That email is already connected to another account."
+        : "Could not create the account. Check Firebase Authentication settings and try again.",
+      "danger",
+    );
+  } finally {
+    submitButton.disabled = false;
+  }
 }
 
 // Display users in table
@@ -2306,6 +2469,7 @@ function displayUsers() {
             <strong>${safeUsername}</strong>
                     ${disabledBadge}
                 </td>
+          <td>${escapeHtml(user.email || "Not linked")}</td>
           <td>${roleBadge}</td>
           <td><span class="account-state ${isOnline ? "account-state-online" : "account-state-offline"}">${statusLabel}</span>${disabledBadge}</td>
           <td>${lastActivityText}</td>
@@ -2551,6 +2715,9 @@ function openEditModal(userId) {
   currentEditingUserId = userId;
   document.getElementById("editUserName").value = user.username;
   document.getElementById("editUserPassword").value = "";
+  document.getElementById("editUserEmail").value = user.email || "";
+  document.getElementById("editUserEmail").disabled = Boolean(user.authUid);
+  document.getElementById("editUserPassword").disabled = Boolean(user.authUid);
   document.getElementById("editUserRole").value = user.role;
 
   const modal = new bootstrap.Modal(document.getElementById("editUserModal"));
@@ -2558,12 +2725,16 @@ function openEditModal(userId) {
 }
 
 // Save user changes
-function saveUserChanges() {
+async function saveUserChanges() {
   const user = users.find((u) => u.id === currentEditingUserId);
   if (!user) return;
 
   const newUsername = document.getElementById("editUserName").value.trim();
   const newPassword = document.getElementById("editUserPassword").value.trim();
+  const newEmail = document
+    .getElementById("editUserEmail")
+    .value.trim()
+    .toLowerCase();
   const newRole = document.getElementById("editUserRole").value;
 
   if (!newUsername || !newRole) {
@@ -2580,6 +2751,18 @@ function saveUserChanges() {
     }
   }
 
+  if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    showNotification("Enter a valid recovery email address.", "warning");
+    return;
+  }
+  if (user.authUid && newPassword) {
+    showNotification(
+      "Use the account reset action to change this Firebase password.",
+      "warning",
+    );
+    return;
+  }
+
   // Check if username already exists (excluding current user)
   if (
     users.some(
@@ -2590,8 +2773,32 @@ function saveUserChanges() {
     return;
   }
 
+  let accountIdentity = null;
+  if (newEmail && !user.authUid) {
+    try {
+      accountIdentity = await KaraokeAccountAuth.provisionAccount(
+        newEmail,
+        newPassword || user.password,
+        user.username,
+      );
+    } catch (error) {
+      console.error("Could not link account email:", error.message);
+      showNotification(
+        error.message === "EMAIL_ALREADY_LINKED" ||
+          error.code === "auth/email-already-in-use"
+          ? "That email is already connected to another account."
+          : "Could not link this email. Check the Firebase Authentication setup and try again.",
+        "danger",
+      );
+      return;
+    }
+  }
+
   user.username = newUsername;
-  if (newPassword) {
+  if (accountIdentity) {
+    Object.assign(user, accountIdentity);
+    user.password = null;
+  } else if (newPassword) {
     user.password = newPassword;
   }
   user.role = newRole;
@@ -2694,9 +2901,23 @@ function logoutUser(userId) {
 // Open change password modal for a specific user
 function openChangePasswordModal(userId, username) {
   currentEditingUserId = userId;
+  const user = users.find((account) => account.id === userId);
+  const resetByEmail = Boolean(user?.email && user?.authUid);
+  document.getElementById("editUserPasswordInput").parentElement.hidden =
+    resetByEmail;
+  document.getElementById("editUserPasswordConfirm").parentElement.hidden =
+    resetByEmail;
+  document.getElementById("editUserPasswordResetNotice").hidden = !resetByEmail;
+  document.getElementById("editUserPasswordResetNotice").textContent =
+    resetByEmail
+      ? `A password reset link will be sent to ${user.email}.`
+      : "This legacy account has no linked recovery email yet. Set one in Edit Account to enable email reset.";
   document.getElementById("editUserPasswordUsername").textContent = username;
   document.getElementById("editUserPasswordInput").value = "";
   document.getElementById("editUserPasswordConfirm").value = "";
+  document.querySelector(
+    '#changeUserPasswordModal button[onclick="handleChangeUserPassword()"]',
+  ).textContent = resetByEmail ? "Send reset link" : "Change Password";
 
   const modal = new bootstrap.Modal(
     document.getElementById("changeUserPasswordModal"),
@@ -2705,8 +2926,24 @@ function openChangePasswordModal(userId, username) {
 }
 
 // Change password for a specific user
-function handleChangeUserPassword() {
+async function handleChangeUserPassword() {
   if (!currentEditingUserId) return;
+
+  const user = users.find((account) => account.id === currentEditingUserId);
+  if (!user) return;
+  if (user.email && user.authUid) {
+    try {
+      await KaraokeAccountAuth.requestPasswordReset(user.email);
+      bootstrap.Modal.getInstance(
+        document.getElementById("changeUserPasswordModal"),
+      ).hide();
+      showNotification(`Reset email sent to ${user.email}.`, "success");
+    } catch (error) {
+      console.error("Could not send password reset:", error.message);
+      showNotification("Could not send the reset email.", "danger");
+    }
+    return;
+  }
 
   const newPassword = document.getElementById("editUserPasswordInput").value;
   const confirmPassword = document.getElementById(
@@ -2725,9 +2962,6 @@ function handleChangeUserPassword() {
   }
 
   // Find and update user
-  const user = users.find((u) => u.id === currentEditingUserId);
-  if (!user) return;
-
   user.password = newPassword;
   saveUsers();
 

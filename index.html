@@ -340,6 +340,13 @@
             required
           />
         </div>
+        <button
+          class="account-request-link"
+          type="button"
+          onclick="openForgotPassword()"
+        >
+          Forgot password?
+        </button>
         <div class="login-buttons">
           <button type="submit" class="login-btn login-btn-submit">
             Sign In
@@ -426,6 +433,13 @@
               required
             />
           </div>
+          <button
+            class="account-request-link"
+            type="button"
+            onclick="openForgotPassword()"
+          >
+            Forgot password?
+          </button>
           <div class="login-buttons">
             <button
               type="submit"
@@ -469,6 +483,17 @@
             pattern="[A-Za-z0-9_.-]+"
             autocomplete="username"
             placeholder="3-30 letters, numbers, dots, dashes, or underscores"
+            required
+          />
+        </div>
+        <div class="login-form-group">
+          <label for="requestedAccountEmail">Email for account access</label>
+          <input
+            id="requestedAccountEmail"
+            name="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
             required
           />
         </div>
@@ -517,6 +542,40 @@
       </form>
     </div>
 
+    <div id="forgotPasswordModal" class="login-modal-custom">
+      <div class="login-title">Reset Password</div>
+      <p>
+        Enter the email linked to your account. We’ll send a reset link if it
+        matches.
+      </p>
+      <form id="passwordResetForm" onsubmit="submitPasswordReset(event)">
+        <div class="login-form-group">
+          <label for="passwordResetEmail">Email address</label>
+          <input
+            id="passwordResetEmail"
+            name="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+        <p id="passwordResetFeedback" role="status" aria-live="polite"></p>
+        <div class="login-buttons">
+          <button type="submit" class="login-btn login-btn-submit">
+            Send reset link
+          </button>
+          <button
+            type="button"
+            class="login-btn login-btn-cancel"
+            onclick="closeLoginModal()"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+
     <!-- Performer portal is served from performer-portal.html. -->
     <script>
       document.title = "SD Karaoke | Welcome";
@@ -524,6 +583,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="account-auth.js"></script>
     <script>
       // ===== PERFORMER PORTAL STATE =====
       let searchResults = [];
@@ -1053,6 +1113,40 @@
           .focus();
       }
 
+      function openForgotPassword() {
+        ["adminLoginModal", "singerLoginModal"].forEach((id) =>
+          document.getElementById(id).classList.remove("show"),
+        );
+        document.getElementById("forgotPasswordModal").classList.add("show");
+        document.getElementById("passwordResetFeedback").textContent = "";
+        document.getElementById("passwordResetEmail").focus();
+      }
+
+      async function submitPasswordReset(event) {
+        event.preventDefault();
+        const form = document.getElementById("passwordResetForm");
+        const button = form.querySelector('button[type="submit"]');
+        const feedback = document.getElementById("passwordResetFeedback");
+        button.disabled = true;
+        feedback.textContent = "Sending reset email...";
+        try {
+          await KaraokeAccountAuth.requestPasswordReset(
+            document.getElementById("passwordResetEmail").value,
+          );
+          feedback.textContent =
+            "If an account is linked to that email, a password reset link has been sent.";
+          form.reset();
+        } catch (error) {
+          console.error("Could not submit password reset:", error.message);
+          feedback.textContent =
+            error.message === "INVALID_EMAIL"
+              ? "Enter a valid email address."
+              : "Password reset is unavailable. Please contact the administrator.";
+        } finally {
+          button.disabled = false;
+        }
+      }
+
       function updatePerformerRoomLoginState(roomId) {
         const selectedRoomId = roomId ?? KaraokeSessions.getRoomIdFromUrl();
         const hasRoom = Boolean(selectedRoomId);
@@ -1202,6 +1296,44 @@
         document.getElementById("loginOverlay").classList.remove("show");
         document.getElementById("adminLoginModal").classList.remove("show");
         document.getElementById("singerLoginModal").classList.remove("show");
+        document.getElementById("forgotPasswordModal").classList.remove("show");
+      }
+
+      async function verifyLoginCredentials(user, password) {
+        if (!user) return false;
+        try {
+          await KaraokeAccountAuth.authenticate(user, password);
+          return true;
+        } catch (error) {
+          if (
+            error.message === "INVALID_CREDENTIALS" ||
+            [
+              "auth/wrong-password",
+              "auth/invalid-credential",
+              "auth/user-not-found",
+              "auth/email-already-in-use",
+            ].includes(error.code)
+          ) {
+            return false;
+          }
+          throw error;
+        }
+      }
+
+      function getLoginSetupErrorMessage(error) {
+        if (error.message === "EMAIL_REQUIRED") {
+          return "Add an email address to enable account recovery.";
+        }
+        if (error.message === "INVALID_EMAIL") {
+          return "Enter a valid email address to secure your account.";
+        }
+        if (error.message === "ACCOUNT_LINK_MISMATCH") {
+          return "This email is linked to a different account. Contact the administrator.";
+        }
+        if (error.message === "EMAIL_ALREADY_LINKED") {
+          return "This email is already linked to another account. Contact the administrator.";
+        }
+        return "Unable to sign in. Check your connection and try again.";
       }
 
       // Validate Admin Login
@@ -1564,7 +1696,7 @@
         console.log("👤 Admin login attempt:", adminName);
 
         // Try to get users from Firebase first with a fresh load
-        forceReloadUsersForLogin(function (users, loadError) {
+        forceReloadUsersForLogin(async function (users, loadError) {
           if (loadError) {
             adminLoginInProgress = false;
             alert(
@@ -1573,13 +1705,23 @@
             return;
           }
           const adminUser = users.find(
-            (u) =>
-              u.username === adminName &&
-              u.password === adminPassword &&
-              u.role === "admin",
+            (u) => u.username === adminName && u.role === "admin",
           );
+          let credentialsValid = false;
+          if (adminUser && !adminUser.disabled) {
+            try {
+              credentialsValid = await verifyLoginCredentials(
+                adminUser,
+                adminPassword,
+              );
+            } catch (error) {
+              adminLoginInProgress = false;
+              alert(getLoginSetupErrorMessage(error));
+              return;
+            }
+          }
 
-          if (adminUser) {
+          if (adminUser && credentialsValid) {
             clearLoginFailures("admin", adminName);
             // Check if user is disabled
             if (adminUser.disabled) {
@@ -1664,7 +1806,7 @@
         console.log("👤 Performer login attempt:", singerUsername);
 
         // Try to get users from Firebase first with a fresh load
-        forceReloadUsersForLogin(function (users, loadError) {
+        forceReloadUsersForLogin(async function (users, loadError) {
           if (loadError) {
             singerLoginInProgress = false;
             alert(
@@ -1672,12 +1814,22 @@
             );
             return;
           }
-          const singerUser = users.find(
-            (u) =>
-              u.username === singerUsername && u.password === singerPassword,
-          );
+          const singerUser = users.find((u) => u.username === singerUsername);
+          let credentialsValid = false;
+          if (singerUser && !singerUser.disabled) {
+            try {
+              credentialsValid = await verifyLoginCredentials(
+                singerUser,
+                singerPassword,
+              );
+            } catch (error) {
+              singerLoginInProgress = false;
+              alert(getLoginSetupErrorMessage(error));
+              return;
+            }
+          }
 
-          if (singerUser) {
+          if (singerUser && credentialsValid) {
             clearLoginFailures("singer", singerUsername);
             // Check if user is disabled
             if (singerUser.disabled) {

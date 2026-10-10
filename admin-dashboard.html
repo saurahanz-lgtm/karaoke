@@ -30,6 +30,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="karaoke-sessions.js"></script>
+    <script src="account-auth.js"></script>
     <script src="account-requests.js"></script>
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
@@ -913,6 +914,7 @@
                   <thead>
                     <tr>
                       <th>Requested Username</th>
+                      <th>Email</th>
                       <th>Submitted</th>
                       <th>Status</th>
                       <th>Action</th>
@@ -920,7 +922,7 @@
                   </thead>
                   <tbody id="accountRequestsTableBody">
                     <tr>
-                      <td colspan="4" class="text-center text-white-50">
+                      <td colspan="5" class="text-center text-white-50">
                         Loading account requests...
                       </td>
                     </tr>
@@ -961,6 +963,42 @@
                     <i class="bi bi-chevron-right" aria-hidden="true"></i>
                   </button>
                 </nav>
+              </div>
+            </section>
+            <section
+              class="account-requests-panel"
+              aria-labelledby="passwordResetRequestsHeading"
+            >
+              <div class="account-requests-heading">
+                <div>
+                  <h3 id="passwordResetRequestsHeading">
+                    Password Reset Requests
+                  </h3>
+                  <p>Submitted email addresses and delivery status</p>
+                </div>
+                <span id="pendingPasswordResetCount" class="account-request-count">
+                  0 pending
+                </span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-dark table-hover">
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Requested</th>
+                      <th>Delivery</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="passwordResetRequestsTableBody">
+                    <tr>
+                      <td colspan="5" class="text-center text-white-50">
+                        Loading password reset requests...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </section>
             <div class="account-stats">
@@ -1021,6 +1059,7 @@
                     <tr>
                       <th>#</th>
                       <th>Username</th>
+                      <th>Email</th>
                       <th>Role</th>
                       <th>Status</th>
                       <th>Last Active</th>
@@ -1117,6 +1156,18 @@
                 />
               </div>
               <div class="form-field">
+                <label for="userEmail">Email for password recovery</label>
+                <input
+                  class="form-control"
+                  id="userEmail"
+                  name="email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder="user@example.com"
+                  required
+                />
+              </div>
+              <div class="form-field">
                 <label for="userRole">Account role</label
                 ><select
                   class="form-control"
@@ -1188,6 +1239,17 @@
                 />
               </div>
               <div class="mb-3">
+                <label for="editUserEmail" class="form-label fw-600"
+                  >Email for password recovery</label
+                >
+                <input
+                  type="email"
+                  class="form-control"
+                  id="editUserEmail"
+                  autocomplete="email"
+                />
+              </div>
+              <div class="mb-3">
                 <label for="editUserRole" class="form-label fw-600">Role</label>
                 <select class="form-control" id="editUserRole" required>
                   <option value="admin">👨‍💼 Admin</option>
@@ -1246,6 +1308,7 @@
             ></button>
           </div>
           <div class="modal-body">
+            <p id="editUserPasswordResetNotice" role="status" hidden></p>
             <div class="mb-3">
               <label for="editUserPasswordInput" class="form-label fw-600"
                 >New Password</label

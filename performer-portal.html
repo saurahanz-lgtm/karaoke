@@ -1619,6 +1619,15 @@
 
         await clearSessionPromise;
 
+        if (typeof firebase !== "undefined" && firebase.auth) {
+          await firebase
+            .auth()
+            .signOut()
+            .catch((error) =>
+              console.warn("Firebase Auth sign-out failed:", error.message),
+            );
+        }
+
         // Clear from memory and storage
         loggedInUser = null;
         window.deviceSessionId = null;
