@@ -974,7 +974,7 @@
                   <h3 id="passwordResetRequestsHeading">
                     Password Reset Requests
                   </h3>
-                  <p>Submitted email addresses and delivery status</p>
+                  <p>Review requests and issue temporary passwords</p>
                 </div>
                 <span id="pendingPasswordResetCount" class="account-request-count">
                   0 pending
@@ -985,16 +985,14 @@
                   <thead>
                     <tr>
                       <th>Username</th>
-                      <th>Email</th>
                       <th>Requested</th>
-                      <th>Delivery</th>
                       <th>Status</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody id="passwordResetRequestsTableBody">
                     <tr>
-                      <td colspan="6" class="text-center text-white-50">
+                      <td colspan="4" class="text-center text-white-50">
                         Loading password reset requests...
                       </td>
                     </tr>
@@ -1310,6 +1308,27 @@
           </div>
           <div class="modal-body">
             <p id="editUserPasswordResetNotice" role="status" hidden></p>
+            <div id="adminTemporaryPasswordResult" hidden>
+              <label for="adminTemporaryPassword" class="form-label fw-600"
+                >Temporary Password</label
+              >
+              <div class="input-group mb-3">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="adminTemporaryPassword"
+                  readonly
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-light"
+                  id="copyAdminTemporaryPasswordButton"
+                  onclick="copyAdminTemporaryPassword()"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
             <div class="mb-3">
               <label for="editUserPasswordInput" class="form-label fw-600"
                 >New Password</label
@@ -1346,6 +1365,7 @@
             <button
               type="button"
               class="btn search-btn text-white"
+              id="changeUserPasswordSubmitButton"
               onclick="handleChangeUserPassword()"
             >
               ✓ Change Password

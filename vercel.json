@@ -1,6 +1,6 @@
 {
   "buildCommand": "",
-  "installCommand": "",
+  "installCommand": "npm install --omit=dev",
   "outputDirectory": ".",
   "redirects": [
     {

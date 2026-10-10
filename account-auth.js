@@ -1,6 +1,5 @@
 (function (global) {
   const USERS_PATH = "users";
-  const RESET_REQUESTS_PATH = "passwordResetRequests";
 
   function auth() {
     if (typeof firebase === "undefined" || !firebase.auth) {
@@ -134,185 +133,129 @@
     };
   }
 
-  async function requestPasswordReset(username, email) {
-    const normalizedUsername = String(username || "")
-      .trim()
-      .toLowerCase();
-    const normalizedEmail = String(email || "")
-      .trim()
-      .toLowerCase();
-    if (!normalizedUsername) throw new Error("USERNAME_REQUIRED");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      throw new Error("INVALID_EMAIL");
-    }
-
-    await firebase
-      .database()
-      .ref(RESET_REQUESTS_PATH)
-      .push({
-        username: String(username).trim(),
-        normalizedUsername,
-        email: normalizedEmail,
-        requestedAt: Date.now(),
-        deliveryStatus: "awaiting_approval",
-        status: "pending",
-      });
-  }
-
-  async function sendPasswordResetEmail(email) {
-    const normalizedEmail = String(email || "")
-      .trim()
-      .toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      throw new Error("INVALID_EMAIL");
-    }
-    const appHomeUrl = new URL(
-      "index.html",
-      new URL("./", global.location.href),
-    ).toString();
-    await auth().sendPasswordResetEmail(normalizedEmail, {
-      url: appHomeUrl,
-      handleCodeInApp: false,
+  async function passwordResetApiRequest({
+    method,
+    action,
+    requestId,
+    username,
+    token,
+    idToken,
+  }) {
+    const isGetRequest = method === "GET";
+    const isStatusRequest = isGetRequest && action !== "list";
+    const url =
+      method === "GET" && action === "list"
+        ? "/api/password-reset?action=list"
+        : isStatusRequest
+          ? `/api/password-reset?action=status&requestId=${encodeURIComponent(requestId)}`
+          : "/api/password-reset";
+    const response = await global.fetch(url, {
+      method,
+      headers: {
+        ...(isStatusRequest
+          ? { Authorization: `Bearer ${token}` }
+          : { "Content-Type": "application/json" }),
+        ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+      },
+      ...(isGetRequest
+        ? {}
+        : { body: JSON.stringify({ action, requestId, username }) }),
     });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(result.error || "RESET_REQUEST_FAILED");
+      error.status = response.status;
+      throw error;
+    }
+    return result;
   }
 
   async function approvePasswordResetRequest(id) {
-    const requestRef = firebase.database().ref(`${RESET_REQUESTS_PATH}/${id}`);
-    const claim = await requestRef.transaction((request) => {
-      const staleApproval =
-        request?.status === "sending" &&
-        Date.now() - (request.sendingAt || 0) > 2 * 60 * 1000;
-      return request?.status === "pending" || staleApproval
-        ? {
-            ...request,
-            status: "sending",
-            sendingAt: Date.now(),
-            deliveryStatus: "sending",
-          }
-        : undefined;
+    return passwordResetApiRequest({
+      method: "POST",
+      action: "approve",
+      requestId: id,
+      ...(await getAdminAuthorization()),
     });
-    if (!claim.committed) {
-      throw new Error("RESET_REQUEST_ALREADY_RESOLVED");
-    }
-    const request = claim.snapshot.val();
-
-    try {
-      const usersSnapshot = await firebase
-        .database()
-        .ref(USERS_PATH)
-        .once("value");
-      const users = Object.values(usersSnapshot.val() || {});
-      const account = users.find(
-        (user) =>
-          user &&
-          (!request.normalizedUsername ||
-            String(user.username || "")
-              .trim()
-              .toLowerCase() === request.normalizedUsername) &&
-          String(user.email || "")
-            .trim()
-            .toLowerCase() === request.email &&
-          user.authUid,
-      );
-      if (!account) throw new Error("RESET_ACCOUNT_EMAIL_MISMATCH");
-      await sendPasswordResetEmail(account.email);
-      await requestRef.update({
-        status: "approved",
-        deliveryStatus: "sent",
-        approvedAt: Date.now(),
-      });
-    } catch (error) {
-      await requestRef.update({
-        status: "pending",
-        deliveryStatus: error.code || "failed",
-        lastAttemptAt: Date.now(),
-      });
-      throw error;
-    }
   }
 
   async function rejectPasswordResetRequest(id) {
-    const requestRef = firebase.database().ref(`${RESET_REQUESTS_PATH}/${id}`);
-    const result = await requestRef.transaction((request) =>
-      request?.status === "pending"
-        ? { ...request, status: "rejected", reviewedAt: Date.now() }
-        : undefined,
-    );
-    if (!result.committed) throw new Error("RESET_REQUEST_ALREADY_RESOLVED");
+    return passwordResetApiRequest({
+      method: "POST",
+      action: "reject",
+      requestId: id,
+      ...(await getAdminAuthorization()),
+    });
   }
 
-  async function resendPasswordResetRequest(id) {
-    const requestRef = firebase.database().ref(`${RESET_REQUESTS_PATH}/${id}`);
-    const requestSnapshot = await requestRef.once("value");
-    const request = requestSnapshot.val();
-    if (!request || request.status !== "approved") {
-      throw new Error("RESET_REQUEST_NOT_APPROVED");
-    }
+  async function resetUserPassword(username) {
+    return passwordResetApiRequest({
+      method: "POST",
+      action: "reset-user",
+      username,
+      ...(await getAdminAuthorization()),
+    });
+  }
 
-    const usersSnapshot = await firebase
-      .database()
-      .ref(USERS_PATH)
-      .once("value");
-    const users = Object.values(usersSnapshot.val() || {});
-    const account = users.find(
-      (user) =>
-        user &&
-        (!request.normalizedUsername ||
-          String(user.username || "")
-            .trim()
-            .toLowerCase() === request.normalizedUsername) &&
-        String(user.email || "")
-          .trim()
-          .toLowerCase() === request.email &&
-        user.authUid,
-    );
-    if (!account) throw new Error("RESET_ACCOUNT_EMAIL_MISMATCH");
+  async function getAdminAuthorization() {
+    const currentUser = auth().currentUser;
+    if (!currentUser) throw new Error("ADMIN_AUTH_REQUIRED");
+    return { idToken: await currentUser.getIdToken() };
+  }
 
-    try {
-      await sendPasswordResetEmail(account.email);
-      await requestRef.update({
-        deliveryStatus: "sent",
-        lastAttemptAt: Date.now(),
-        resendCount: (request.resendCount || 0) + 1,
-      });
-    } catch (error) {
-      await requestRef.update({
-        deliveryStatus: error.code || "failed",
-        lastAttemptAt: Date.now(),
-      });
-      throw error;
-    }
+  async function requestPasswordReset(username) {
+    return passwordResetApiRequest({
+      method: "POST",
+      action: "request",
+      username,
+    });
+  }
+
+  async function getPasswordResetStatus(requestId, token) {
+    return passwordResetApiRequest({ method: "GET", requestId, token });
   }
 
   function listenResetRequests(callback, onError) {
-    const ref = firebase.database().ref(RESET_REQUESTS_PATH);
-    const handler = (snapshot) => {
-      const requests = snapshot.val() || {};
-      callback(
-        Object.entries(requests)
-          .map(([id, request]) => ({ ...request, id }))
-          .sort((first, second) => second.requestedAt - first.requestedAt),
-      );
+    let stopped = false;
+    let loading = false;
+    let listenerFailed = false;
+    const load = async () => {
+      if (stopped || loading) return;
+      loading = true;
+      try {
+        const { idToken } = await getAdminAuthorization();
+        const requests = await passwordResetApiRequest({
+          method: "GET",
+          action: "list",
+          idToken,
+        });
+        if (!stopped) {
+          listenerFailed = false;
+          callback(requests);
+        }
+      } catch (error) {
+        if (!stopped && !listenerFailed) onError?.(error);
+        listenerFailed = true;
+      } finally {
+        loading = false;
+      }
     };
-    ref.on("value", handler, onError);
-    return () => ref.off("value", handler);
-  }
-
-  async function markResetRequestReviewed(id) {
-    await firebase
-      .database()
-      .ref(`${RESET_REQUESTS_PATH}/${id}`)
-      .update({ status: "reviewed", reviewedAt: Date.now() });
+    load();
+    const interval = setInterval(load, 5000);
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
   }
 
   global.KaraokeAccountAuth = {
     authenticate,
     approvePasswordResetRequest,
+    getPasswordResetStatus,
     listenResetRequests,
     provisionAccount,
     rejectPasswordResetRequest,
-    resendPasswordResetRequest,
+    resetUserPassword,
     requestPasswordReset,
-    sendPasswordResetEmail,
   };
 })(window);
