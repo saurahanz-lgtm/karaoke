@@ -56,6 +56,21 @@ let knownPendingAccountRequestIds = null;
 let requestNotificationAudioContext = null;
 let pendingRequestNotificationSounds = 0;
 
+function normalizeAccountRecord(account, index = 0) {
+  return {
+    id: account?.id || index + 1,
+    username: account?.username || `user_${index}`,
+    password: typeof account?.password === "string" ? account.password : "",
+    role: account?.role || "user",
+    joined: account?.joined || new Date().toISOString().split("T")[0],
+    lastActivity: account?.lastActivity ?? 0,
+    disabled: account?.disabled === true,
+    ...(account?.accountRequestId
+      ? { accountRequestId: account.accountRequestId }
+      : {}),
+  };
+}
+
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", function () {
   // Check if user is logged in
@@ -1626,15 +1641,6 @@ async function logout() {
 
     await clearSessionPromise;
 
-    if (typeof firebase !== "undefined" && firebase.auth) {
-      await firebase
-        .auth()
-        .signOut()
-        .catch((error) =>
-          console.warn("Firebase Auth sign-out failed:", error.message),
-        );
-    }
-
     // Clear from memory and storage
     loggedInUser = null;
     window.deviceSessionId = null;
@@ -1667,11 +1673,16 @@ function loadUsers() {
           if (data && Object.keys(data).length > 0) {
             users = (Array.isArray(data) ? data : Object.values(data))
               .filter((user) => user && user.username)
-              .map((user) => ({
-                ...user,
-                lastActivity: user.lastActivity ?? 0,
-              }));
+              .map(normalizeAccountRecord);
             localStorage.setItem("karaoke_users", JSON.stringify(users));
+            usersRef
+              .set(users)
+              .catch((error) =>
+                console.warn(
+                  "Could not remove old account fields:",
+                  error.message,
+                ),
+              );
             displayUsers();
             updateStats();
             updateAdminActivity();
@@ -1686,9 +1697,11 @@ function loadUsers() {
               .then((result) => {
                 const currentData = result.snapshot.val();
                 if (currentData) {
-                  users = Array.isArray(currentData)
-                    ? currentData
-                    : Object.values(currentData);
+                  users = (
+                    Array.isArray(currentData)
+                      ? currentData
+                      : Object.values(currentData)
+                  ).map(normalizeAccountRecord);
                   localStorage.setItem("karaoke_users", JSON.stringify(users));
                   displayUsers();
                   updateStats();
@@ -1727,10 +1740,7 @@ function loadUsers() {
             Array.isArray(data) ? data : Object.values(data || {})
           )
             .filter((user) => user && user.username)
-            .map((user) => ({
-              ...user,
-              lastActivity: user.lastActivity ?? 0,
-            }));
+            .map(normalizeAccountRecord);
 
           users = firebaseUsers;
           localStorage.setItem("karaoke_users", JSON.stringify(users));
@@ -1761,19 +1771,8 @@ function loadFromLocalStorage() {
 
       if (Array.isArray(parsedUsers) && parsedUsers.length > 0) {
         // Validate and normalize each user
-        users = parsedUsers.map((u, idx) => ({
-          ...u,
-          id: u.id || idx + 1,
-          username: u.username || `user_${idx}`,
-          password: u.authUid ? null : u.password || "temp123",
-          role: u.role || "user",
-          joined: u.joined || new Date().toISOString().split("T")[0],
-          lastActivity:
-            u.lastActivity === undefined || u.lastActivity === null
-              ? 0
-              : u.lastActivity,
-          disabled: u.disabled === true ? true : false,
-        }));
+        users = parsedUsers.map(normalizeAccountRecord);
+        localStorage.setItem("karaoke_users", JSON.stringify(users));
         console.log("✅ Users loaded from localStorage - Total:", users.length);
         return; // Successfully loaded
       }
@@ -1792,6 +1791,7 @@ function loadFromLocalStorage() {
 
 // Save users to Firebase/localStorage
 function saveUsers() {
+  users = users.map(normalizeAccountRecord);
   // CRITICAL: Always save to localStorage first (this is the reliable backup)
   try {
     const usersJson = JSON.stringify(users);
@@ -1918,16 +1918,7 @@ function syncUsersToFirebase() {
       const usersRef = firebase.database().ref("users");
 
       // Ensure all users have proper format before syncing
-      const sanitizedUsers = users.map((u) => ({
-        ...u,
-        id: u.id || 0,
-        username: u.username || "",
-        password: u.authUid ? null : u.password || "",
-        role: u.role || "user",
-        joined: u.joined || new Date().toISOString().split("T")[0],
-        lastActivity: u.lastActivity || 0,
-        disabled: u.disabled || false,
-      }));
+      const sanitizedUsers = users.map(normalizeAccountRecord);
 
       usersRef
         .set(sanitizedUsers)
@@ -2000,13 +1991,7 @@ function fullFirebaseSync() {
           if (data) {
             firebaseUsers = Array.isArray(data) ? data : Object.values(data);
             firebaseUsers = firebaseUsers.filter((u) => u && u.username);
-            firebaseUsers = firebaseUsers.map((u) => ({
-              ...u,
-              lastActivity:
-                u.lastActivity === undefined || u.lastActivity === null
-                  ? 0
-                  : u.lastActivity,
-            }));
+            firebaseUsers = firebaseUsers.map(normalizeAccountRecord);
           }
 
           // Check if data differs from local state
@@ -2054,9 +2039,9 @@ function verifyAndSyncAllUsers() {
         const usersRef = firebase.database().ref("users");
 
         // Step 1: Verify local data integrity
-        const localValidUsers = users.filter(
-          (u) => u && u.username && u.username.trim().length > 0,
-        );
+        const localValidUsers = users
+          .filter((u) => u && u.username && u.username.trim().length > 0)
+          .map(normalizeAccountRecord);
         console.log(
           "✅ Local verification: " +
             localValidUsers.length +
@@ -2076,16 +2061,12 @@ function verifyAndSyncAllUsers() {
         }
 
         // Step 2: Sync to Firebase
-        const sanitizedUsers = localValidUsers.map((u) => ({
-          ...u,
-          id: u.id || 0,
-          username: u.username.trim(),
-          password: u.authUid ? null : u.password || "",
-          role: u.role || "user",
-          joined: u.joined || new Date().toISOString().split("T")[0],
-          lastActivity: u.lastActivity || 0,
-          disabled: u.disabled || false,
-        }));
+        const sanitizedUsers = localValidUsers.map((user) =>
+          normalizeAccountRecord({
+            ...user,
+            username: user.username.trim(),
+          }),
+        );
 
         usersRef
           .set(sanitizedUsers)
@@ -2183,7 +2164,9 @@ function reloadUsersFromFirebase(callback) {
         .once("value", (snapshot) => {
           const data = snapshot.val();
           if (data) {
-            users = Array.isArray(data) ? data : Object.values(data);
+            users = (Array.isArray(data) ? data : Object.values(data)).map(
+              normalizeAccountRecord,
+            );
             console.log(
               "✅ Users reloaded from Firebase before operation:",
               users,
@@ -2210,7 +2193,7 @@ function reloadUsersFromFirebase(callback) {
 }
 
 // Continue with adding user after reloading from Firebase
-function continueAddUser(username, password, role, identity = null) {
+function continueAddUser(username, password, role) {
   const passwordValidation = validatePassword(password);
   if (!passwordValidation.valid) {
     showNotification(passwordValidation.message, "warning");
@@ -2230,8 +2213,7 @@ function continueAddUser(username, password, role, identity = null) {
   const newUser = {
     id: Math.max(...users.map((u) => u.id || 0), 0) + 1,
     username,
-    password: identity ? null : password,
-    ...identity,
+    password,
     role,
     joined: new Date().toISOString().split("T")[0],
     lastActivity: 0, // User starts as Offline until they log in
@@ -2423,7 +2405,7 @@ function displayUsers() {
           <td>${escapeHtml(user.joined || "-")}</td>
           <td class="account-actions">
                     <button class="table-action" type="button" data-account-action="edit" data-user-id="${escapeHtml(user.id)}" aria-label="Edit ${safeUsername}" title="Edit account"><i class="bi bi-pencil-square"></i></button>
-                    ${user.authUid ? "" : `<button class="table-action" type="button" data-account-action="password" data-user-id="${escapeHtml(user.id)}" aria-label="Change password for ${safeUsername}" title="Change password"><i class="bi bi-key"></i></button>`}
+                    <button class="table-action" type="button" data-account-action="password" data-user-id="${escapeHtml(user.id)}" aria-label="Change password for ${safeUsername}" title="Change password"><i class="bi bi-key"></i></button>
                     <button class="table-action" type="button" data-account-action="toggle" data-user-id="${escapeHtml(user.id)}" aria-label="${isDisabled ? "Enable" : "Disable"} ${safeUsername}" title="${isDisabled ? "Enable" : "Disable"} account"><i class="bi ${isDisabled ? "bi-unlock" : "bi-lock"}"></i></button>
                     <button class="table-action" type="button" data-account-action="logout" data-user-id="${escapeHtml(user.id)}" aria-label="Log out ${safeUsername}" title="Log out account" ${loggedInUser?.username === user.username ? "disabled" : ""}><i class="bi bi-box-arrow-right"></i></button>
                     <button class="table-action table-action-danger" type="button" data-account-action="delete" data-user-id="${escapeHtml(user.id)}" aria-label="Delete ${safeUsername}" title="Delete account"><i class="bi bi-trash3"></i></button>
@@ -2662,7 +2644,7 @@ function openEditModal(userId) {
   currentEditingUserId = userId;
   document.getElementById("editUserName").value = user.username;
   document.getElementById("editUserPassword").value = "";
-  document.getElementById("editUserPassword").disabled = Boolean(user.authUid);
+  document.getElementById("editUserPassword").disabled = false;
   document.getElementById("editUserRole").value = user.role;
 
   const modal = new bootstrap.Modal(document.getElementById("editUserModal"));
@@ -2690,14 +2672,6 @@ async function saveUserChanges() {
       showNotification(passwordValidation.message, "warning");
       return;
     }
-  }
-
-  if (user.authUid && newPassword) {
-    showNotification(
-      "Password changes are unavailable for Firebase-linked accounts.",
-      "warning",
-    );
-    return;
   }
 
   // Check if username already exists (excluding current user)
@@ -2813,13 +2787,6 @@ function logoutUser(userId) {
 function openChangePasswordModal(userId, username) {
   currentEditingUserId = userId;
   const user = users.find((account) => account.id === userId);
-  if (user?.authUid) {
-    showNotification(
-      "Password changes are unavailable for Firebase-linked accounts.",
-      "warning",
-    );
-    return;
-  }
   document.getElementById("editUserPasswordUsername").textContent = username;
   document.getElementById("editUserPasswordInput").value = "";
   document.getElementById("editUserPasswordConfirm").value = "";

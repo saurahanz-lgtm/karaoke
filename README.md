@@ -177,7 +177,6 @@ Frontend Layer:
 Backend Integration:
 ├── YouTube API v3 (video search & playback)
 ├── Firebase Realtime Database (data storage)
-├── Firebase Authentication (user auth)
 │
 Deployment:
 ├── Vercel (hosting & CDN)
@@ -259,9 +258,8 @@ New accounts use a username and password. Before deploying:
 1. Create personal YouTube API key
 2. Use environment variables for secrets
 3. Implement backend API proxy
-4. Set up Firebase authentication
-5. Enable HTTPS (Vercel provides this)
-6. Restrict API keys to your domain
+4. Enable HTTPS (Vercel provides this)
+5. Restrict API keys to your domain
 
 ---
 
@@ -272,7 +270,6 @@ New accounts use a username and password. Before deploying:
 - Google Cloud Console → Quotas
 - Check daily YouTube API usage
 - Monitor for quota overages
-- Set up email alerts
 
 ### Deployment Monitoring
 

@@ -27,7 +27,6 @@
     <!-- Firebase SDK (Compat Version for legacy API) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="karaoke-sessions.js"></script>
     <script src="account-requests.js"></script>
@@ -524,7 +523,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <script src="account-auth.js"></script>
     <script>
       // ===== PERFORMER PORTAL STATE =====
       let searchResults = [];
@@ -1204,58 +1202,24 @@
         document.getElementById("singerLoginModal").classList.remove("show");
       }
 
-      async function verifyLoginCredentials(user, password) {
-        if (!user) return false;
-        try {
-          await KaraokeAccountAuth.authenticate(user, password);
-          return true;
-        } catch (error) {
-          if (
-            error.message === "INVALID_CREDENTIALS" ||
-            [
-              "auth/wrong-password",
-              "auth/invalid-credential",
-              "auth/user-not-found",
-            ].includes(error.code)
-          ) {
-            return false;
-          }
-          throw error;
-        }
+      function verifyLoginCredentials(user, password) {
+        return Boolean(user && user.password && user.password === password);
       }
 
-      function getLoginSetupErrorMessage(error) {
-        if (
-          error.code === "auth/configuration-not-found" ||
-          error.message === "CONFIGURATION_NOT_FOUND"
-        ) {
-          return "Firebase Authentication is unavailable. Please contact the administrator.";
-        }
-        if (error.code === "auth/operation-not-allowed") {
-          return "Firebase sign-in is disabled. Ask the administrator to check the authentication settings.";
-        }
-        if (error.code === "auth/unauthorized-domain") {
-          return "This website is not authorized for sign-in. Ask the administrator to add this domain in Firebase Authentication settings.";
-        }
-        if (error.code === "auth/invalid-api-key") {
-          return "Firebase sign-in is not configured correctly. Please contact the administrator.";
-        }
-        if (error.code === "auth/network-request-failed") {
-          return "Could not reach Firebase Authentication. Check the device date/time, network restrictions, or try another connection.";
-        }
-        if (error.code === "auth/too-many-requests") {
-          return "Too many sign-in attempts. Wait a while, then try again.";
-        }
-        if (
-          error.code === "PERMISSION_DENIED" ||
-          error.message === "PERMISSION_DENIED"
-        ) {
-          return "Firebase blocked access to this account. Ask the administrator to check the database rules.";
-        }
-        if (error.message === "ACCOUNT_LINK_MISMATCH") {
-          return "This sign-in is linked to a different account. Contact the administrator.";
-        }
-        return "Unable to sign in. Check your connection and try again.";
+      function normalizeLoginAccount(account, index = 0) {
+        return {
+          id: account?.id || index + 1,
+          username: account?.username || `user_${index}`,
+          password:
+            typeof account?.password === "string" ? account.password : "",
+          role: account?.role || "user",
+          joined: account?.joined || new Date().toISOString().split("T")[0],
+          lastActivity: account?.lastActivity ?? 0,
+          disabled: account?.disabled === true,
+          ...(account?.accountRequestId
+            ? { accountRequestId: account.accountRequestId }
+            : {}),
+        };
       }
 
       // Validate Admin Login
@@ -1631,16 +1595,7 @@
           );
           let credentialsValid = false;
           if (adminUser && !adminUser.disabled) {
-            try {
-              credentialsValid = await verifyLoginCredentials(
-                adminUser,
-                adminPassword,
-              );
-            } catch (error) {
-              adminLoginInProgress = false;
-              alert(getLoginSetupErrorMessage(error));
-              return;
-            }
+            credentialsValid = verifyLoginCredentials(adminUser, adminPassword);
           }
 
           if (adminUser && credentialsValid) {
@@ -1739,16 +1694,10 @@
           const singerUser = users.find((u) => u.username === singerUsername);
           let credentialsValid = false;
           if (singerUser && !singerUser.disabled) {
-            try {
-              credentialsValid = await verifyLoginCredentials(
-                singerUser,
-                singerPassword,
-              );
-            } catch (error) {
-              singerLoginInProgress = false;
-              alert(getLoginSetupErrorMessage(error));
-              return;
-            }
+            credentialsValid = verifyLoginCredentials(
+              singerUser,
+              singerPassword,
+            );
           }
 
           if (singerUser && credentialsValid) {
@@ -1825,7 +1774,9 @@
             const stored = JSON.parse(
               localStorage.getItem("karaoke_users") || "[]",
             );
-            return Array.isArray(stored) ? stored : [];
+            return Array.isArray(stored)
+              ? stored.map(normalizeLoginAccount)
+              : [];
           } catch (error) {
             console.warn("Could not read cached users:", error.message);
             return [];
@@ -1858,7 +1809,9 @@
               const data = snapshot.val();
               const users = (
                 Array.isArray(data) ? data : Object.values(data || {})
-              ).filter((user) => user && user.username);
+              )
+                .filter((user) => user && user.username)
+                .map(normalizeLoginAccount);
               if (users.length > 0) {
                 localStorage.setItem("karaoke_users", JSON.stringify(users));
               }
