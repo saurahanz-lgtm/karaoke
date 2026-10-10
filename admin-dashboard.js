@@ -2214,7 +2214,7 @@ function reloadUsersFromFirebase(callback) {
 }
 
 // Continue with adding user after reloading from Firebase
-function continueAddUser(username, password, role, identity) {
+function continueAddUser(username, password, role, identity = null) {
   const passwordValidation = validatePassword(password);
   if (!passwordValidation.valid) {
     showNotification(passwordValidation.message, "warning");
@@ -2300,16 +2300,10 @@ async function handleAddUser(e) {
 
   const username = document.getElementById("userName").value.trim();
   const password = document.getElementById("userPassword").value.trim();
-  const email = document.getElementById("userEmail").value.trim().toLowerCase();
   const role = document.getElementById("userRole").value;
 
-  if (!username || !password || !email || !role) {
+  if (!username || !password || !role) {
     showNotification("Please fill in all fields", "warning");
-    return;
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    showNotification("Enter a valid account email address.", "warning");
     return;
   }
 
@@ -2335,21 +2329,10 @@ async function handleAddUser(e) {
   );
   submitButton.disabled = true;
   try {
-    const identity = await KaraokeAccountAuth.provisionAccount(
-      email,
-      password,
-      username,
-    );
-    continueAddUser(username, password, role, identity);
+    continueAddUser(username, password, role);
   } catch (error) {
-    console.error("Could not create Firebase account:", error.message);
-    showNotification(
-      error.message === "EMAIL_ALREADY_LINKED" ||
-        error.code === "auth/email-already-in-use"
-        ? "That email is already connected to another account."
-        : "Could not create the account. Check Firebase Authentication settings and try again.",
-      "danger",
-    );
+    console.error("Could not create account:", error.message);
+    showNotification("Could not create the account. Please try again.", "danger");
   } finally {
     submitButton.disabled = false;
   }
