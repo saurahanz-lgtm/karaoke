@@ -871,17 +871,20 @@
           );
           if (existingIndex >= 0) {
             favoriteSongs.splice(existingIndex, 1);
+            saveFavoriteSongs();
+            if (showingFavoriteSongs) displayFavoriteSongs();
+            else if (searchResults.length) {
+              displaySearchResults(
+                searchResults,
+                loggedInUser?.username || "Guest",
+              );
+            }
           } else {
             favoriteSongs.push({ title, artist, videoId, thumbnail });
-            showingFavoriteSongs = true;
-          }
-          saveFavoriteSongs();
-          if (showingFavoriteSongs) displayFavoriteSongs();
-          else if (searchResults.length) {
-            displaySearchResults(
-              searchResults,
-              loggedInUser?.username || "Guest",
-            );
+            showingFavoriteSongs = false;
+            saveFavoriteSongs();
+            document.getElementById("searchInput").value = "";
+            document.getElementById("resultsContainer").innerHTML = "";
           }
           return;
         }
