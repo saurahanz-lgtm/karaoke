@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const openRequestButton = document.getElementById("showAccountRequestButton");
   const requestForm = document.getElementById("accountRequestPanel");
   const usernameInput = document.getElementById("requestedAccountUsername");
-  const emailInput = document.getElementById("requestedAccountEmail");
   const submitButton = document.getElementById("submitAccountRequestButton");
   const feedback = document.getElementById("accountRequestFeedback");
   const credentials = document.getElementById("accountRequestCredentials");
@@ -215,9 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
           playRequestApprovalSound(requestId);
         }
         usernameInput.value = request.username || usernameInput.value;
-        emailInput.value = request.email || emailInput.value;
         usernameInput.disabled = true;
-        emailInput.disabled = true;
         submitButton.disabled = true;
         anotherRequestButton.hidden = request.status !== "rejected";
         if (request.status !== "rejected") {
@@ -296,7 +293,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const requestedUsername = usernameInput.value.trim();
-    const requestedEmail = emailInput.value.trim();
     if (!/^[A-Za-z0-9_.-]{3,30}$/.test(requestedUsername)) {
       showFeedback(
         "Use 3-30 letters, numbers, dots, dashes, or underscores for the username.",
@@ -308,10 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.disabled = true;
     showFeedback("Submitting your account request...", "pending");
     try {
-      const request = await KaraokeAccountRequests.create(
-        requestedUsername,
-        requestedEmail,
-      );
+      const request = await KaraokeAccountRequests.create(requestedUsername);
       recordSuccessfulAccountRequest();
       sessionStorage.setItem("karaoke_account_request_id", request.id);
       watchRequest(request.id);
@@ -322,8 +315,6 @@ document.addEventListener("DOMContentLoaded", () => {
           "That username already has an account. Return to sign in instead.",
         ACCOUNT_REQUEST_ALREADY_PENDING:
           "A request for that username is already awaiting review.",
-        INVALID_EMAIL: "Enter a valid email address.",
-        EMAIL_ALREADY_LINKED: "That email is already connected to an account.",
         FIREBASE_UNAVAILABLE:
           "Account requests are temporarily unavailable. Please try again later.",
       };
@@ -358,7 +349,6 @@ document.addEventListener("DOMContentLoaded", () => {
     currentRequestStatus = null;
     requestForm.reset();
     usernameInput.disabled = false;
-    emailInput.disabled = false;
     submitButton.disabled = false;
     resetRequestDetails();
     anotherRequestButton.disabled = false;

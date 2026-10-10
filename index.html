@@ -472,17 +472,6 @@
             required
           />
         </div>
-        <div class="login-form-group">
-          <label for="requestedAccountEmail">Email for account access</label>
-          <input
-            id="requestedAccountEmail"
-            name="email"
-            type="email"
-            autocomplete="email"
-            placeholder="you@example.com"
-            required
-          />
-        </div>
         <button
           id="submitAccountRequestButton"
           class="login-btn login-btn-submit"
@@ -1227,7 +1216,6 @@
               "auth/wrong-password",
               "auth/invalid-credential",
               "auth/user-not-found",
-              "auth/email-already-in-use",
             ].includes(error.code)
           ) {
             return false;
@@ -1241,10 +1229,10 @@
           error.code === "auth/configuration-not-found" ||
           error.message === "CONFIGURATION_NOT_FOUND"
         ) {
-          return "Firebase Authentication has not been set up for this project. The administrator must open Firebase Console → Authentication → Get started, then enable Email/Password sign-in.";
+          return "Firebase Authentication is unavailable. Please contact the administrator.";
         }
         if (error.code === "auth/operation-not-allowed") {
-          return "Email/password sign-in is disabled. Ask the administrator to enable Email/Password in Firebase Authentication.";
+          return "Firebase sign-in is disabled. Ask the administrator to check the authentication settings.";
         }
         if (error.code === "auth/unauthorized-domain") {
           return "This website is not authorized for sign-in. Ask the administrator to add this domain in Firebase Authentication settings.";
@@ -1264,17 +1252,8 @@
         ) {
           return "Firebase blocked access to this account. Ask the administrator to check the database rules.";
         }
-        if (error.message === "EMAIL_REQUIRED") {
-          return "Add an email address to enable account recovery.";
-        }
-        if (error.message === "INVALID_EMAIL") {
-          return "Enter a valid email address to secure your account.";
-        }
         if (error.message === "ACCOUNT_LINK_MISMATCH") {
-          return "This email is linked to a different account. Contact the administrator.";
-        }
-        if (error.message === "EMAIL_ALREADY_LINKED") {
-          return "This email is already linked to another account. Contact the administrator.";
+          return "This sign-in is linked to a different account. Contact the administrator.";
         }
         return "Unable to sign in. Check your connection and try again.";
       }

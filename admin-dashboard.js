@@ -440,7 +440,7 @@ function initializeAccountRequestListener() {
     !firebase.database
   ) {
     tableBody.innerHTML =
-      '<tr><td colspan="5" class="text-center text-white-50">Account request review is unavailable.</td></tr>';
+      '<tr><td colspan="4" class="text-center text-white-50">Account request review is unavailable.</td></tr>';
     return;
   }
 
@@ -464,7 +464,7 @@ function initializeAccountRequestListener() {
     (error) => {
       console.error("Account request listener failed:", error.message);
       tableBody.innerHTML =
-        '<tr><td colspan="5" class="text-center text-white-50">Could not load account requests.</td></tr>';
+        '<tr><td colspan="4" class="text-center text-white-50">Could not load account requests.</td></tr>';
     },
   );
 }
@@ -494,8 +494,8 @@ function renderAccountRequests() {
     pagination.hidden = true;
     tableBody.innerHTML =
       currentAccountRequestView === "history"
-        ? '<tr><td colspan="5" class="text-center text-white-50">No approved or rejected requests yet.</td></tr>'
-        : '<tr><td colspan="5" class="text-center text-white-50">No pending account requests.</td></tr>';
+        ? '<tr><td colspan="4" class="text-center text-white-50">No approved or rejected requests yet.</td></tr>'
+        : '<tr><td colspan="4" class="text-center text-white-50">No pending account requests.</td></tr>';
     return;
   }
 
@@ -523,7 +523,6 @@ function renderAccountRequests() {
       .map((request) => {
         const row = document.createElement("tr");
         const usernameCell = document.createElement("td");
-        const emailCell = document.createElement("td");
         const dateCell = document.createElement("td");
         const statusCell = document.createElement("td");
         const actionCell = document.createElement("td");
@@ -532,7 +531,6 @@ function renderAccountRequests() {
         actionGroup.className = "account-request-row-actions";
         actionButtons.className = "account-actions";
         usernameCell.textContent = request.username || "Unknown username";
-        emailCell.textContent = request.email || "-";
         dateCell.textContent = request.createdAt
           ? new Date(request.createdAt).toLocaleString()
           : "-";
@@ -617,7 +615,7 @@ function renderAccountRequests() {
           actionGroup.appendChild(actionButtons);
         }
         actionCell.appendChild(actionGroup);
-        row.append(usernameCell, emailCell, dateCell, statusCell, actionCell);
+        row.append(usernameCell, dateCell, statusCell, actionCell);
         return row;
       }),
   );
@@ -820,11 +818,9 @@ async function handleAccountRequestDecision(request, decision, buttons) {
     const message =
       error.message === "ACCOUNT_ALREADY_EXISTS"
         ? "That username is already in use. The requester has been notified."
-        : error.message === "REQUEST_EMAIL_REQUIRED"
-          ? "A valid account email is required to approve this account."
-          : error.message === "REQUEST_ALREADY_RESOLVED"
-            ? "This account request has already been handled."
-            : "Could not update the account request. Check the Firebase connection.";
+        : error.message === "REQUEST_ALREADY_RESOLVED"
+          ? "This account request has already been handled."
+          : "Could not update the account request. Check the Firebase connection.";
     showNotification(message, "danger");
   }
 }
@@ -2332,7 +2328,10 @@ async function handleAddUser(e) {
     continueAddUser(username, password, role);
   } catch (error) {
     console.error("Could not create account:", error.message);
-    showNotification("Could not create the account. Please try again.", "danger");
+    showNotification(
+      "Could not create the account. Please try again.",
+      "danger",
+    );
   } finally {
     submitButton.disabled = false;
   }
@@ -2418,7 +2417,6 @@ function displayUsers() {
             <strong>${safeUsername}</strong>
                     ${disabledBadge}
                 </td>
-          <td>${escapeHtml(user.email || "Not linked")}</td>
           <td>${roleBadge}</td>
           <td><span class="account-state ${isOnline ? "account-state-online" : "account-state-offline"}">${statusLabel}</span>${disabledBadge}</td>
           <td>${lastActivityText}</td>
@@ -2664,8 +2662,6 @@ function openEditModal(userId) {
   currentEditingUserId = userId;
   document.getElementById("editUserName").value = user.username;
   document.getElementById("editUserPassword").value = "";
-  document.getElementById("editUserEmail").value = user.email || "";
-  document.getElementById("editUserEmail").disabled = Boolean(user.authUid);
   document.getElementById("editUserPassword").disabled = Boolean(user.authUid);
   document.getElementById("editUserRole").value = user.role;
 
@@ -2680,10 +2676,6 @@ async function saveUserChanges() {
 
   const newUsername = document.getElementById("editUserName").value.trim();
   const newPassword = document.getElementById("editUserPassword").value.trim();
-  const newEmail = document
-    .getElementById("editUserEmail")
-    .value.trim()
-    .toLowerCase();
   const newRole = document.getElementById("editUserRole").value;
 
   if (!newUsername || !newRole) {
@@ -2700,10 +2692,6 @@ async function saveUserChanges() {
     }
   }
 
-  if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-    showNotification("Enter a valid account email address.", "warning");
-    return;
-  }
   if (user.authUid && newPassword) {
     showNotification(
       "Password changes are unavailable for Firebase-linked accounts.",
@@ -2722,34 +2710,8 @@ async function saveUserChanges() {
     return;
   }
 
-  let accountIdentity = null;
-  if (newEmail && !user.authUid) {
-    try {
-      accountIdentity = await KaraokeAccountAuth.provisionAccount(
-        newEmail,
-        newPassword || user.password,
-        user.username,
-      );
-    } catch (error) {
-      console.error("Could not link account email:", error.message);
-      showNotification(
-        error.message === "EMAIL_ALREADY_LINKED" ||
-          error.code === "auth/email-already-in-use"
-          ? "That email is already connected to another account."
-          : "Could not link this email. Check the Firebase Authentication setup and try again.",
-        "danger",
-      );
-      return;
-    }
-  }
-
   user.username = newUsername;
-  if (accountIdentity) {
-    Object.assign(user, accountIdentity);
-    user.password = null;
-  } else if (newPassword) {
-    user.password = newPassword;
-  }
+  if (newPassword) user.password = newPassword;
   user.role = newRole;
 
   saveUsers();

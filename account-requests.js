@@ -24,16 +24,10 @@
     return `sd${String(randomValue[0] % 10000).padStart(4, "0")}`;
   }
 
-  async function create(username, email) {
+  async function create(username) {
     const requestedUsername = String(username || "").trim();
     const normalizedUsername = requestedUsername.toLowerCase();
-    const requestedEmail = String(email || "")
-      .trim()
-      .toLowerCase();
     if (!requestedUsername) throw new Error("USERNAME_REQUIRED");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requestedEmail)) {
-      throw new Error("INVALID_EMAIL");
-    }
 
     const db = database();
     const usersSnapshot = await db.ref(USERS_PATH).once("value");
@@ -43,20 +37,11 @@
         String(user.username).trim().toLowerCase() === normalizedUsername,
     );
     if (userExists) throw new Error("ACCOUNT_ALREADY_EXISTS");
-    const emailExists = existingUsers.some(
-      (user) =>
-        String(user.email || "")
-          .trim()
-          .toLowerCase() === requestedEmail,
-    );
-    if (emailExists) throw new Error("EMAIL_ALREADY_LINKED");
-
     const requestsRef = db.ref(REQUESTS_PATH);
     const requestRef = requestsRef.push();
     const request = {
       username: requestedUsername,
       normalizedUsername,
-      email: requestedEmail,
       status: "pending",
       createdAt: Date.now(),
     };
@@ -67,10 +52,7 @@
         (item) =>
           item &&
           ["pending", "approving"].includes(item.status) &&
-          (item.normalizedUsername === normalizedUsername ||
-            String(item.email || "")
-              .trim()
-              .toLowerCase() === requestedEmail),
+          item.normalizedUsername === normalizedUsername,
       );
       if (pendingDuplicate) return undefined;
       return { ...requests, [requestRef.key]: request };
@@ -149,29 +131,10 @@
 
     const request = claim.snapshot.val();
     const password = request.approvalPassword;
-    const accountAuth = global.KaraokeAccountAuth;
-    let identity;
     let duplicateUsername = false;
     let previouslyCreatedUser = null;
 
     try {
-      if (!accountAuth) throw new Error("AUTH_UNAVAILABLE");
-      if (!request.email) {
-        const email = global
-          .prompt(`Enter an account email for ${request.username}:`)
-          ?.trim()
-          .toLowerCase();
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          throw new Error("REQUEST_EMAIL_REQUIRED");
-        }
-        request.email = email;
-        await requestRef.update({ email });
-      }
-      identity = await accountAuth.provisionAccount(
-        request.email,
-        password,
-        request.username,
-      );
       const userResult = await db.ref(USERS_PATH).transaction((current) => {
         const existingUsers = asUserList(current);
         previouslyCreatedUser = existingUsers.find(
@@ -193,10 +156,7 @@
           {
             id: nextId,
             username: request.username,
-            password: null,
-            email: identity.email,
-            authUid: identity.authUid,
-            authProvider: "password",
+            password,
             role: "user",
             joined: new Date().toISOString().split("T")[0],
             lastActivity: 0,
