@@ -49,6 +49,9 @@ const roomRequestListeners = new Map();
 const roomRequestsByRoom = new Map();
 let stopListeningToSelectedRoomDisplay = null;
 let selectedRoomDisplayId = null;
+let roomBeingEditedTimeLimit = null;
+let roomTimeLimitTriggerButton = null;
+let roomTimeLimitModal = null;
 let knownPendingGlobalRoomRequestIds = new Set();
 let allRoomRequests = [];
 let stopListeningToAllRoomRequests = null;
@@ -1188,45 +1191,103 @@ async function handleRenameRoom(room, button) {
 }
 
 async function handleSetRoomTimeLimit(room, button) {
+  roomBeingEditedTimeLimit = room;
+  roomTimeLimitTriggerButton = button;
   const currentLimit = Number(room.timeLimitMinutes) || 0;
-  const hoursInput = window.prompt(
-    `Set ${room.name}'s time limit in hours (enter 0 hours and 0 minutes for unlimited):`,
-    String(Math.floor(currentLimit / 60)),
+  document.getElementById("roomTimeLimitRoomName").textContent =
+    `${room.name} (${room.id})`;
+  document.getElementById("roomTimeLimitHours").value = String(
+    Math.floor(currentLimit / 60),
   );
-  if (hoursInput === null) return;
-  const minutesInput = window.prompt(
-    "Set additional minutes (0 to 59):",
-    String(currentLimit % 60),
+  document.getElementById("roomTimeLimitMinutes").value = String(
+    currentLimit % 60,
   );
-  if (minutesInput === null) return;
-  if (!hoursInput.trim() || !minutesInput.trim()) {
-    showNotification("Enter whole hours and minutes.", "warning");
-    return;
+  document.getElementById("roomTimeLimitUnlimited").checked =
+    currentLimit === 0;
+  updateRoomTimeLimitPreview();
+  const modalElement = document.getElementById("roomTimeLimitModal");
+  if (!roomTimeLimitModal) {
+    roomTimeLimitModal = new bootstrap.Modal(modalElement);
+    modalElement.addEventListener("hidden.bs.modal", () => {
+      roomTimeLimitTriggerButton?.focus();
+      roomTimeLimitTriggerButton = null;
+    });
   }
-  const hours = Number(hoursInput.trim());
-  const additionalMinutes = Number(minutesInput.trim());
-  if (
-    !Number.isInteger(hours) ||
-    !Number.isInteger(additionalMinutes) ||
-    hours < 0 ||
-    additionalMinutes < 0 ||
-    additionalMinutes > 59
-  ) {
-    showNotification("Enter whole hours and 0 to 59 minutes.", "warning");
-    return;
-  }
-  const minutes = hours * 60 + additionalMinutes;
-  if (minutes > 10080) {
-    showNotification("The room time limit cannot exceed 7 days.", "warning");
+  roomTimeLimitModal.show();
+}
+
+function updateRoomTimeLimitPreview() {
+  const hoursInput = document.getElementById("roomTimeLimitHours");
+  const minutesInput = document.getElementById("roomTimeLimitMinutes");
+  const unlimited = document.getElementById("roomTimeLimitUnlimited").checked;
+  const preview = document.getElementById("roomTimeLimitPreview");
+  hoursInput.disabled = unlimited;
+  minutesInput.disabled = unlimited;
+  if (unlimited) {
+    preview.textContent = "This room will have no time limit.";
     return;
   }
 
-  button.disabled = true;
-  try {
-    await KaraokeSessions.setRoomTimeLimit(room.id, minutes);
+  const hours = Number(hoursInput.value);
+  const minutes = Number(minutesInput.value);
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    hours < 0 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    preview.textContent = "Enter whole hours and 0 to 59 minutes.";
+    return;
+  }
+  const totalMinutes = hours * 60 + minutes;
+  if (totalMinutes > 10080) {
+    preview.textContent = "The maximum time limit is 7 days.";
+    return;
+  }
+  if (totalMinutes === 0) {
+    preview.textContent = "Choose No time limit to make this room unlimited.";
+    return;
+  }
+  preview.textContent = `Room time limit: ${hours} hour${hours === 1 ? "" : "s"}, ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+}
+
+async function saveRoomTimeLimit() {
+  if (!roomBeingEditedTimeLimit) return;
+  const unlimited = document.getElementById("roomTimeLimitUnlimited").checked;
+  const hours = Number(document.getElementById("roomTimeLimitHours").value);
+  const additionalMinutes = Number(
+    document.getElementById("roomTimeLimitMinutes").value,
+  );
+  const minutes = unlimited ? 0 : hours * 60 + additionalMinutes;
+  if (
+    !unlimited &&
+    (!Number.isInteger(hours) ||
+      !Number.isInteger(additionalMinutes) ||
+      hours < 0 ||
+      additionalMinutes < 0 ||
+      additionalMinutes > 59 ||
+      minutes < 1 ||
+      minutes > 10080)
+  ) {
     showNotification(
-      minutes
-        ? `Room limit set to ${minutes} minutes.`
+      "Choose a valid time from 1 minute to 7 days, or enable No time limit.",
+      "warning",
+    );
+    return;
+  }
+
+  const saveButton = document.getElementById("saveRoomTimeLimitButton");
+  saveButton.disabled = true;
+  try {
+    await KaraokeSessions.setRoomTimeLimit(
+      roomBeingEditedTimeLimit.id,
+      minutes,
+    );
+    roomTimeLimitModal.hide();
+    showNotification(
+      minutes > 0
+        ? `Room limit set to ${hours}h ${additionalMinutes}m.`
         : "Room time limit removed.",
       "success",
     );
@@ -1239,7 +1300,7 @@ async function handleSetRoomTimeLimit(room, button) {
       "danger",
     );
   } finally {
-    button.disabled = false;
+    saveButton.disabled = false;
   }
 }
 

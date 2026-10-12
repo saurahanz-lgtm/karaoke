@@ -1241,6 +1241,109 @@
       </div>
     </div>
 
+    <!-- Room Time Limit Modal -->
+    <div
+      class="modal fade"
+      id="roomTimeLimitModal"
+      tabindex="-1"
+      aria-labelledby="roomTimeLimitModalTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div
+          class="modal-content"
+          style="
+            background: linear-gradient(145deg, #101d46, #09142f);
+            border: 1px solid rgba(97, 124, 218, 0.45);
+            color: #edf2ff;
+          "
+        >
+          <div class="modal-header border-0">
+            <div>
+              <h5 class="modal-title" id="roomTimeLimitModalTitle">
+                Set Room Time Limit
+              </h5>
+              <p class="mb-0 mt-1 text-white-50" id="roomTimeLimitRoomName"></p>
+            </div>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label" for="roomTimeLimitHours">Hours</label>
+                <input
+                  class="form-control"
+                  id="roomTimeLimitHours"
+                  type="number"
+                  min="0"
+                  max="168"
+                  step="1"
+                  value="0"
+                  oninput="updateRoomTimeLimitPreview()"
+                  required
+                />
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="roomTimeLimitMinutes">Minutes</label>
+                <input
+                  class="form-control"
+                  id="roomTimeLimitMinutes"
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="1"
+                  value="0"
+                  oninput="updateRoomTimeLimitPreview()"
+                  required
+                />
+              </div>
+            </div>
+            <div class="form-check form-switch mt-3">
+              <input
+                class="form-check-input"
+                id="roomTimeLimitUnlimited"
+                type="checkbox"
+                onchange="updateRoomTimeLimitPreview()"
+              />
+              <label class="form-check-label" for="roomTimeLimitUnlimited">
+                No time limit
+              </label>
+            </div>
+            <p
+              class="mt-3 mb-0 text-white-50"
+              id="roomTimeLimitPreview"
+              aria-live="polite"
+            ></p>
+            <p class="mt-2 mb-0 text-white-50">
+              The countdown starts when the first performer joins. Maximum: 7 days.
+            </p>
+          </div>
+          <div class="modal-footer border-0">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="saveRoomTimeLimitButton"
+              onclick="saveRoomTimeLimit()"
+            >
+              Save Time Limit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Edit User Modal -->
     <div class="modal fade" id="editUserModal" tabindex="-1">
       <div class="modal-dialog" style="background: transparent">
