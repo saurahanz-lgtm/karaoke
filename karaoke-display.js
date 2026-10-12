@@ -276,7 +276,12 @@ function saveKaraokeDisplayRoomRequestState(state) {
   }
 }
 
-function showKaraokeDisplayRoomRequestStatus(title, message, rejected = false) {
+function showKaraokeDisplayRoomRequestStatus(
+  title,
+  message,
+  rejected = false,
+  retryAnchorRoomId = null,
+) {
   const splash = document.getElementById("splashScreen");
   if (!splash) return;
   splash.innerHTML = `
@@ -288,6 +293,19 @@ function showKaraokeDisplayRoomRequestStatus(title, message, rejected = false) {
   `;
   splash.querySelector("#tvRoomRequestTitle").textContent = title;
   splash.querySelector("#tvRoomRequestMessage").textContent = message;
+  if (rejected && retryAnchorRoomId) {
+    const retryButton = document.createElement("button");
+    retryButton.type = "button";
+    retryButton.textContent = "Request another room";
+    retryButton.style.cssText =
+      "margin-top:24px;padding:12px 20px;border:0;border-radius:8px;background:#315cfb;color:#fff;font:600 1rem 'DM Sans',sans-serif;cursor:pointer";
+    retryButton.addEventListener("click", () => {
+      localStorage.removeItem(KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY);
+      hideKaraokeDisplayRoomRequestStatus();
+      return requestKaraokeDisplayRoomApproval(retryAnchorRoomId);
+    });
+    splash.querySelector("section").append(retryButton);
+  }
   splash.style.display = "flex";
 }
 
@@ -392,6 +410,7 @@ async function requestKaraokeDisplayRoomApproval(anchorRoomId) {
       "Room request rejected",
       "The administrator could not open another room. Please contact them for assistance.",
       true,
+      existingRequest.anchorRoomId || anchorRoomId,
     );
     return;
   }
