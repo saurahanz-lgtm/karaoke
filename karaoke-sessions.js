@@ -8,9 +8,44 @@
   const MAX_ROOM_TIME_LIMIT_MINUTES = 10080;
   const MEMBER_TIMEOUT_MS = 60000;
   const HEARTBEAT_INTERVAL_MS = 15000;
+  const DEVICE_ID_STORAGE_KEY = "karaoke_room_tab_device_id";
+  const TAB_INSTANCE_ID = global.crypto?.randomUUID
+    ? global.crypto.randomUUID()
+    : `tab_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   let heartbeatTimer = null;
   let joinedRoomId = null;
   let joinedMemberRef = null;
+  let roomDeviceId = global.sessionStorage.getItem(DEVICE_ID_STORAGE_KEY);
+  let roomDeviceIdPromise = null;
+  let activeDeviceIdProbe = null;
+  const deviceIdChannel =
+    typeof global.BroadcastChannel === "function"
+      ? new global.BroadcastChannel("karaoke_room_device_identity")
+      : null;
+
+  deviceIdChannel?.addEventListener("message", (event) => {
+    const message = event.data;
+    if (!message || message.tabInstanceId === TAB_INSTANCE_ID) return;
+
+    if (message.type === "probe" && message.deviceId === roomDeviceId) {
+      deviceIdChannel.postMessage({
+        type: "claim",
+        deviceId: roomDeviceId,
+        tabInstanceId: TAB_INSTANCE_ID,
+        targetTabInstanceId: message.tabInstanceId,
+      });
+      return;
+    }
+
+    if (
+      message.type === "claim" &&
+      activeDeviceIdProbe &&
+      message.deviceId === activeDeviceIdProbe.deviceId &&
+      message.targetTabInstanceId === TAB_INSTANCE_ID
+    ) {
+      activeDeviceIdProbe.claims.add(message.tabInstanceId);
+    }
+  });
 
   function database() {
     if (typeof firebase === "undefined" || !firebase.database) {
@@ -76,15 +111,38 @@
     }
   }
 
-  function getDeviceId() {
-    let deviceId = localStorage.getItem("karaoke_room_device_id");
-    if (!deviceId) {
-      deviceId = global.crypto?.randomUUID
-        ? global.crypto.randomUUID()
-        : `device_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-      localStorage.setItem("karaoke_room_device_id", deviceId);
+  function createDeviceId() {
+    return global.crypto?.randomUUID
+      ? global.crypto.randomUUID()
+      : `device_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  async function getDeviceId() {
+    if (!roomDeviceIdPromise) {
+      roomDeviceIdPromise = (async () => {
+        roomDeviceId =
+          global.sessionStorage.getItem(DEVICE_ID_STORAGE_KEY) ||
+          createDeviceId();
+
+        if (deviceIdChannel) {
+          const claims = new Set();
+          activeDeviceIdProbe = { deviceId: roomDeviceId, claims };
+          deviceIdChannel.postMessage({
+            type: "probe",
+            deviceId: roomDeviceId,
+            tabInstanceId: TAB_INSTANCE_ID,
+          });
+          await new Promise((resolve) => global.setTimeout(resolve, 120));
+          activeDeviceIdProbe = null;
+
+          if (claims.size > 0) roomDeviceId = createDeviceId();
+        }
+
+        global.sessionStorage.setItem(DEVICE_ID_STORAGE_KEY, roomDeviceId);
+        return roomDeviceId;
+      })();
     }
-    return deviceId;
+    return roomDeviceIdPromise;
   }
 
   function getRoomIdFromUrl() {
@@ -837,7 +895,7 @@
     if (!roomSnapshot.exists()) throw new Error("ROOM_NOT_FOUND");
     throwIfRoomTimeExpired(roomSnapshot.val());
 
-    const deviceId = getDeviceId();
+    const deviceId = await getDeviceId();
     const memberRef = db.ref(`${ROOM_DATA_PATH}/${roomId}/members/${deviceId}`);
     await memberRef.onDisconnect().remove();
 
@@ -907,7 +965,7 @@
   }
 
   async function joinRoomWithFallback(roomId, username) {
-    const deviceId = getDeviceId();
+    const deviceId = await getDeviceId();
     const roomsSnapshot = await database().ref(ROOM_LIST_PATH).once("value");
     const rooms = Object.entries(roomsSnapshot.val() || {}).map(
       ([id, room]) => ({ ...room, id }),
