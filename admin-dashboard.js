@@ -1099,6 +1099,8 @@ function renderKaraokeRooms() {
         const devicesCell = document.createElement("td");
         const statusCell = document.createElement("td");
         const actionCell = document.createElement("td");
+        const roomActions = document.createElement("div");
+        roomActions.className = "karaoke-room-actions";
         nameCell.textContent = room.name;
         codeCell.textContent = room.id;
         const deviceCount = roomDeviceCounts.get(room.id) || 0;
@@ -1131,20 +1133,20 @@ function renderKaraokeRooms() {
         renameButton.addEventListener("click", () =>
           handleRenameRoom(room, renameButton),
         );
-        actionCell.appendChild(renameButton);
+        roomActions.appendChild(renameButton);
         const timeLimitButton = document.createElement("button");
         timeLimitButton.type = "button";
-        timeLimitButton.className = "btn btn-sm btn-outline-info me-2";
+        timeLimitButton.className = "btn btn-sm btn-outline-info";
         timeLimitButton.textContent = "Set Time Limit";
         timeLimitButton.title = "Set room duration in hours and minutes";
         timeLimitButton.addEventListener("click", () =>
           handleSetRoomTimeLimit(room, timeLimitButton),
         );
-        actionCell.appendChild(timeLimitButton);
+        roomActions.appendChild(timeLimitButton);
         if (room.id === "main") {
           const defaultLabel = document.createElement("span");
           defaultLabel.textContent = "Default room";
-          actionCell.appendChild(defaultLabel);
+          roomActions.appendChild(defaultLabel);
         } else {
           const deleteButton = document.createElement("button");
           deleteButton.type = "button";
@@ -1158,8 +1160,9 @@ function renderKaraokeRooms() {
           deleteButton.addEventListener("click", () =>
             handleDeleteRoom(room, deleteButton),
           );
-          actionCell.appendChild(deleteButton);
+          roomActions.appendChild(deleteButton);
         }
+        actionCell.appendChild(roomActions);
         row.append(nameCell, codeCell, devicesCell, statusCell, actionCell);
         return row;
       }),
