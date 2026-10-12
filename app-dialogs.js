@@ -143,4 +143,57 @@
       cancelLabel: options.cancelLabel || "Cancel",
       danger: false,
     });
+
+  document.querySelectorAll("form").forEach((form) => {
+    form.noValidate = true;
+  });
+
+  document.addEventListener(
+    "submit",
+    (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+
+      const invalidField = [...form.elements].find(
+        (field) => field.willValidate && !field.validity.valid,
+      );
+      if (!invalidField) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const label = [...form.querySelectorAll("label")].find(
+        (candidate) =>
+          candidate.htmlFor === invalidField.id ||
+          candidate.contains(invalidField),
+      );
+      const fieldName =
+        label?.textContent.trim() ||
+        invalidField.getAttribute("aria-label") ||
+        invalidField.name ||
+        "This field";
+      const validity = invalidField.validity;
+      let message = `Check the value in ${fieldName}.`;
+
+      if (validity.valueMissing) {
+        message = `${fieldName} is required.`;
+      } else if (validity.tooShort) {
+        message = `${fieldName} must be at least ${invalidField.minLength} characters.`;
+      } else if (validity.tooLong) {
+        message = `${fieldName} must be no more than ${invalidField.maxLength} characters.`;
+      } else if (
+        validity.typeMismatch ||
+        validity.patternMismatch ||
+        validity.badInput
+      ) {
+        message = `Enter a valid value for ${fieldName}.`;
+      } else if (validity.rangeUnderflow || validity.rangeOverflow) {
+        message = `Enter a value within the allowed range for ${fieldName}.`;
+      }
+
+      showAppToast(message, "warning");
+      invalidField.focus();
+    },
+    true,
+  );
 })();
