@@ -14,6 +14,165 @@ body {
   min-height: 100vh;
 }
 
+.app-toast-region {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 12000;
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.app-toast {
+  padding: 11px 14px;
+  border: 1px solid rgba(130, 152, 255, 0.4);
+  border-left: 3px solid #8298ff;
+  border-radius: 7px;
+  color: #edf2ff;
+  background: rgba(11, 23, 54, 0.96);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  pointer-events: auto;
+  animation: app-toast-enter 160ms ease-out;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.app-toast--success {
+  border-left-color: #20d4b0;
+}
+
+.app-toast--warning {
+  border-left-color: #f0ad4e;
+}
+
+.app-toast--danger {
+  border-left-color: #ff6588;
+}
+
+.app-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+@keyframes app-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-action-dialog {
+  width: min(420px, calc(100vw - 28px));
+  max-width: none;
+  padding: 22px;
+  border: 1px solid rgba(130, 152, 255, 0.42);
+  border-radius: 10px;
+  color: #edf2ff;
+  background: #0b1736;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.55);
+  font-family: "DM Sans", sans-serif;
+}
+
+.app-action-dialog::backdrop {
+  background: rgba(2, 7, 22, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.app-action-dialog__title {
+  margin: 0;
+  color: #fff;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.app-action-dialog__message {
+  margin: 10px 0 18px;
+  color: #c2cde6;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.app-action-dialog__input {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin: 0 0 18px;
+  padding: 9px 11px;
+  border: 1px solid rgba(130, 152, 255, 0.42);
+  border-radius: 6px;
+  outline: 0;
+  color: #edf2ff;
+  background: #050d25;
+  font: inherit;
+  font-size: 16px;
+}
+
+.app-action-dialog__input:focus {
+  border-color: #20d4b0;
+  box-shadow: 0 0 0 2px rgba(32, 212, 176, 0.18);
+}
+
+.app-action-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.app-action-dialog__button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-action-dialog__button--cancel {
+  border-color: rgba(153, 173, 255, 0.35);
+  color: #dce6ff;
+  background: rgba(49, 92, 251, 0.12);
+}
+
+.app-action-dialog__button--primary {
+  background: linear-gradient(120deg, #7628f1, #315cfb);
+}
+
+.app-action-dialog__button--danger {
+  background: linear-gradient(120deg, #c63865, #a92f50);
+}
+
+.app-action-dialog__button:focus-visible {
+  outline: 2px solid #20d4b0;
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .app-toast-region {
+    top: max(10px, env(safe-area-inset-top));
+    right: 10px;
+    left: 10px;
+    width: auto;
+  }
+
+  .app-action-dialog {
+    padding: 18px;
+  }
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes gradient {
   0% {

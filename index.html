@@ -9,6 +9,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <script src="app-dialogs.js" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -570,7 +571,7 @@
         const searchQuery = searchInput ? searchInput.value.trim() : "";
 
         if (!searchQuery) {
-          alert("Please enter a song name");
+          showAppToast("Please enter a song name");
           return;
         }
 
@@ -704,7 +705,7 @@
       // Request song
       function requestSong(title, artist, videoId, userName, btn) {
         if (!userName.trim()) {
-          alert("Enter your username before selecting a song.");
+          showAppToast("Enter your username before selecting a song.");
           return;
         }
 
@@ -875,7 +876,7 @@
       function togglePlayPause() {
         const btn = document.getElementById("playPauseBtn");
         if (!audioPlayer.src) {
-          alert("No song loaded. Please search for a song first.");
+          showAppToast("No song loaded. Please search for a song first.");
           return;
         }
 
@@ -1573,7 +1574,7 @@
 
         const lockoutMessage = getLoginLockoutMessage("admin", adminName);
         if (lockoutMessage) {
-          alert(lockoutMessage);
+          showAppToast(lockoutMessage);
           return;
         }
         if (adminLoginInProgress) return;
@@ -1585,7 +1586,7 @@
         forceReloadUsersForLogin(async function (users, loadError) {
           if (loadError) {
             adminLoginInProgress = false;
-            alert(
+            showAppToast(
               "Unable to verify your account with Firebase. Check your connection and try again.",
             );
             return;
@@ -1604,7 +1605,7 @@
             if (adminUser.disabled) {
               adminLoginInProgress = false;
               console.log("❌ Admin user is disabled:", adminUser.username);
-              alert(
+              showAppToast(
                 "❌ This admin account has been disabled.\n\nPlease contact another administrator.",
               );
               document.getElementById("adminName").focus();
@@ -1620,7 +1621,7 @@
                 console.log(
                   "❌ Login blocked - user already logged in elsewhere",
                 );
-                alert(
+                showAppToast(
                   "❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.",
                 );
                 return; // BLOCK the login
@@ -1631,7 +1632,7 @@
               registerLoginSession(adminName).then((registered) => {
                 if (!registered) {
                   adminLoginInProgress = false;
-                  alert(
+                  showAppToast(
                     "Login could not sync with Firebase. Please try again.",
                   );
                   return;
@@ -1647,7 +1648,7 @@
             adminLoginInProgress = false;
             console.log("❌ Admin user not found or password incorrect");
             const failure = recordFailedLogin("admin", adminName);
-            alert(
+            showAppToast(
               failure.lockedUntil
                 ? `Too many failed sign-in attempts. Please wait ${formatLoginWait(failure.lockedUntil - Date.now())} before trying again.`
                 : `Invalid admin credentials. Please check your username and password. ${failure.attemptsRemaining} attempts remaining before temporary lockout.`,
@@ -1674,7 +1675,7 @@
 
         const lockoutMessage = getLoginLockoutMessage("singer", singerUsername);
         if (lockoutMessage) {
-          alert(lockoutMessage);
+          showAppToast(lockoutMessage);
           return;
         }
         if (singerLoginInProgress) return;
@@ -1686,7 +1687,7 @@
         forceReloadUsersForLogin(async function (users, loadError) {
           if (loadError) {
             singerLoginInProgress = false;
-            alert(
+            showAppToast(
               "Unable to verify your account with Firebase. Check your connection and try again.",
             );
             return;
@@ -1709,7 +1710,7 @@
                 "❌ Performer user is disabled:",
                 singerUser.username,
               );
-              alert(
+              showAppToast(
                 "❌ Your account has been disabled.\n\nPlease contact an administrator.",
               );
               document.getElementById("singerUsername").focus();
@@ -1727,7 +1728,7 @@
                   console.log(
                     "❌ Login blocked - user already logged in elsewhere",
                   );
-                  alert(
+                  showAppToast(
                     "❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.",
                   );
                   return; // BLOCK the login
@@ -1738,7 +1739,7 @@
                 registerLoginSession(singerUsername).then((registered) => {
                   if (!registered) {
                     singerLoginInProgress = false;
-                    alert(
+                    showAppToast(
                       "Login could not sync with Firebase. Please try again.",
                     );
                     return;
@@ -1756,7 +1757,7 @@
             singerLoginInProgress = false;
             console.log("❌ Performer user not found or password incorrect");
             const failure = recordFailedLogin("singer", singerUsername);
-            alert(
+            showAppToast(
               failure.lockedUntil
                 ? `Too many failed sign-in attempts. Please wait ${formatLoginWait(failure.lockedUntil - Date.now())} before trying again.`
                 : `Invalid credentials. Please check your username and password. ${failure.attemptsRemaining} attempts remaining before temporary lockout.`,

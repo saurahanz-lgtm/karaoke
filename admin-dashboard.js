@@ -792,9 +792,14 @@ async function deleteSelectedAccountHistory() {
   );
   if (selectedRequests.length === 0) return;
   if (
-    !window.confirm(
+    !(await showAppConfirm(
       `Delete ${selectedRequests.length} selected account request history item(s)? This cannot be undone.`,
-    )
+      {
+        title: "Delete account history",
+        confirmLabel: "Delete selected",
+        danger: true,
+      },
+    ))
   ) {
     return;
   }
@@ -909,9 +914,14 @@ function selectAccountRequestView(view) {
 
 async function deleteAccountRequest(request, button) {
   if (
-    !window.confirm(
+    !(await showAppConfirm(
       `Delete the account request from "${request.username || "unknown user"}"? This cannot be undone.`,
-    )
+      {
+        title: "Delete account request",
+        confirmLabel: "Delete",
+        danger: true,
+      },
+    ))
   ) {
     return;
   }
@@ -1002,7 +1012,14 @@ function updateAdminRequestNotifications() {
 async function handleAccountRequestDecision(request, decision, buttons) {
   if (
     decision === "reject" &&
-    !window.confirm(`Reject the account request for "${request.username}"?`)
+    !(await showAppConfirm(
+      `Reject the account request for "${request.username}"?`,
+      {
+        title: "Reject account request",
+        confirmLabel: "Reject",
+        danger: true,
+      },
+    ))
   ) {
     return;
   }
@@ -1298,9 +1315,14 @@ async function deleteSelectedRoomHistory() {
     );
   if (selectedRequests.length === 0) return;
   if (
-    !window.confirm(
+    !(await showAppConfirm(
       `Delete ${selectedRequests.length} selected room request history item(s)? This cannot be undone.`,
-    )
+      {
+        title: "Delete request history",
+        confirmLabel: "Delete selected",
+        danger: true,
+      },
+    ))
   ) {
     return;
   }
@@ -1374,9 +1396,14 @@ function renderCurrentRoomRequests() {
 
 async function handleDeleteRoomRequest(request, button) {
   if (
-    !window.confirm(
+    !(await showAppConfirm(
       `Delete the ${request.status} room request from "${request.username || "Performer"}"? This cannot be undone.`,
-    )
+      {
+        title: "Delete room request",
+        confirmLabel: "Delete",
+        danger: true,
+      },
+    ))
   ) {
     return;
   }
@@ -1570,7 +1597,11 @@ function renderKaraokeRooms() {
 }
 
 async function handleRenameRoom(room, button) {
-  const name = window.prompt("Enter the new room name:", room.name);
+  const name = await showAppPrompt("Enter the new room name:", room.name, {
+    title: "Rename room",
+    confirmLabel: "Save name",
+    maxLength: 40,
+  });
   if (name === null || name.trim() === room.name) return;
   if (!name.trim()) {
     showNotification("Room name cannot be empty.", "warning");
@@ -1709,9 +1740,14 @@ async function saveRoomTimeLimit() {
 
 async function handleDeleteRoom(room, button) {
   if (
-    !window.confirm(
+    !(await showAppConfirm(
       `Delete room "${room.name}" and its queue, requests, and saved data?`,
-    )
+      {
+        title: "Delete karaoke room",
+        confirmLabel: "Delete room",
+        danger: true,
+      },
+    ))
   ) {
     return;
   }
@@ -1726,14 +1762,14 @@ async function handleDeleteRoom(room, button) {
       error.message === "ROOM_HAS_ACTIVE_DEVICES"
         ? "Disconnect all phones from this room before deleting it."
         : "Could not delete room. Check the Firebase connection.";
-    alert(message);
+    showAppToast(message);
   }
 }
 
 async function handleCreateRoom(event) {
   event.preventDefault();
   if (loggedInUser?.role !== "admin") {
-    alert("Only admins can create rooms.");
+    showAppToast("Only admins can create rooms.");
     return;
   }
 
@@ -1748,7 +1784,7 @@ async function handleCreateRoom(event) {
     input.value = "";
   } catch (error) {
     console.error("Could not create karaoke room:", error.message);
-    alert("Could not create room. Check the Firebase connection.");
+    showAppToast("Could not create room. Check the Firebase connection.");
   } finally {
     button.disabled = false;
   }
@@ -1797,7 +1833,7 @@ function checkAuthentication() {
     return true;
   } else {
     // Not logged in, redirect to home
-    alert("Please login first");
+    showAppToast("Please login first");
     window.location.href = "index.html";
     return false;
   }
@@ -1992,7 +2028,7 @@ function validateAdminSession() {
               console.warn(
                 `Other device logged in ${(timeSinceLogin / 1000).toFixed(0)} seconds ago`,
               );
-              alert(
+              showAppToast(
                 "Your session has been disconnected. You were logged in from another device.",
               );
               window.location.href = "index.html";
@@ -2137,7 +2173,12 @@ function updateAdminActivity() {
 
 // Logout function
 async function logout() {
-  if (confirm("Are you sure you want to logout?")) {
+  if (
+    await showAppConfirm("Are you sure you want to logout?", {
+      title: "Log out",
+      confirmLabel: "Log out",
+    })
+  ) {
     const username = loggedInUser?.username;
     let clearSessionPromise = Promise.resolve();
 
@@ -3257,11 +3298,20 @@ async function saveUserChanges() {
 }
 
 // Delete user
-function deleteUser(userId) {
+async function deleteUser(userId) {
   const user = users.find((u) => u.id === userId);
   if (!user) return;
 
-  if (confirm(`Are you sure you want to delete "${user.username}"?`)) {
+  if (
+    await showAppConfirm(
+      `Are you sure you want to delete "${user.username}"?`,
+      {
+        title: "Delete user",
+        confirmLabel: "Delete user",
+        danger: true,
+      },
+    )
+  ) {
     users = users.filter((u) => u.id !== userId);
     saveUsers();
     displayUsers();
@@ -3271,7 +3321,7 @@ function deleteUser(userId) {
 }
 
 // Toggle user disabled status (disable/enable user)
-function toggleUserDisabled(userId) {
+async function toggleUserDisabled(userId) {
   const user = users.find((u) => u.id === userId);
   if (!user) return;
 
@@ -3279,7 +3329,16 @@ function toggleUserDisabled(userId) {
   const newStatus = !currentStatus;
   const action = newStatus ? "disable" : "enable";
 
-  if (confirm(`Are you sure you want to ${action} "${user.username}"?`)) {
+  if (
+    await showAppConfirm(
+      `Are you sure you want to ${action} "${user.username}"?`,
+      {
+        title: `${action === "disable" ? "Disable" : "Enable"} user`,
+        confirmLabel: action === "disable" ? "Disable user" : "Enable user",
+        danger: newStatus,
+      },
+    )
+  ) {
     user.disabled = newStatus;
     saveUsers();
     displayUsers();
@@ -3296,7 +3355,7 @@ function toggleUserDisabled(userId) {
 }
 
 // Log out a specific user session
-function logoutUser(userId) {
+async function logoutUser(userId) {
   const user = users.find((u) => u.id === userId);
   if (!user) return;
   if (loggedInUser?.username === user.username) {
@@ -3304,7 +3363,16 @@ function logoutUser(userId) {
     return;
   }
 
-  if (!confirm(`Are you sure you want to logout "${user.username}"?`)) {
+  if (
+    !(await showAppConfirm(
+      `Are you sure you want to logout "${user.username}"?`,
+      {
+        title: "Log out user",
+        confirmLabel: "Log out",
+        danger: true,
+      },
+    ))
+  ) {
     return;
   }
 
@@ -3371,12 +3439,12 @@ function handleChangeUserPassword() {
 
   // Validate password
   if (!newPassword || newPassword.length < 6) {
-    alert("❌ Password must be at least 6 characters long!");
+    showAppToast("❌ Password must be at least 6 characters long!");
     return;
   }
 
   if (newPassword !== confirmPassword) {
-    alert("❌ Passwords do not match!");
+    showAppToast("❌ Passwords do not match!");
     return;
   }
 
@@ -3543,7 +3611,7 @@ function enableKaraokeDisplay() {
   console.log("🟢 Enabling Karaoke Display...");
 
   if (typeof firebase === "undefined" || !firebase.database) {
-    alert("❌ Firebase not available. Please check your connection.");
+    showAppToast("❌ Firebase not available. Please check your connection.");
     console.error("Firebase not initialized");
     return;
   }
@@ -3584,7 +3652,7 @@ function disableKaraokeDisplay() {
   console.log("🔴 Disabling Karaoke Display...");
 
   if (typeof firebase === "undefined" || !firebase.database) {
-    alert("❌ Firebase not available. Please check your connection.");
+    showAppToast("❌ Firebase not available. Please check your connection.");
     console.error("Firebase not initialized");
     return;
   }

@@ -2251,8 +2251,16 @@ function removeSongFromQueue(songId) {
 }
 
 // Function to delete entire queue (requires admin password)
-function deleteQueue() {
-  const password = prompt("Enter admin password to clear queue:");
+async function deleteQueue() {
+  const password = await showAppPrompt(
+    "Enter admin password to clear queue:",
+    "",
+    {
+      title: "Clear queue",
+      inputType: "password",
+      confirmLabel: "Continue",
+    },
+  );
 
   if (password === null) {
     // User cancelled
@@ -2266,11 +2274,23 @@ function deleteQueue() {
   );
 
   if (!adminUser) {
-    alert("❌ Incorrect password! Only admins can clear the queue.");
+    showAppToast(
+      "Incorrect password. Only admins can clear the queue.",
+      "danger",
+    );
     return;
   }
 
-  if (confirm("Are you sure you want to clear all songs from the queue?")) {
+  if (
+    await showAppConfirm(
+      "Are you sure you want to clear all songs from the queue?",
+      {
+        title: "Clear queue",
+        confirmLabel: "Clear queue",
+        danger: true,
+      },
+    )
+  ) {
     tvQueue = [];
     clearCurrentSongPlayback();
 
@@ -2278,7 +2298,7 @@ function deleteQueue() {
     updates[`karaokeSessions/${activeKaraokeRoomId}/queue`] = null;
     updates[`karaokeSessions/${activeKaraokeRoomId}/currentSong`] = null;
     firebase.database().ref().update(updates);
-    alert("✅ Queue cleared successfully!");
+    showAppToast("Queue cleared successfully!", "success");
   }
 }
 // ===== TV ENABLED/DISABLED CONTROL =====
