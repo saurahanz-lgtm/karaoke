@@ -3262,16 +3262,6 @@ body.karaoke-display-page {
   background: rgba(51, 61, 131, 0.78);
 }
 
-.guide-entry--display {
-  min-height: 32px;
-  align-self: flex-start;
-  padding: 0 10px;
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  background: rgba(12, 20, 28, 0.76);
-  font-size: 0.75rem;
-}
-
 .guide-page {
   --guide-ink: #1f302d;
   --guide-muted: #5d6b67;
@@ -3836,13 +3826,6 @@ body.karaoke-display-page {
 .guide-help-link--performer {
   border-color: rgba(255, 255, 255, 0.55);
   background: rgba(11, 23, 54, 0.36);
-}
-
-.guide-help-link--display {
-  width: 34px;
-  height: 34px;
-  flex-basis: 34px;
-  align-self: flex-end;
 }
 
 .guide-dialog {
