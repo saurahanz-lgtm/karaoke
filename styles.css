@@ -3813,8 +3813,10 @@ body.karaoke-display-page {
   color: #edf2ff;
   background: rgba(11, 23, 54, 0.8);
   font-size: 1rem;
+  font-family: inherit;
   line-height: 1;
   text-decoration: none;
+  cursor: pointer;
   transition:
     border-color 150ms ease,
     background-color 150ms ease;
@@ -3841,6 +3843,123 @@ body.karaoke-display-page {
   height: 34px;
   flex-basis: 34px;
   align-self: flex-end;
+}
+
+.guide-dialog {
+  display: none;
+  width: min(920px, calc(100vw - 32px));
+  height: min(780px, calc(100dvh - 32px));
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(130, 152, 255, 0.4);
+  border-radius: 10px;
+  color: #edf2ff;
+  background: #050d25;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+}
+
+.guide-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.guide-dialog::backdrop {
+  background: rgba(2, 7, 22, 0.76);
+  backdrop-filter: blur(4px);
+}
+
+.guide-dialog-header {
+  display: flex;
+  flex: 0 0 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(97, 124, 218, 0.27);
+  background: #081533;
+}
+
+.guide-dialog-header h2 {
+  margin: 0;
+  color: #edf2ff;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.guide-dialog-close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border: 1px solid rgba(153, 173, 255, 0.3);
+  border-radius: 7px;
+  color: #dce6ff;
+  background: rgba(49, 92, 251, 0.14);
+  cursor: pointer;
+}
+
+.guide-dialog-close:hover {
+  border-color: #20d4b0;
+  color: #fff;
+  background: rgba(49, 92, 251, 0.32);
+}
+
+.guide-dialog-close:focus-visible {
+  outline: 2px solid #20d4b0;
+  outline-offset: 2px;
+}
+
+.guide-dialog-frame {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  border: 0;
+  background: #050d25;
+}
+
+.guide-embedded body {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+.guide-embedded .guide-skip-link,
+.guide-embedded .guide-brand,
+.guide-embedded .guide-topbar > .guide-entry,
+.guide-embedded .guide-quick-links,
+.guide-embedded .guide-inline-link,
+.guide-embedded .guide-footer {
+  display: none !important;
+}
+
+.guide-embedded .guide-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  justify-content: flex-end;
+  min-height: 42px;
+  padding: 4px 12px;
+}
+
+.guide-embedded .guide-layout {
+  width: 100%;
+  padding: 7px 16px 18px;
+}
+
+.guide-embedded .guide-intro {
+  padding: 9px 0 12px;
+}
+
+.guide-embedded .guide-intro h1 {
+  font-size: 23px;
+}
+
+.guide-embedded .guide-note--start {
+  margin-top: 9px;
 }
 
 .guide-page {
@@ -4253,5 +4372,23 @@ body.karaoke-display-page {
 
   .guide-tab {
     font-size: 0.66rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .guide-dialog {
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+    border-radius: 8px;
+  }
+
+  .guide-dialog-header {
+    flex-basis: 44px;
+    padding: 0 10px;
+  }
+
+  .guide-embedded .guide-layout {
+    padding-right: 11px;
+    padding-left: 11px;
   }
 }

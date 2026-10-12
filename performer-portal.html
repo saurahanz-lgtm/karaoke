@@ -702,14 +702,15 @@
       <!-- HEADER -->
       <div class="header">
         <h1><span class="sd-text">SD</span>karaoke</h1>
-        <a
+        <button
           class="guide-help-link guide-help-link--performer"
-          href="user-guide.html"
+          type="button"
+          data-open-user-guide
           aria-label="Quick guide"
           title="Quick guide"
         >
           <i class="bi bi-question-lg" aria-hidden="true"></i>
-        </a>
+        </button>
         <button class="disconnect" onclick="disconnectPerformer()">
           DISCONNECT
         </button>
@@ -2540,5 +2541,29 @@
         localStorage.setItem("karaoke_users", JSON.stringify(users));
       }
     </script>
+    <dialog
+      class="guide-dialog"
+      id="userGuideDialog"
+      aria-labelledby="userGuideDialogTitle"
+    >
+      <div class="guide-dialog-header">
+        <h2 id="userGuideDialogTitle">Quick guide</h2>
+        <button
+          class="guide-dialog-close"
+          type="button"
+          data-close-user-guide
+          aria-label="Close guide"
+          title="Close guide"
+        >
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+      <iframe
+        class="guide-dialog-frame"
+        data-guide-src="user-guide.html?embed=1"
+        title="SD Karaoke quick guide"
+      ></iframe>
+    </dialog>
+    <script src="user-guide-modal.js"></script>
   </body>
 </html>
