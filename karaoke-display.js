@@ -2074,7 +2074,7 @@ function displayScoreModal(
   icon.textContent = "♪";
 
   const title = document.createElement("h2");
-  title.textContent = "Mic activity score";
+  title.textContent = "Your score is";
 
   const singer = document.createElement("p");
   singer.className = "score-modal-singer";
@@ -2084,17 +2084,29 @@ function displayScoreModal(
   value.className = "score-modal-value";
   value.textContent = score === null ? "--" : `${score}%`;
 
-  const label = document.createElement("p");
-  label.className = "score-modal-label";
-  label.textContent = "Mic activity";
+  const feedback = document.createElement("p");
+  feedback.className = "score-modal-feedback";
+  if (score === null) {
+    feedback.textContent = "Enable mic scoring for your next song.";
+  } else if (score === 100) {
+    feedback.textContent = "You're a great singer!";
+  } else if (score >= 80) {
+    feedback.textContent = "Amazing singing energy! Keep it up!";
+  } else if (score >= 60) {
+    feedback.textContent = "You're finding your rhythm!";
+  } else if (score > 0) {
+    feedback.textContent = "Keep going, you're warming up!";
+  } else {
+    feedback.textContent = "Ready for the next song? Give it a try!";
+  }
 
   const note = document.createElement("p");
   note.className = "score-modal-note";
   note.textContent =
     score === null
-      ? "Mic scoring was off or no playback time was measured. Enable it before the next song."
-      : `${activitySeconds}s of mic activity during ${observedSeconds}s of monitored playback. This measures sound activity, not pitch accuracy; room noise or music may affect it.`;
-  scoreDisplay.append(icon, title, singer, value, label, note);
+      ? "Mic scoring was off or no playback time was measured."
+      : `Your mic registered activity for ${activitySeconds}s of ${observedSeconds}s monitored. This measures sound, not pitch accuracy; room noise or music may affect it.`;
+  scoreDisplay.append(icon, title, singer, value, feedback, note);
 
   modal.appendChild(scoreDisplay);
   document.body.appendChild(modal);
