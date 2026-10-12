@@ -2747,6 +2747,19 @@ body.karaoke-display-page {
   outline-offset: 3px;
 }
 
+.access-portal-version {
+  position: fixed;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  left: max(14px, env(safe-area-inset-left));
+  z-index: 20;
+  color: rgba(194, 205, 230, 0.68);
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .home-page #userDisplayName {
   color: #b9a4ff !important;
 }
