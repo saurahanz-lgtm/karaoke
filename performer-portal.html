@@ -532,108 +532,86 @@
 
       /* Footer Styles */
       .footer-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: clamp(40px, 8vw, 60px) clamp(20px, 4vw, 40px);
-        margin-top: clamp(40px, 8vw, 80px);
-        border-top: 2px solid rgba(255, 255, 255, 0.1);
+        margin-top: 24px;
+        padding: 16px 16px max(18px, env(safe-area-inset-bottom));
+        border-top: 1px solid rgba(130, 152, 255, 0.2);
+        color: #c2cde6;
+        background: #050d25 !important;
+        text-align: center;
       }
 
       .footer-content {
+        display: grid;
+        justify-items: center;
+        gap: 14px;
         max-width: 900px;
         margin: 0 auto;
-        padding: 0 clamp(15px, 3vw, 30px);
       }
 
-      .footer-title {
-        font-size: clamp(1.5rem, 4vw, 2rem);
-        font-weight: 900;
-        color: #ffffff;
-        margin-bottom: clamp(12px, 2vw, 20px);
-        font-family: "Brush Script MT", "Lucida Calligraphy", cursive;
-        background: linear-gradient(135deg, #f093fb 0%, #ffffff 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+      .footer-version {
+        margin: 0;
+        color: #b9c8e8;
+        font-size: 0.875rem;
+        line-height: 1.4;
       }
 
-      .footer-description {
-        font-size: clamp(0.85rem, 2vw, 0.95rem);
-        line-height: 1.6;
-        opacity: 0.9;
-        margin-bottom: clamp(20px, 4vw, 30px);
-        color: rgba(255, 255, 255, 0.95);
-      }
-
-      .footer-social {
-        margin: clamp(20px, 4vw, 30px) 0;
-      }
-
-      .footer-social-title {
-        font-size: clamp(1rem, 2.5vw, 1.2rem);
-        font-weight: 600;
-        color: #f093fb;
-        margin-bottom: clamp(12px, 2vw, 15px);
-      }
-
-      .social-icons {
-        display: flex;
-        gap: clamp(10px, 2vw, 15px);
-        flex-wrap: wrap;
-      }
-
-      .social-icon {
-        width: clamp(36px, 8vw, 44px);
-        height: clamp(36px, 8vw, 44px);
+      .footer-links {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(255, 255, 255, 0.15);
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        color: #ffffff;
-        text-decoration: none;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        font-size: clamp(1rem, 2vw, 1.1rem);
-        font-weight: 600;
+        gap: 14px;
+        color: rgba(194, 205, 230, 0.55);
+        font-size: 0.875rem;
+        line-height: 1.4;
       }
 
-      .social-icon:hover {
-        background: rgba(255, 255, 255, 0.25);
-        color: #f093fb;
-        transform: translateY(-4px) scale(1.1);
-        box-shadow: 0 8px 25px rgba(240, 147, 251, 0.3);
-        border-color: rgba(240, 147, 251, 0.6);
+      .footer-links details {
+        position: relative;
+      }
+
+      .footer-links summary {
+        color: #d8dfff;
+        font-weight: 600;
+        cursor: pointer;
+        list-style: none;
+      }
+
+      .footer-links summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .footer-links summary:hover {
+        color: #fff;
+      }
+
+      .footer-links summary:focus-visible {
+        outline: 2px solid #20d4b0;
+        outline-offset: 4px;
       }
 
       .footer-privacy {
-        margin: clamp(18px, 4vw, 26px) 0 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.16);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-        text-align: left;
-      }
-
-      .footer-privacy summary {
-        min-height: 44px;
-        padding: 12px 2px;
-        color: #f093fb;
-        font-size: 0.9rem;
-        font-weight: 700;
-        cursor: pointer;
-      }
-
-      .footer-privacy summary:focus-visible {
-        outline: 2px solid #20d4b0;
-        outline-offset: 3px;
+        margin: 0;
       }
 
       .footer-privacy-content {
-        max-width: 760px;
-        padding: 0 2px 15px;
-        color: rgba(255, 255, 255, 0.82);
+        position: absolute;
+        bottom: calc(100% + 12px);
+        left: 50%;
+        z-index: 20;
+        width: min(760px, calc(100vw - 32px));
+        max-height: min(60vh, 420px);
+        padding: 16px;
+        overflow: auto;
+        transform: translateX(-50%);
+        border: 1px solid rgba(130, 152, 255, 0.35);
+        border-radius: 8px;
+        color: #c2cde6;
+        background: #0b1736;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
         font-size: 0.82rem;
         line-height: 1.6;
         overflow-wrap: anywhere;
+        text-align: left;
       }
 
       .footer-privacy-content p {
@@ -648,37 +626,21 @@
         color: #fff;
       }
 
-      .footer-copyright {
-        font-size: clamp(0.75rem, 1.5vw, 0.85rem);
-        opacity: 0.85;
-        text-align: center;
-        padding-top: clamp(20px, 4vw, 30px);
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
-        margin-top: clamp(20px, 4vw, 30px);
-      }
-
-      /* Responsive Footer */
-      @media (max-width: 768px) {
-        .footer-section {
-          padding: 30px 15px;
-          margin-top: 40px;
-        }
-
-        .footer-title {
-          text-align: center;
-        }
-
-        .footer-description {
-          text-align: center;
-        }
-
-        .footer-social-title {
-          text-align: center;
-        }
-
-        .social-icons {
-          justify-content: center;
-        }
+      .footer-about-content {
+        position: absolute;
+        bottom: calc(100% + 12px);
+        left: 50%;
+        width: min(360px, calc(100vw - 32px));
+        padding: 12px 14px;
+        transform: translateX(-50%);
+        border: 1px solid rgba(130, 152, 255, 0.35);
+        border-radius: 8px;
+        color: #c2cde6;
+        background: #0b1736;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        font-size: 0.82rem;
+        line-height: 1.5;
+        text-align: left;
       }
     </style>
   </head>
@@ -868,73 +830,63 @@
     <!-- FOOTER -->
     <footer class="footer-section">
       <div class="footer-content">
-        <h2 class="footer-title">🎤 SDkaraoke</h2>
-        <p class="footer-description">
-          Turn any screen into a karaoke machine with SDKaraoke. A simple and
-          fun way to enjoy karaoke with your favorite YouTube music. No setup,
-          no stress — select a song and sing instantly.
+        <p class="footer-version">
+          SD Karaoke &bull; Version <span id="footerVersion">1.1.0</span>
         </p>
-
-        <div class="footer-social">
-          <div class="footer-social-title">Connect With Me</div>
-          <div class="social-icons">
-            <a
-              href="https://www.facebook.com/profile.php?id=61580750922961"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="social-icon"
-              title="Facebook"
-              >f</a
-            >
-            <a
-              href="https://www.tiktok.com/@shnxxie18?is_from_webapp=1&sender_device=pc"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="social-icon"
-              title="TikTok"
-              >♪</a
-            >
-          </div>
-        </div>
-
-        <details class="footer-privacy">
-          <summary>Privacy Policy</summary>
-          <div class="footer-privacy-content">
-            <p>
-              <strong>Information used.</strong> SD Karaoke processes account
-              usernames and credentials, room membership and activity, song
-              searches and reservations, and account or room requests to provide
-              sign-in, room access, queue, and moderation features.
-            </p>
-            <p>
-              <strong>Storage.</strong> Some session details, device
-              identifiers, saved favorites, and search cache are stored in your
-              browser's local or session storage. Account, room, membership, and
-              request records may be stored in Firebase Realtime Database,
-              depending on the system configuration. Signing out or clearing
-              browser storage does not necessarily delete records stored in
-              Firebase.
-            </p>
-            <p>
-              <strong>Third-party services.</strong> Song searches use the
-              YouTube Data API and playback uses the YouTube embedded player.
-              Search and playback requests are handled by Google/YouTube and are
-              subject to their privacy policies.
-            </p>
-            <p>
-              <strong>Developer:</strong> Shan Denver. For privacy or account
-              questions, use the contact links above or contact your system
-              administrator.
-            </p>
-          </div>
-        </details>
-
-        <div class="footer-copyright">
-          © 2026 SDkaraoke. All rights reserved. | Built with heart by Shan
-          Denver
-        </div>
+        <nav class="footer-links" aria-label="Footer links">
+          <details class="footer-privacy">
+            <summary>Privacy Policy</summary>
+            <div class="footer-privacy-content">
+              <p>
+                <strong>Information used.</strong> SD Karaoke processes account
+                usernames and credentials, room membership and activity, song
+                searches and reservations, and account or room requests to
+                provide sign-in, room access, queue, and moderation features.
+              </p>
+              <p>
+                <strong>Storage.</strong> Some session details, device
+                identifiers, saved favorites, and search cache are stored in
+                your browser's local or session storage. Account, room,
+                membership, and request records may be stored in Firebase
+                Realtime Database, depending on the system configuration.
+                Signing out or clearing browser storage does not necessarily
+                delete records stored in Firebase.
+              </p>
+              <p>
+                <strong>Third-party services.</strong> Song searches use the
+                YouTube Data API and playback uses the YouTube embedded player.
+                Search and playback requests are handled by Google/YouTube and
+                are subject to their privacy policies.
+              </p>
+              <p>
+                <strong>Developer:</strong> Shan Denver. For privacy or account
+                questions, use the contact links above or contact your system
+                administrator.
+              </p>
+            </div>
+          </details>
+          <span aria-hidden="true">|</span>
+          <details>
+            <summary>About</summary>
+            <div class="footer-about-content">
+              Turn any screen into a karaoke machine with SD Karaoke. Search
+              songs, reserve your favorites, and sing along with YouTube music.
+            </div>
+          </details>
+        </nav>
       </div>
     </footer>
+    <script>
+      fetch("package.json")
+        .then((response) => (response.ok ? response.json() : null))
+        .then((packageInfo) => {
+          if (packageInfo?.version) {
+            document.getElementById("footerVersion").textContent =
+              packageInfo.version;
+          }
+        })
+        .catch(() => {});
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
