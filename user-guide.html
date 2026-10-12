@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="fil">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Gabay sa paggamit ng SD Karaoke para sa performers, admins, at karaoke display."
+      content="Quick guide for using the SD Karaoke performer portal and karaoke display."
     />
-    <title>Gabay sa paggamit | SD Karaoke</title>
+    <title>Quick Guide | SD Karaoke</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -26,7 +26,9 @@
     />
   </head>
   <body class="guide-page">
-    <a class="guide-skip-link" href="#guideContent">Lumaktaw sa gabay</a>
+    <a class="guide-skip-link" href="#guideContent" data-i18n="skip"
+      >Skip to guide</a
+    >
     <header class="guide-topbar">
       <a class="guide-brand" href="index.html" aria-label="SD Karaoke home">
         <span class="guide-brand-mark"
@@ -34,67 +36,125 @@
         ></span>
         <span><strong>SD Karaoke</strong><small>QUICK GUIDE</small></span>
       </a>
-      <a class="guide-entry" href="index.html">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i>
-        <span>Balik sa home</span>
-      </a>
+      <div class="guide-topbar-actions">
+        <label class="guide-language-control" for="guideLanguage">
+          <i class="bi bi-translate" aria-hidden="true"></i>
+          <span data-i18n="language">Language</span>
+          <select
+            id="guideLanguage"
+            aria-label="Guide language"
+            data-i18n-aria="languageAria"
+          >
+            <option value="en">English</option>
+            <option value="tl">Tagalog</option>
+          </select>
+        </label>
+        <a
+          class="guide-entry"
+          href="performer-portal.html"
+          data-i18n-aria="backToPerformer"
+        >
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          <span data-i18n="backToPerformer">Back to Performer</span>
+        </a>
+      </div>
     </header>
 
     <main class="guide-layout" id="guideContent">
-      <aside class="guide-index" aria-label="Mga bahagi ng gabay">
-        <p class="guide-index-title">Nasa gabay</p>
-        <nav>
-          <a href="#performer"><span>01</span> Performer</a>
-          <a href="#admin"><span>02</span> Administrator</a>
-          <a href="#display"><span>03</span> Karaoke display</a>
-          <a href="#help"><span>04</span> Kapag may problema</a>
-        </nav>
-        <a class="guide-index-home" href="index.html">
-          <i class="bi bi-house-door" aria-hidden="true"></i> Piliin ang portal
-        </a>
-      </aside>
+      <nav
+        class="guide-index"
+        role="tablist"
+        aria-label="Guide sections"
+        data-i18n-aria="sectionLabel"
+      >
+        <button
+          class="guide-tab is-active"
+          id="performerTab"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="performerPanel"
+          data-guide-tab="performer"
+          data-i18n="performerTab"
+        >
+          Performer
+        </button>
+        <button
+          class="guide-tab"
+          id="displayTab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="displayPanel"
+          data-guide-tab="display"
+          data-i18n="displayTab"
+        >
+          Karaoke display
+        </button>
+        <button
+          class="guide-tab"
+          id="helpTab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="helpPanel"
+          data-guide-tab="help"
+          data-i18n="helpTab"
+        >
+          Troubleshooting
+        </button>
+      </nav>
 
       <div class="guide-content">
         <section class="guide-intro" aria-labelledby="guideTitle">
-          <p class="guide-eyebrow">SD KARAOKE / MAGSIMULA RITO</p>
-          <h1 id="guideTitle">Gabay sa paggamit</h1>
-          <p class="guide-lede">
-            Piliin ang papel mo sa karaoke. Sundan ang mga hakbang para
-            makakonekta, makapagpareserba ng kanta, at mapatakbo ang display.
+          <p class="guide-eyebrow" data-i18n="eyebrow">
+            SD KARAOKE / QUICK START
           </p>
-          <div class="guide-quick-links" aria-label="Mga pangunahing portal">
-            <a href="index.html">
-              <i class="bi bi-door-open" aria-hidden="true"></i>
-              Piliin ang portal
+          <h1 id="guideTitle" data-i18n="title">Quick guide</h1>
+          <p class="guide-lede">
+            <span data-i18n="lede"
+              >Choose a section to learn how to join a room, reserve a song, or
+              set up the shared display.</span
+            >
+          </p>
+          <div
+            class="guide-quick-links"
+            aria-label="Quick links"
+            data-i18n-aria="quickLinksLabel"
+          >
+            <a href="performer-portal.html">
+              <i class="bi bi-music-note-list" aria-hidden="true"></i>
+              <span data-i18n="performerLink">Open Performer portal</span>
             </a>
             <a href="karaoke-display.html" target="_blank" rel="noopener">
               <i class="bi bi-display" aria-hidden="true"></i>
-              Buksan ang display
+              <span data-i18n="displayLink">Open Karaoke Display</span>
             </a>
           </div>
           <div class="guide-note guide-note--start">
             <i class="bi bi-info-circle" aria-hidden="true"></i>
-            <p>
-              Kailangan ng performer ng room QR o Room ID at aprubadong account.
-              Kung wala ka pang account, mag-request ng access sa sign-in
-              screen.
+            <p data-i18n="introNote">
+              To join, scan the room QR code or enter its Room ID. Sign in with
+              an approved performer account.
             </p>
           </div>
         </section>
 
         <section
           class="guide-section"
-          id="performer"
-          aria-labelledby="performerTitle"
+          id="performerPanel"
+          role="tabpanel"
+          aria-labelledby="performerTab"
+          data-guide-panel="performer"
         >
           <div class="guide-section-heading">
-            <span class="guide-section-number">01</span>
             <div>
-              <p class="guide-eyebrow">KUMANTA AT MAGPA-RESERVE</p>
-              <h2 id="performerTitle">Para sa Performer</h2>
-              <p>
-                Gamitin ang phone para sumali sa room at idagdag ang kanta sa
-                pila.
+              <p class="guide-eyebrow" data-i18n="performerEyebrow">
+                JOIN AND REQUEST A SONG
+              </p>
+              <h2 id="performerTitle" data-i18n="performerTitle">Performer</h2>
+              <p data-i18n="performerLead">
+                Use your phone to join the room and add a song to its queue.
               </p>
             </div>
           </div>
@@ -102,144 +162,76 @@
             <li>
               <span class="guide-step-number">1</span>
               <div>
-                <h3>Kumonekta sa room</h3>
-                <p>
-                  Sa home, piliin ang <strong>Karaoke Performer</strong>. I-scan
-                  ang QR code sa TV, o piliin ang <strong>Enter Room ID</strong>
-                  at ilagay ang ID na nakikita sa display.
+                <h3 data-i18n="performerStep1Title">Join the room</h3>
+                <p data-i18n="performerStep1">
+                  Open the Performer portal and scan the QR code on the display.
+                  If scanning is unavailable, enter the Room ID shown beside it.
                 </p>
               </div>
             </li>
             <li>
               <span class="guide-step-number">2</span>
               <div>
-                <h3>Mag-sign in</h3>
-                <p>
-                  Ilagay ang username at password kapag nakakonekta na sa room.
-                  Kung wala ka pang account, mag-submit ng account request at
-                  hintayin ang approval ng administrator.
+                <h3 data-i18n="performerStep2Title">Sign in</h3>
+                <p data-i18n="performerStep2">
+                  Enter your username and password. New performers can request
+                  an account from the sign-in screen and use it after approval.
                 </p>
               </div>
             </li>
             <li>
               <span class="guide-step-number">3</span>
               <div>
-                <h3>Maghanap at magpa-reserve</h3>
-                <p>
-                  Sa <strong>Search &amp; Reserve</strong>, hanapin ang title o
-                  artist. Pindutin ang <strong>Reserve</strong> sa tamang kanta
-                  para idagdag ito sa room queue. Gamitin ang star para itabi o
-                  alisin sa <strong>Saved favorites</strong>.
+                <h3 data-i18n="performerStep3Title">Search and reserve</h3>
+                <p data-i18n="performerStep3">
+                  Search by song title or artist, then select
+                  <strong>Reserve</strong> on the right result. Use the star to
+                  save or remove a favorite.
                 </p>
               </div>
             </li>
             <li>
               <span class="guide-step-number">4</span>
               <div>
-                <h3>Subaybayan ang pila</h3>
-                <p>
-                  Tingnan ang <strong>Reserved Songs</strong> habang naghihintay
-                  na patugtugin ng host ang kanta. Ang mute, volume, at
-                  play/pause controls ay nakaaapekto sa shared display ng room.
+                <h3 data-i18n="performerStep4Title">
+                  Follow your place in line
+                </h3>
+                <p data-i18n="performerStep4">
+                  Check <strong>Reserved Songs</strong> to see the room queue.
+                  Playback and volume controls affect the shared display.
                 </p>
               </div>
             </li>
           </ol>
           <div class="guide-note guide-note--teal">
             <i class="bi bi-hourglass-split" aria-hidden="true"></i>
-            <p>
-              Kapag puno ang room o tapos na ang oras nito, gamitin ang
-              <strong>Request another room</strong> o
-              <strong>Request Additional Time</strong> kung ipinakita sa screen.
-              Hintayin ang approval bago magpatuloy.
+            <p data-i18n="performerNote">
+              If the room is full or its time expires, use
+              <strong>Request another room</strong> or
+              <strong>Request Additional Time</strong> when shown.
             </p>
           </div>
         </section>
 
-        <section class="guide-section" id="admin" aria-labelledby="adminTitle">
-          <div class="guide-section-heading">
-            <span class="guide-section-number guide-section-number--coral"
-              >02</span
-            >
-            <div>
-              <p class="guide-eyebrow">MAGHANDA AT MAG-MANAGE</p>
-              <h2 id="adminTitle">Para sa Administrator</h2>
-              <p>
-                Gamitin ang sidebar para lumipat sa mga bahagi ng admin
-                dashboard.
-              </p>
-            </div>
-          </div>
-          <ol class="guide-steps">
-            <li>
-              <span class="guide-step-number">1</span>
-              <div>
-                <h3>Gumawa ng karaoke room</h3>
-                <p>
-                  Buksan ang <strong>Karaoke Rooms</strong>, ilagay ang room
-                  name, at pindutin ang <strong>Add Room</strong>. Ibahagi sa
-                  performers ang QR code o Room ID na ipinapakita sa karaoke
-                  display.
-                </p>
-              </div>
-            </li>
-            <li>
-              <span class="guide-step-number">2</span>
-              <div>
-                <h3>Pamahalaan ang accounts</h3>
-                <p>
-                  Sa <strong>User Management</strong>, suriin ang account
-                  requests at aprubahan o tanggihan ang mga ito. Gamitin ang
-                  <strong>Add New User</strong> para gumawa ng account; piliin
-                  lamang ang Admin role para sa pinagkakatiwalaang tagapamahala.
-                </p>
-              </div>
-            </li>
-            <li>
-              <span class="guide-step-number">3</span>
-              <div>
-                <h3>Ayusin ang room requests</h3>
-                <p>
-                  Sa <strong>Room Requests</strong>, piliin ang
-                  <strong>Room Requests</strong> o
-                  <strong>Time Extensions</strong>, saka aprubahan o tanggihan
-                  ang pending request. Sa <strong>History</strong>, piliin ang
-                  mga row o ang checkbox sa table header para piliin ang lahat
-                  sa kasalukuyang page, at pindutin ang
-                  <strong>Delete selected</strong> kung kailangan.
-                </p>
-              </div>
-            </li>
-            <li>
-              <span class="guide-step-number">4</span>
-              <div>
-                <h3>Kontrolin ang display</h3>
-                <p>
-                  Sa <strong>Karaoke Display Control</strong>, puwedeng i-enable
-                  o i-disable ang lahat ng display o isang napiling room. Kapag
-                  naka-disable, pumili ng announcement para makita ng performers
-                  ang dahilan.
-                </p>
-              </div>
-            </li>
-          </ol>
-        </section>
-
         <section
           class="guide-section"
-          id="display"
-          aria-labelledby="displayTitle"
+          id="displayPanel"
+          role="tabpanel"
+          aria-labelledby="displayTab"
+          data-guide-panel="display"
+          hidden
         >
           <div class="guide-section-heading">
-            <span class="guide-section-number guide-section-number--blue"
-              >03</span
-            >
             <div>
-              <p class="guide-eyebrow">SCREEN PARA SA LAHAT</p>
-              <h2 id="displayTitle">Para sa Karaoke Display</h2>
-              <p>
-                Magbukas ng hiwalay na browser o screen para sa kasalukuyang
-                kanta at QR.
+              <p class="guide-eyebrow" data-i18n="displayEyebrow">
+                SHARED SCREEN
+              </p>
+              <h2 id="displayTitle" data-i18n="displayTitle">
+                Karaoke Display
+              </h2>
+              <p data-i18n="displayLead">
+                Set up the shared screen so performers can join the correct
+                room.
               </p>
             </div>
           </div>
@@ -247,35 +239,36 @@
             <li>
               <span class="guide-step-number">1</span>
               <div>
-                <h3>Buksan sa TV o pangalawang screen</h3>
-                <p>
-                  Bisitahin ang Karaoke Display page. Awtomatiko itong
-                  mag-a-assign ng available room; tiyaking tugma ang room name
-                  at Room ID sa screen ng performers. Iwan itong bukas habang
-                  ginagamit ang karaoke.
+                <h3 data-i18n="displayStep1Title">
+                  Open the display on a TV or second screen
+                </h3>
+                <p data-i18n="displayStep1">
+                  Open Karaoke Display in a separate browser or device. It
+                  automatically assigns an available room; check that its room
+                  name and Room ID match the performers' screen.
                 </p>
               </div>
             </li>
             <li>
               <span class="guide-step-number">2</span>
               <div>
-                <h3>Ipakita ang QR at kanta</h3>
-                <p>
-                  I-scan ng performers ang QR sa screen para sumali. I-full
-                  screen para mas madaling makita ang pinapatugtog at ang
-                  susunod na kanta. Kung hindi ma-scan, gamitin ang Room ID.
+                <h3 data-i18n="displayStep2Title">
+                  Show the QR code and current song
+                </h3>
+                <p data-i18n="displayStep2">
+                  Performers scan the QR code to join. Use Full Screen for a
+                  clearer view of the current and next songs. They can enter the
+                  Room ID if scanning is unavailable.
                 </p>
               </div>
             </li>
             <li>
               <span class="guide-step-number">3</span>
               <div>
-                <h3>Gamitin nang maingat ang Clear Queue</h3>
-                <p>
-                  Inaalis ng <strong>Clear Queue</strong> ang mga nakapilang
-                  kanta sa aktibong room. Gamitin lamang ito kapag talagang
-                  kailangang linisin ang pila. Hihingi ito ng admin password at
-                  kumpirmasyon bago magpatuloy.
+                <h3 data-i18n="displayStep3Title">Use Clear Queue carefully</h3>
+                <p data-i18n="displayStep3">
+                  <strong>Clear Queue</strong> removes queued songs from the
+                  active room. It requires an admin password and confirmation.
                 </p>
               </div>
             </li>
@@ -287,61 +280,289 @@
             rel="noopener"
           >
             <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
-            Buksan ang Karaoke Display
+            <span data-i18n="openDisplay">Open Karaoke Display</span>
           </a>
         </section>
 
         <section
           class="guide-section guide-help-section"
-          id="help"
-          aria-labelledby="helpTitle"
+          id="helpPanel"
+          role="tabpanel"
+          aria-labelledby="helpTab"
+          data-guide-panel="help"
+          hidden
         >
           <div class="guide-section-heading">
-            <span class="guide-section-number guide-section-number--gold"
-              >04</span
-            >
             <div>
-              <p class="guide-eyebrow">MABILIS NA TULONG</p>
-              <h2 id="helpTitle">Kapag may problema</h2>
-              <p>I-check muna ang mga ito bago muling kumonekta.</p>
+              <p class="guide-eyebrow" data-i18n="helpEyebrow">QUICK FIXES</p>
+              <h2 id="helpTitle" data-i18n="helpTitle">Troubleshooting</h2>
+              <p data-i18n="helpLead">
+                Try these checks for common performer and display issues.
+              </p>
             </div>
           </div>
           <div class="guide-faq">
             <details>
-              <summary>Hindi gumagana ang QR code</summary>
-              <p>
-                Payagan ang camera access sa browser. Kung hindi pa rin ma-scan,
-                ilagay ang Room ID na nakasulat sa display.
-              </p>
-            </details>
-            <details>
-              <summary>Hindi ako makapag-sign in</summary>
-              <p>
-                Tiyaking tama ang Room ID at credentials. Para sa bagong
-                performer account, mag-request ng access at hintaying aprubahan
-                ito ng administrator.
-              </p>
-            </details>
-            <details>
-              <summary>
-                Hindi lumalabas ang kanta o hindi makapag-reserve
+              <summary data-i18n="helpQrTitle">
+                The QR code will not scan
               </summary>
-              <p>
-                Suriin kung nakakonekta ka sa tamang room at kung available ang
-                display. Kapag puno o sarado ang room, sundin ang request na
-                ipinapakita sa performer screen.
+              <p data-i18n="helpQr">
+                Allow camera access in your browser, move closer to the screen,
+                or enter the Room ID shown on the display.
+              </p>
+            </details>
+            <details>
+              <summary data-i18n="helpRoomTitle">
+                I cannot join the room
+              </summary>
+              <p data-i18n="helpRoom">
+                Check that the Room ID matches the display and that the room has
+                space. If the room is full or its time has ended, use the
+                request option shown on screen.
+              </p>
+            </details>
+            <details>
+              <summary data-i18n="helpSongTitle">
+                I cannot find or reserve a song
+              </summary>
+              <p data-i18n="helpSong">
+                Try a shorter search using the song title or artist. Confirm
+                that you joined the intended room and that the display is
+                available.
+              </p>
+            </details>
+            <details>
+              <summary data-i18n="helpAudioTitle">
+                There is no sound on the display
+              </summary>
+              <p data-i18n="helpAudio">
+                Check the TV or device volume, browser audio, and the room mute
+                and volume controls on the Performer screen.
               </p>
             </details>
           </div>
         </section>
 
         <footer class="guide-footer">
-          <a href="#guideContent"
-            ><i class="bi bi-arrow-up" aria-hidden="true"></i> Balik sa itaas</a
+          <a href="#guideContent">
+            <i class="bi bi-arrow-up" aria-hidden="true"></i>
+            <span data-i18n="backToTop">Back to top</span>
+          </a>
+          <a href="performer-portal.html" data-i18n="backToPerformer"
+            >Back to Performer</a
           >
-          <a href="index.html">SD Karaoke home</a>
         </footer>
       </div>
     </main>
+    <script>
+      const guideTranslations = {
+        en: {
+          skip: "Skip to guide",
+          language: "Language",
+          languageAria: "Guide language",
+          sectionLabel: "Guide sections",
+          quickLinksLabel: "Quick links",
+          backToPerformer: "Back to Performer",
+          performerTab: "Performer",
+          displayTab: "Karaoke display",
+          helpTab: "Troubleshooting",
+          eyebrow: "SD KARAOKE / QUICK START",
+          title: "Quick guide",
+          lede: "Choose a section to learn how to join a room, reserve a song, or set up the shared display.",
+          performerLink: "Open Performer portal",
+          displayLink: "Open Karaoke Display",
+          introNote:
+            "To join, scan the room QR code or enter its Room ID. Sign in with an approved performer account.",
+          performerEyebrow: "JOIN AND REQUEST A SONG",
+          performerTitle: "Performer",
+          performerLead:
+            "Use your phone to join the room and add a song to its queue.",
+          performerStep1Title: "Join the room",
+          performerStep1:
+            "Open the Performer portal and scan the QR code on the display. If scanning is unavailable, enter the Room ID shown beside it.",
+          performerStep2Title: "Sign in",
+          performerStep2:
+            "Enter your username and password. New performers can request an account from the sign-in screen and use it after approval.",
+          performerStep3Title: "Search and reserve",
+          performerStep3:
+            "Search by song title or artist, then select <strong>Reserve</strong> on the right result. Use the star to save or remove a favorite.",
+          performerStep4Title: "Follow your place in line",
+          performerStep4:
+            "Check <strong>Reserved Songs</strong> to see the room queue. Playback and volume controls affect the shared display.",
+          performerNote:
+            "If the room is full or its time expires, use <strong>Request another room</strong> or <strong>Request Additional Time</strong> when shown.",
+          displayEyebrow: "SHARED SCREEN",
+          displayTitle: "Karaoke Display",
+          displayLead:
+            "Set up the shared screen so performers can join the correct room.",
+          displayStep1Title: "Open the display on a TV or second screen",
+          displayStep1:
+            "Open Karaoke Display in a separate browser or device. It automatically assigns an available room; check that its room name and Room ID match the performers' screen.",
+          displayStep2Title: "Show the QR code and current song",
+          displayStep2:
+            "Performers scan the QR code to join. Use Full Screen for a clearer view of the current and next songs. They can enter the Room ID if scanning is unavailable.",
+          displayStep3Title: "Use Clear Queue carefully",
+          displayStep3:
+            "<strong>Clear Queue</strong> removes queued songs from the active room. It requires an admin password and confirmation.",
+          openDisplay: "Open Karaoke Display",
+          helpEyebrow: "QUICK FIXES",
+          helpTitle: "Troubleshooting",
+          helpLead: "Try these checks for common performer and display issues.",
+          helpQrTitle: "The QR code will not scan",
+          helpQr:
+            "Allow camera access in your browser, move closer to the screen, or enter the Room ID shown on the display.",
+          helpRoomTitle: "I cannot join the room",
+          helpRoom:
+            "Check that the Room ID matches the display and that the room has space. If the room is full or its time has ended, use the request option shown on screen.",
+          helpSongTitle: "I cannot find or reserve a song",
+          helpSong:
+            "Try a shorter search using the song title or artist. Confirm that you joined the intended room and that the display is available.",
+          helpAudioTitle: "There is no sound on the display",
+          helpAudio:
+            "Check the TV or device volume, browser audio, and the room mute and volume controls on the Performer screen.",
+          backToTop: "Back to top",
+        },
+        tl: {
+          skip: "Lumaktaw sa gabay",
+          language: "Wika",
+          languageAria: "Wika ng gabay",
+          sectionLabel: "Mga seksyon ng gabay",
+          quickLinksLabel: "Mga link",
+          backToPerformer: "Bumalik sa Performer",
+          performerTab: "Performer",
+          displayTab: "Karaoke display",
+          helpTab: "Mga karaniwang problema",
+          eyebrow: "SD KARAOKE / MABILIS NA SIMULA",
+          title: "Gabay sa paggamit",
+          lede: "Pumili ng seksyon para malaman kung paano sumali sa room, magpareserba ng kanta, o maghanda ng shared display.",
+          performerLink: "Buksan ang Performer portal",
+          displayLink: "Buksan ang Karaoke Display",
+          introNote:
+            "Para sumali, i-scan ang room QR code o ilagay ang Room ID. Mag-sign in gamit ang aprubadong performer account.",
+          performerEyebrow: "SUMALI AT MAGPA-RESERVE",
+          performerTitle: "Para sa Performer",
+          performerLead:
+            "Gamitin ang phone para sumali sa room at magdagdag ng kanta sa pila.",
+          performerStep1Title: "Sumali sa room",
+          performerStep1:
+            "Buksan ang Performer portal at i-scan ang QR code sa display. Kung hindi makapag-scan, ilagay ang Room ID na nakasulat sa tabi nito.",
+          performerStep2Title: "Mag-sign in",
+          performerStep2:
+            "Ilagay ang username at password. Kung bago ka, mag-request ng account sa sign-in screen at gamitin ito kapag aprubado na.",
+          performerStep3Title: "Maghanap at magpareserba",
+          performerStep3:
+            "Maghanap gamit ang pamagat ng kanta o artist, saka piliin ang <strong>Reserve</strong> sa tamang resulta. Pindutin ang star para mag-save o mag-alis ng paborito.",
+          performerStep4Title: "Tingnan ang pila",
+          performerStep4:
+            "Buksan ang <strong>Reserved Songs</strong> para makita ang pila ng room. Naaapektuhan ng playback at volume controls ang shared display.",
+          performerNote:
+            "Kung puno na o tapos na ang oras ng room, gamitin ang <strong>Request another room</strong> o <strong>Request Additional Time</strong> kung lumabas sa screen.",
+          displayEyebrow: "SHARED SCREEN",
+          displayTitle: "Karaoke Display",
+          displayLead:
+            "Ihanda ang shared screen para makasali ang performers sa tamang room.",
+          displayStep1Title: "Buksan sa TV o pangalawang screen",
+          displayStep1:
+            "Buksan ang Karaoke Display sa hiwalay na browser o device. Awtomatiko itong pipili ng bakanteng room; tiyaking tugma ang room name at Room ID sa screen ng performers.",
+          displayStep2Title: "Ipakita ang QR at kasalukuyang kanta",
+          displayStep2:
+            "I-scan ng performers ang QR code para sumali. Gamitin ang Full Screen para mas makita ang kasalukuyan at susunod na kanta. Maaari ring ilagay ang Room ID kung hindi gumagana ang scan.",
+          displayStep3Title: "Gamitin nang maingat ang Clear Queue",
+          displayStep3:
+            "Inaalis ng <strong>Clear Queue</strong> ang mga nakapilang kanta sa aktibong room. Kailangan dito ang admin password at kumpirmasyon.",
+          openDisplay: "Buksan ang Karaoke Display",
+          helpEyebrow: "MABILIS NA TULONG",
+          helpTitle: "Mga karaniwang problema",
+          helpLead:
+            "Subukan ang mga ito para sa karaniwang isyu sa Performer at display.",
+          helpQrTitle: "Hindi ma-scan ang QR code",
+          helpQr:
+            "Payagan ang camera access sa browser, lumapit sa screen, o ilagay ang Room ID na nakasulat sa display.",
+          helpRoomTitle: "Hindi ako makasali sa room",
+          helpRoom:
+            "Tiyaking tugma ang Room ID sa display at may bakante pa sa room. Kung puno na o tapos na ang oras, gamitin ang request option na ipinakita sa screen.",
+          helpSongTitle: "Hindi ko makita o ma-reserve ang kanta",
+          helpSong:
+            "Subukan ang mas maikling paghahanap gamit ang pamagat o artist. Tiyaking nasa tamang room at available ang display.",
+          helpAudioTitle: "Walang tunog sa display",
+          helpAudio:
+            "Suriin ang volume ng TV o device, browser audio, at mute at volume controls ng room sa Performer screen.",
+          backToTop: "Balik sa itaas",
+        },
+      };
+
+      const guideLanguageSelect = document.getElementById("guideLanguage");
+      const guideTabs = [...document.querySelectorAll("[data-guide-tab]")];
+      const guidePanels = [...document.querySelectorAll("[data-guide-panel]")];
+
+      function setGuideLanguage(language) {
+        const selectedLanguage = language === "tl" ? "tl" : "en";
+        const dictionary = guideTranslations[selectedLanguage];
+        document.documentElement.lang =
+          selectedLanguage === "tl" ? "fil" : "en";
+        guideLanguageSelect.value = selectedLanguage;
+        document.title = `${dictionary.title} | SD Karaoke`;
+        document.querySelectorAll("[data-i18n]").forEach((element) => {
+          element.innerHTML = dictionary[element.dataset.i18n];
+        });
+        document.querySelectorAll("[data-i18n-aria]").forEach((element) => {
+          element.setAttribute(
+            "aria-label",
+            dictionary[element.dataset.i18nAria],
+          );
+        });
+        try {
+          localStorage.setItem("sd-karaoke-guide-language", selectedLanguage);
+        } catch (error) {
+          console.warn("Could not save guide language preference.", error);
+        }
+      }
+
+      function selectGuideTab(selectedTab, shouldFocus = false) {
+        guideTabs.forEach((tab) => {
+          const isSelected = tab === selectedTab;
+          tab.classList.toggle("is-active", isSelected);
+          tab.setAttribute("aria-selected", String(isSelected));
+          tab.tabIndex = isSelected ? 0 : -1;
+        });
+        guidePanels.forEach((panel) => {
+          panel.hidden =
+            panel.dataset.guidePanel !== selectedTab.dataset.guideTab;
+        });
+        if (shouldFocus) selectedTab.focus();
+      }
+
+      guideLanguageSelect.addEventListener("change", (event) => {
+        setGuideLanguage(event.target.value);
+      });
+
+      guideTabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => selectGuideTab(tab));
+        tab.addEventListener("keydown", (event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+            return;
+          event.preventDefault();
+          const nextIndex =
+            event.key === "Home"
+              ? 0
+              : event.key === "End"
+                ? guideTabs.length - 1
+                : (index +
+                    (event.key === "ArrowRight" ? 1 : guideTabs.length - 1)) %
+                  guideTabs.length;
+          selectGuideTab(guideTabs[nextIndex], true);
+        });
+      });
+
+      selectGuideTab(guideTabs[0]);
+      let savedLanguage = "en";
+      try {
+        savedLanguage =
+          localStorage.getItem("sd-karaoke-guide-language") || "en";
+      } catch (error) {
+        console.warn("Could not read guide language preference.", error);
+      }
+      setGuideLanguage(savedLanguage);
+    </script>
   </body>
 </html>
