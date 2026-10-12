@@ -2021,7 +2021,7 @@ function onPlayerStateChange(e) {
 }
 
 // Show score/results when video ends
-function showScore() {
+async function showScore() {
   const score =
     micScoringEnabled && micObservedPlayingMs > 0
       ? Math.min(
@@ -2038,10 +2038,46 @@ function showScore() {
   });
   displayScoreModal(score);
 
-  // Wait for score display before playing next song
-  setTimeout(() => {
-    playNextSong();
-  }, 3000);
+  const soundPlayed = await playScoreSound();
+  if (!soundPlayed) {
+    await new Promise((resolve) => setTimeout(resolve, 2600));
+  }
+  document.getElementById("scoreModal")?.remove();
+  playNextSong();
+}
+
+function playScoreSound() {
+  return new Promise((resolve) => {
+    const sound = new Audio("assets/score.mp3");
+    sound.preload = "auto";
+    sound.volume = 0.8;
+
+    let settled = false;
+    let timeoutId;
+    const finish = (played) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      if (!played) sound.pause();
+      resolve(played);
+    };
+
+    timeoutId = window.setTimeout(() => finish(false), 15000);
+    sound.addEventListener("ended", () => finish(true), { once: true });
+    sound.addEventListener(
+      "error",
+      () => {
+        console.warn("Could not load the score sound:", sound.error);
+        finish(false);
+      },
+      { once: true },
+    );
+
+    sound.play().catch((error) => {
+      console.warn("Could not play the score sound:", error.message);
+      finish(false);
+    });
+  });
 }
 
 // Display score modal
@@ -2154,10 +2190,6 @@ function displayScoreModal(score) {
         }
     `;
   document.head.appendChild(style);
-
-  setTimeout(() => {
-    modal.remove();
-  }, 2600);
 }
 
 // Show video unavailable message
