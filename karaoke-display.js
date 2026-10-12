@@ -75,6 +75,9 @@ let microphoneStream = null;
 let microphoneAudioContext = null;
 let microphoneAnalyser = null;
 let microphoneSamples = null;
+let scoreAudioContext = null;
+let scoreAudioBuffer = null;
+let scoreAudioLoadPromise = null;
 let micScoringEnabled = false;
 let micActivityMs = 0;
 let micObservedPlayingMs = 0;
@@ -84,7 +87,52 @@ let micSamplingTimer = null;
 const MIC_MIN_ACTIVITY_RMS = 0.02;
 
 function showMicConsentDialog() {
-  document.getElementById("micConsentDialog")?.showModal();
+  const dialog = document.getElementById("micConsentDialog");
+  if (!dialog) return;
+  dialog.addEventListener("cancel", unlockScoreAudio, { once: true });
+  dialog.showModal();
+}
+
+function unlockScoreAudio() {
+  const AudioContextConstructor =
+    window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) {
+    return Promise.reject(new Error("Web Audio is not supported."));
+  }
+
+  if (!scoreAudioContext || scoreAudioContext.state === "closed") {
+    scoreAudioContext = new AudioContextConstructor();
+  }
+
+  const resumePromise =
+    scoreAudioContext.state === "suspended"
+      ? scoreAudioContext.resume()
+      : Promise.resolve();
+
+  if (!scoreAudioLoadPromise) {
+    scoreAudioLoadPromise = fetch("assets/score.mp3")
+      .then((response) => {
+        if (!response.ok) throw new Error("Score sound could not be loaded.");
+        return response.arrayBuffer();
+      })
+      .then((audioData) => scoreAudioContext.decodeAudioData(audioData))
+      .then((audioBuffer) => {
+        scoreAudioBuffer = audioBuffer;
+      })
+      .catch((error) => {
+        scoreAudioLoadPromise = null;
+        throw error;
+      });
+  }
+
+  return Promise.all([resumePromise, scoreAudioLoadPromise]);
+}
+
+function declineMicScoring() {
+  unlockScoreAudio().catch((error) =>
+    console.warn("Could not prepare score sound:", error.message),
+  );
+  document.getElementById("micConsentDialog")?.close("declined");
 }
 
 async function enableMicScoring() {
@@ -93,6 +141,9 @@ async function enableMicScoring() {
   const status = document.getElementById("micConsentStatus");
   if (allowButton) allowButton.disabled = true;
   if (status) status.textContent = "Waiting for microphone permission...";
+  unlockScoreAudio().catch((error) =>
+    console.warn("Could not prepare score sound:", error.message),
+  );
 
   try {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -2047,37 +2098,26 @@ async function showScore() {
 }
 
 function playScoreSound() {
-  return new Promise((resolve) => {
-    const sound = new Audio("assets/score.mp3");
-    sound.preload = "auto";
-    sound.volume = 0.8;
-
-    let settled = false;
-    let timeoutId;
-    const finish = (played) => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeoutId);
-      if (!played) sound.pause();
-      resolve(played);
-    };
-
-    timeoutId = window.setTimeout(() => finish(false), 15000);
-    sound.addEventListener("ended", () => finish(true), { once: true });
-    sound.addEventListener(
-      "error",
-      () => {
-        console.warn("Could not load the score sound:", sound.error);
-        finish(false);
-      },
-      { once: true },
-    );
-
-    sound.play().catch((error) => {
+  return unlockScoreAudio()
+    .then(
+      () =>
+        new Promise((resolve) => {
+          const source = scoreAudioContext.createBufferSource();
+          const gain = scoreAudioContext.createGain();
+          source.buffer = scoreAudioBuffer;
+          gain.gain.value = 0.8;
+          source.connect(gain);
+          gain.connect(scoreAudioContext.destination);
+          source.addEventListener("ended", () => resolve(true), {
+            once: true,
+          });
+          source.start();
+        }),
+    )
+    .catch((error) => {
       console.warn("Could not play the score sound:", error.message);
-      finish(false);
+      return false;
     });
-  });
 }
 
 // Display score modal
