@@ -28,6 +28,7 @@ let loggedInUser = null;
 let currentFilter = null;
 let currentUserPage = 1;
 let currentRoomRequestView = "pending";
+let currentRoomRequestType = "room";
 let currentKaraokeRoomPage = 1;
 let currentRoomRequestPage = 1;
 let currentAccountRequestView = "pending";
@@ -214,6 +215,11 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll("[data-room-request-filter]").forEach((button) => {
     button.addEventListener("click", () =>
       selectRoomRequestView(button.dataset.roomRequestFilter),
+    );
+  });
+  document.querySelectorAll("[data-room-request-type]").forEach((button) => {
+    button.addEventListener("click", () =>
+      selectRoomRequestType(button.dataset.roomRequestType),
     );
   });
   document
@@ -776,8 +782,12 @@ function updateAdminRequestNotifications() {
     ...roomRequests
       .filter((request) => request.status === "pending")
       .map((request) => ({
-        label: `Room request from ${request.username || "singer"} (${request.roomId || "unknown room"})`,
+        label:
+          request.type === "extension"
+            ? `Time extension from ${request.username || "performer"} (${request.roomId || "unknown room"})`
+            : `Room request from ${request.username || "singer"} (${request.roomId || "unknown room"})`,
         view: "requests",
+        requestType: request.type === "extension" ? "extension" : "room",
         createdAt: request.createdAt || 0,
       })),
   ].sort((first, second) => second.createdAt - first.createdAt);
@@ -798,7 +808,10 @@ function updateAdminRequestNotifications() {
       button.textContent = request.label;
       button.addEventListener("click", () => {
         if (request.view === "users") selectAccountRequestView("pending");
-        if (request.view === "requests") selectRoomRequestView("pending");
+        if (request.view === "requests") {
+          selectRoomRequestType(request.requestType);
+          selectRoomRequestView("pending");
+        }
         setAdminView(request.view);
         document.getElementById("adminRequestNotificationsPanel").hidden = true;
         toggle.setAttribute("aria-expanded", "false");
@@ -853,16 +866,21 @@ function renderRoomRequests(requests) {
   const pagination = document.getElementById("roomRequestsPagination");
   const previousButton = document.getElementById("previousRoomRequestsPage");
   const nextButton = document.getElementById("nextRoomRequestsPage");
-  const pendingCount = requests.filter((request) =>
+  const selectedRequests = requests.filter((request) =>
+    currentRoomRequestType === "extension"
+      ? request.type === "extension"
+      : request.type !== "extension",
+  );
+  const pendingCount = selectedRequests.filter((request) =>
     ["pending", "approving"].includes(request.status),
   ).length;
-  const historyCount = requests.filter((request) =>
+  const historyCount = selectedRequests.filter((request) =>
     ["approved", "rejected"].includes(request.status),
   ).length;
   document.getElementById("pendingRoomRequestCount").textContent =
     `${pendingCount} pending · ${historyCount} history`;
 
-  const visibleRequests = requests.filter((request) =>
+  const visibleRequests = selectedRequests.filter((request) =>
     currentRoomRequestView === "history"
       ? ["approved", "rejected"].includes(request.status)
       : ["pending", "approving"].includes(request.status),
@@ -870,7 +888,15 @@ function renderRoomRequests(requests) {
   if (visibleRequests.length === 0) {
     currentRoomRequestPage = 1;
     pagination.hidden = true;
-    tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-white-50">No ${currentRoomRequestView === "history" ? "room request history" : "pending room requests"}.</td></tr>`;
+    const emptyMessage =
+      currentRoomRequestType === "extension"
+        ? currentRoomRequestView === "history"
+          ? "No time extension history."
+          : "No pending time extension requests."
+        : currentRoomRequestView === "history"
+          ? "No room request history."
+          : "No pending room requests.";
+    tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-white-50">${emptyMessage}</td></tr>`;
     return;
   }
 
@@ -1004,6 +1030,22 @@ function selectRoomRequestView(view) {
       String(button.dataset.roomRequestFilter === currentRoomRequestView),
     );
   });
+  renderCurrentRoomRequests();
+}
+
+function selectRoomRequestType(type) {
+  currentRoomRequestType = type === "extension" ? "extension" : "room";
+  currentRoomRequestPage = 1;
+  document.querySelectorAll("[data-room-request-type]").forEach((button) => {
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.roomRequestType === currentRoomRequestType),
+    );
+  });
+  document.getElementById("roomRequestsHeading").textContent =
+    currentRoomRequestType === "extension"
+      ? "TIME EXTENSIONS"
+      : "ROOM REQUESTS";
   renderCurrentRoomRequests();
 }
 

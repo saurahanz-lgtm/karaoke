@@ -860,7 +860,7 @@
                 id="roomRequestsHeading"
                 style="color: #f0ad4e; font-weight: 700"
               >
-                📨 ROOM REQUESTS
+                📨 REQUESTS
               </h2>
               <div class="d-flex flex-wrap align-items-center gap-3">
                 <span class="text-white-50" id="pendingRoomRequestCount"
@@ -869,7 +869,29 @@
                 <div
                   class="account-request-filters"
                   role="group"
-                  aria-label="Room request status"
+                  aria-label="Request type"
+                >
+                  <button
+                    class="account-request-filter"
+                    type="button"
+                    data-room-request-type="room"
+                    aria-pressed="true"
+                  >
+                    Room Requests
+                  </button>
+                  <button
+                    class="account-request-filter"
+                    type="button"
+                    data-room-request-type="extension"
+                    aria-pressed="false"
+                  >
+                    Time Extensions
+                  </button>
+                </div>
+                <div
+                  class="account-request-filters"
+                  role="group"
+                  aria-label="Selected request status"
                 >
                   <button
                     class="account-request-filter"
