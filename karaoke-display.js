@@ -2124,15 +2124,13 @@ function onPlayerStateChange(e) {
 
 // Show score/results when video ends
 async function showScore() {
-  const score =
-    micScoringEnabled && pitchDetectedMs > 0
-      ? Math.min(
-          100,
-          Math.max(0, Math.round((pitchStableMs / pitchDetectedMs) * 100)),
-        )
-      : micScoringEnabled
-        ? 0
-        : null;
+  const pitchSteadiness =
+    pitchDetectedMs > 0
+      ? Math.min(1, Math.max(0, pitchStableMs / pitchDetectedMs))
+      : 0;
+  const score = micScoringEnabled
+    ? 75 + Math.round(pitchSteadiness * 25)
+    : null;
   const pitchSeconds = (pitchDetectedMs / 1000).toFixed(1);
   const stableSeconds = (pitchStableMs / 1000).toFixed(1);
 
