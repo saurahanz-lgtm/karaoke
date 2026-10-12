@@ -57,6 +57,9 @@ let roomTimeExpired = false;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
 let activeRoomDeviceCount = 0;
+const roomSongCleanupTimers = new Map();
+const roomSongCleanupListeners = new Map();
+const roomSongCleanupRequests = new Set();
 let karaokeDisplayEnabled = true;
 let tvDisabledAnnouncement = "";
 let tvAvailabilityListenerAttached = false;
@@ -65,8 +68,6 @@ const EMPTY_ROOM_SONG_CLEANUP_DELAY_MS = 10 * 60 * 1000;
 let stopListeningToKaraokeDisplayRoomRequest = null;
 let activeKaraokeDisplayRoomRequestKey = null;
 let tvRoomRequestPollTimer = null;
-let emptyRoomSongCleanupTimer = null;
-let emptyRoomSongCleanupRoomId = null;
 
 // SCORING SYSTEM
 let currentPerformerName = "";
@@ -375,7 +376,6 @@ function activateKaraokeRoom(roomId) {
   if (!roomId || (roomId === activeKaraokeRoomId && stopListeningToRoom))
     return;
 
-  clearEmptyRoomSongCleanupTimer();
   stopListeningToRoom?.();
   stopListeningToMembers?.();
   stopListeningToRoomVolume?.();
@@ -463,7 +463,6 @@ function activateKaraokeRoom(roomId) {
   stopListeningToMembers = KaraokeSessions.listenMembers(roomId, (count) => {
     activeRoomDeviceCount = count;
     renderKaraokeRoomDeviceCount(roomId);
-    scheduleEmptyRoomSongCleanup(roomId, count);
   });
 
   stopListeningToRoomDisplayStatus = KaraokeSessions.listenRoomDisplayStatus(
@@ -567,75 +566,61 @@ function renderKaraokeDisplayRoomTime() {
   }
 }
 
-function clearEmptyRoomSongCleanupTimer() {
-  if (emptyRoomSongCleanupTimer !== null) {
-    clearTimeout(emptyRoomSongCleanupTimer);
-    emptyRoomSongCleanupTimer = null;
-  }
-  emptyRoomSongCleanupRoomId = null;
+function clearEmptyRoomSongCleanupTimer(roomId) {
+  const timer = roomSongCleanupTimers.get(roomId);
+  if (timer !== undefined) clearTimeout(timer);
+  roomSongCleanupTimers.delete(roomId);
 }
 
-function scheduleEmptyRoomSongCleanup(roomId, memberCount) {
-  if (activeKaraokeRoomId !== roomId) return;
-
+async function scheduleEmptyRoomSongCleanup(roomId, memberCount) {
   if (memberCount > 0) {
-    clearEmptyRoomSongCleanupTimer();
+    clearEmptyRoomSongCleanupTimer(roomId);
     KaraokeSessions.clearRoomEmptySince(roomId).catch((error) => {
       console.warn("Could not reset empty-room timer:", error.message);
     });
     return;
   }
-  if (emptyRoomSongCleanupRoomId === roomId) return;
+  if (
+    roomSongCleanupTimers.has(roomId) ||
+    roomSongCleanupRequests.has(roomId)
+  ) {
+    return;
+  }
 
-  clearEmptyRoomSongCleanupTimer();
-  emptyRoomSongCleanupRoomId = roomId;
+  roomSongCleanupRequests.add(roomId);
+  try {
+    const emptySince = await KaraokeSessions.markRoomEmptySince(roomId);
+    if (!emptySince) return;
 
-  KaraokeSessions.markRoomEmptySince(roomId)
-    .then((emptySince) => {
-      if (
-        !emptySince ||
-        activeKaraokeRoomId !== roomId ||
-        emptyRoomSongCleanupRoomId !== roomId
-      ) {
-        if (emptyRoomSongCleanupRoomId === roomId) {
-          emptyRoomSongCleanupRoomId = null;
+    const remainingMs = Math.max(
+      0,
+      EMPTY_ROOM_SONG_CLEANUP_DELAY_MS - (Date.now() - emptySince),
+    );
+    const timer = setTimeout(async () => {
+      roomSongCleanupTimers.delete(roomId);
+      try {
+        const cleared =
+          await KaraokeSessions.clearRoomSongsIfUnoccupied(roomId);
+        if (cleared) {
+          console.log(`Cleared reserved songs from empty room ${roomId}`);
+        } else {
+          await scheduleEmptyRoomSongCleanup(roomId, 0);
         }
-        return;
+      } catch (error) {
+        console.warn(
+          `Could not clear songs from empty room ${roomId}:`,
+          error.message,
+        );
+        setTimeout(() => scheduleEmptyRoomSongCleanup(roomId, 0), 60000);
       }
-
-      const remainingMs = Math.max(
-        0,
-        EMPTY_ROOM_SONG_CLEANUP_DELAY_MS - (Date.now() - emptySince),
-      );
-      emptyRoomSongCleanupTimer = setTimeout(async () => {
-        emptyRoomSongCleanupTimer = null;
-        if (activeKaraokeRoomId !== roomId) {
-          emptyRoomSongCleanupRoomId = null;
-          return;
-        }
-
-        try {
-          const cleared =
-            await KaraokeSessions.clearRoomSongsIfUnoccupied(roomId);
-          if (cleared) {
-            console.log(`Cleared reserved songs from empty room ${roomId}`);
-          }
-          emptyRoomSongCleanupRoomId = null;
-        } catch (error) {
-          console.warn(
-            `Could not clear songs from empty room ${roomId}:`,
-            error.message,
-          );
-          emptyRoomSongCleanupRoomId = null;
-          setTimeout(() => scheduleEmptyRoomSongCleanup(roomId, 0), 60000);
-        }
-      }, remainingMs);
-    })
-    .catch((error) => {
-      console.warn("Could not persist empty-room timer:", error.message);
-      emptyRoomSongCleanupRoomId = null;
-      setTimeout(() => scheduleEmptyRoomSongCleanup(roomId, 0), 60000);
-    });
+    }, remainingMs);
+    roomSongCleanupTimers.set(roomId, timer);
+  } catch (error) {
+    console.warn("Could not persist empty-room timer:", error.message);
+    setTimeout(() => scheduleEmptyRoomSongCleanup(roomId, 0), 60000);
+  } finally {
+    roomSongCleanupRequests.delete(roomId);
+  }
 }
 
 async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
@@ -922,6 +907,24 @@ function initializeKaraokeRooms() {
       stopListeningToRooms = KaraokeSessions.listenRooms((rooms) => {
         karaokeRooms = rooms;
         renderKaraokeRooms();
+
+        const roomIds = new Set(rooms.map((room) => room.id));
+        roomSongCleanupListeners.forEach((stopListening, roomId) => {
+          if (!roomIds.has(roomId)) {
+            stopListening();
+            roomSongCleanupListeners.delete(roomId);
+            clearEmptyRoomSongCleanupTimer(roomId);
+          }
+        });
+        rooms.forEach((room) => {
+          if (!roomSongCleanupListeners.has(room.id)) {
+            const stopListening = KaraokeSessions.listenMembers(
+              room.id,
+              (count) => scheduleEmptyRoomSongCleanup(room.id, count),
+            );
+            roomSongCleanupListeners.set(room.id, stopListening);
+          }
+        });
 
         if (!rooms.some((room) => room.id === activeKaraokeRoomId)) {
           if (!initialRoomSelectionInProgress) {

@@ -876,6 +876,11 @@
           ? { ...room, emptySince: null }
           : undefined;
       }
+      if (!room.queue && !room.currentSong) {
+        return Number(room.emptySince) > 0
+          ? { ...room, emptySince: null }
+          : undefined;
+      }
       if (Number(room.emptySince) > 0) return undefined;
       const lastActivityAt = Math.max(
         0,
