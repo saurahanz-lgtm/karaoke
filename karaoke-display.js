@@ -48,6 +48,8 @@ let stopListeningToMembers = null;
 let stopListeningToRooms = null;
 let stopListeningToRoomVolume = null;
 let stopListeningToRoomMuted = null;
+let stopListeningToRoomDisplayStatus = null;
+let roomDisplayEnabled = true;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
 let karaokeDisplayEnabled = true;
@@ -141,7 +143,10 @@ function activateKaraokeRoom(roomId) {
   stopListeningToMembers?.();
   stopListeningToRoomVolume?.();
   stopListeningToRoomMuted?.();
+  stopListeningToRoomDisplayStatus?.();
+  stopListeningToRoomDisplayStatus = null;
   activeKaraokeRoomId = roomId;
+  roomDisplayEnabled = true;
   activeRoomVolume = KaraokeSessions.DEFAULT_ROOM_VOLUME;
   activeRoomMuted = false;
   sessionStorage.setItem("karaokeTvRoomId", roomId);
@@ -220,6 +225,32 @@ function activateKaraokeRoom(roomId) {
     }
     scheduleEmptyRoomSongCleanup(roomId, count);
   });
+
+  stopListeningToRoomDisplayStatus = KaraokeSessions.listenRoomDisplayStatus(
+    roomId,
+    (settings) => {
+      const wasRoomDisabled = !roomDisplayEnabled;
+      roomDisplayEnabled = settings.enabled !== false;
+      if (!roomDisplayEnabled) {
+        karaokeDisplayEnabled = false;
+        tvDisabledAnnouncement =
+          settings.announcement ||
+          "The karaoke display in this room is temporarily unavailable.";
+        stopListeningToRoom?.();
+        stopListeningToRoom = null;
+        stopListeningToRoomVolume?.();
+        stopListeningToRoomVolume = null;
+        stopListeningToRoomMuted?.();
+        stopListeningToRoomMuted = null;
+        clearCurrentSongPlayback();
+        showRoomDisplayUnavailableMessage(tvDisabledAnnouncement);
+      } else if (wasRoomDisabled) {
+        window.location.reload();
+      }
+    },
+    (error) =>
+      console.warn("Could not load room display status:", error.message),
+  );
 }
 
 function clearEmptyRoomSongCleanupTimer() {
@@ -2256,4 +2287,18 @@ function showKaraokeDisplayUnavailableMessage(
       console.warn("Error setting up listener:", e.message);
     }
   }
+}
+
+function showRoomDisplayUnavailableMessage(announcement) {
+  const splashScreen = document.getElementById("splashScreen");
+  if (!splashScreen) return;
+  splashScreen.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;padding:24px;box-sizing:border-box;background:linear-gradient(135deg,#1a0a2e,#0f0f1e);color:#fff;text-align:center;font-family:'DM Sans',sans-serif">
+      <div style="font-size:clamp(40px,12vw,100px);margin-bottom:24px">&#128308;</div>
+      <h1 style="margin:0 0 16px;font-size:clamp(1.5rem,8vw,3.5rem)">ROOM DISPLAY DISABLED</h1>
+      <p id="roomDisabledAnnouncement" style="max-width:90%;color:#d5d9e3;font-size:clamp(1rem,3.5vw,1.3rem);line-height:1.6"></p>
+    </div>`;
+  document.getElementById("roomDisabledAnnouncement").textContent =
+    announcement;
+  splashScreen.style.display = "flex";
 }

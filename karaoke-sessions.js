@@ -18,7 +18,7 @@
     return firebase.database();
   }
 
-  async function assertKaraokeDisplayEnabled() {
+  async function assertKaraokeDisplayEnabled(roomId) {
     const snapshot = await database().ref("tvControl").once("value");
     const settings = snapshot.val() || {};
     if (settings.enabled === false) {
@@ -27,6 +27,19 @@
         settings.announcement ||
         "The karaoke display is temporarily unavailable. Please check back soon.";
       throw error;
+    }
+    if (roomId) {
+      const roomSettingsSnapshot = await roomRef(roomId, "displayControl").once(
+        "value",
+      );
+      const roomSettings = roomSettingsSnapshot.val() || {};
+      if (roomSettings.enabled === false) {
+        const error = new Error("KARAOKE_DISPLAY_DISABLED");
+        error.announcement =
+          roomSettings.announcement ||
+          "The karaoke display in this room is temporarily unavailable.";
+        throw error;
+      }
     }
   }
 
@@ -346,6 +359,21 @@
     const handler = (snapshot) => callback(snapshot.val());
     ref.on("value", handler, onError);
     return () => ref.off("value", handler);
+  }
+
+  function listenRoomDisplayStatus(roomId, callback, onError) {
+    const ref = roomRef(roomId, "displayControl");
+    const handler = (snapshot) => callback(snapshot.val() || {});
+    ref.on("value", handler, onError);
+    return () => ref.off("value", handler);
+  }
+
+  function setRoomDisplayAvailability(roomId, enabled, announcement) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    return roomRef(roomId, "displayControl").update({
+      enabled: Boolean(enabled),
+      announcement: enabled ? null : announcement || null,
+    });
   }
 
   async function approveRoomRequest(roomId, requestId, roomName) {
@@ -725,7 +753,7 @@
   }
 
   async function addSong(roomId, song) {
-    await assertKaraokeDisplayEnabled();
+    await assertKaraokeDisplayEnabled(roomId);
     const result = await roomRef(roomId).transaction((current) => {
       const room = current || {};
       const queue = normalizeQueue(room.queue);
@@ -747,7 +775,7 @@
   }
 
   async function claimNextSong(roomId) {
-    await assertKaraokeDisplayEnabled();
+    await assertKaraokeDisplayEnabled(roomId);
     return roomRef(roomId).transaction((current) => {
       const room = current || {};
       if (room.currentSong?.videoId) return undefined;
@@ -763,7 +791,7 @@
   }
 
   async function advanceToNextSong(roomId) {
-    await assertKaraokeDisplayEnabled();
+    await assertKaraokeDisplayEnabled(roomId);
     return roomRef(roomId).transaction((current) => {
       const room = current || {};
       const queue = normalizeQueue(room.queue);
@@ -780,7 +808,7 @@
   }
 
   async function sendControl(roomId, command, payload = {}) {
-    await assertKaraokeDisplayEnabled();
+    await assertKaraokeDisplayEnabled(roomId);
     return roomRef(roomId, "control").update({
       ...payload,
       command,
@@ -826,6 +854,7 @@
     listenRoomRequest,
     listenRooms,
     listenRoomRequests,
+    listenRoomDisplayStatus,
     listenVolume,
     roomRef,
     renameRoom,
@@ -833,6 +862,7 @@
     rejectRoomRequest,
     setRoomVolume,
     setRoomMuted,
+    setRoomDisplayAvailability,
     setPlaybackState,
     sendControl,
   };

@@ -47,6 +47,8 @@ const roomDeviceIds = new Map();
 const roomMemberListeners = new Map();
 const roomRequestListeners = new Map();
 const roomRequestsByRoom = new Map();
+let stopListeningToSelectedRoomDisplay = null;
+let selectedRoomDisplayId = null;
 let knownPendingGlobalRoomRequestIds = new Set();
 let allRoomRequests = [];
 let stopListeningToAllRoomRequests = null;
@@ -181,6 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {
   initializePresenceListener();
   initializeAccountRequestListener();
   initializeRoomManagement();
+  initializeRoomSpecificDisplayControls();
 
   // Add event listeners
   document
@@ -350,6 +353,7 @@ function initializeRoomManagement() {
     .then(() => {
       KaraokeSessions.listenRooms((rooms) => {
         karaokeRooms = rooms;
+        updateRoomDisplayControlOptions(rooms);
         const roomIds = new Set(rooms.map((room) => room.id));
 
         roomMemberListeners.forEach((stopListening, roomId) => {
@@ -3062,4 +3066,103 @@ function disableKaraokeDisplay() {
     console.error("Firebase exception:", e.message);
     showNotification("❌ Error: " + e.message, "danger");
   }
+}
+
+function initializeRoomSpecificDisplayControls() {
+  document
+    .getElementById("roomDisplayControlSelect")
+    .addEventListener("change", listenToSelectedRoomDisplayStatus);
+}
+
+function updateRoomDisplayControlOptions(rooms) {
+  const select = document.getElementById("roomDisplayControlSelect");
+  if (!select) return;
+  const selectedRoomId = select.value;
+  select.replaceChildren(
+    new Option(rooms.length ? "Select a room..." : "No rooms available", ""),
+    ...rooms.map((room) => new Option(`${room.name} (${room.id})`, room.id)),
+  );
+  select.value = rooms.some((room) => room.id === selectedRoomId)
+    ? selectedRoomId
+    : "";
+  listenToSelectedRoomDisplayStatus();
+}
+
+function listenToSelectedRoomDisplayStatus() {
+  const roomId = document.getElementById("roomDisplayControlSelect").value;
+  if (roomId === selectedRoomDisplayId) return;
+  stopListeningToSelectedRoomDisplay?.();
+  stopListeningToSelectedRoomDisplay = null;
+  selectedRoomDisplayId = roomId || null;
+  if (!roomId) {
+    updateSelectedRoomDisplayStatus(true, false);
+    return;
+  }
+
+  stopListeningToSelectedRoomDisplay = KaraokeSessions.listenRoomDisplayStatus(
+    roomId,
+    (settings) =>
+      updateSelectedRoomDisplayStatus(settings.enabled !== false, true),
+    (error) =>
+      console.warn(
+        "Could not load selected room display status:",
+        error.message,
+      ),
+  );
+}
+
+function updateSelectedRoomDisplayStatus(isEnabled, hasRoom = true) {
+  const status = document.getElementById("roomDisplayStatus");
+  const enableButton = document.getElementById("enableRoomDisplayBtn");
+  const disableButton = document.getElementById("disableRoomDisplayBtn");
+  if (!status) return;
+  if (!hasRoom) {
+    status.textContent = "Select a room";
+    status.className = "display-status display-status-enabled";
+    if (enableButton) enableButton.disabled = true;
+    if (disableButton) disableButton.disabled = true;
+    return;
+  }
+  status.textContent = isEnabled
+    ? "Room Display Enabled"
+    : "Room Display Disabled";
+  status.className = `display-status display-status-${isEnabled ? "enabled" : "disabled"}`;
+  if (enableButton) enableButton.disabled = isEnabled;
+  if (disableButton) disableButton.disabled = !isEnabled;
+}
+
+function enableSelectedKaraokeRoomDisplay() {
+  updateSelectedKaraokeRoomDisplayAvailability(true);
+}
+
+function disableSelectedKaraokeRoomDisplay() {
+  updateSelectedKaraokeRoomDisplayAvailability(
+    false,
+    "The karaoke display in this room is temporarily unavailable.",
+  );
+}
+
+function updateSelectedKaraokeRoomDisplayAvailability(enabled, announcement) {
+  const roomId = document.getElementById("roomDisplayControlSelect").value;
+  if (!roomId) {
+    showNotification("Select a room first.", "warning");
+    return;
+  }
+  KaraokeSessions.setRoomDisplayAvailability(roomId, enabled, announcement)
+    .then(() =>
+      showNotification(
+        `Room display ${enabled ? "enabled" : "disabled"}.`,
+        enabled ? "success" : "warning",
+      ),
+    )
+    .catch((error) => {
+      console.error(
+        "Could not update room display availability:",
+        error.message,
+      );
+      showNotification(
+        "Could not update this room's display status.",
+        "danger",
+      );
+    });
 }
