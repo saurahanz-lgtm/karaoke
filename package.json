@@ -1,6 +1,6 @@
 {
   "name": "sdkaraoke",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "SDkaraoke - Interactive karaoke application",
   "main": "index.html",
   "scripts": {
