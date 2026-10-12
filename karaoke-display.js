@@ -54,9 +54,12 @@ let karaokeDisplayEnabled = true;
 let tvDisabledAnnouncement = "";
 let tvAvailabilityListenerAttached = false;
 const KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY = "karaoke_tv_room_request_v1";
+const EMPTY_ROOM_SONG_CLEANUP_DELAY_MS = 10 * 60 * 1000;
 let stopListeningToKaraokeDisplayRoomRequest = null;
 let activeKaraokeDisplayRoomRequestKey = null;
 let tvRoomRequestPollTimer = null;
+let emptyRoomSongCleanupTimer = null;
+let emptyRoomSongCleanupRoomId = null;
 
 // SCORING SYSTEM
 let songStartTime = null;
@@ -133,6 +136,7 @@ function activateKaraokeRoom(roomId) {
   if (!roomId || (roomId === activeKaraokeRoomId && stopListeningToRoom))
     return;
 
+  clearEmptyRoomSongCleanupTimer();
   stopListeningToRoom?.();
   stopListeningToMembers?.();
   stopListeningToRoomVolume?.();
@@ -214,7 +218,46 @@ function activateKaraokeRoom(roomId) {
     if (memberCount) {
       memberCount.textContent = `${count} / ${KaraokeSessions.MAX_DEVICES} phones`;
     }
+    scheduleEmptyRoomSongCleanup(roomId, count);
   });
+}
+
+function clearEmptyRoomSongCleanupTimer() {
+  if (emptyRoomSongCleanupTimer !== null) {
+    clearTimeout(emptyRoomSongCleanupTimer);
+    emptyRoomSongCleanupTimer = null;
+  }
+  emptyRoomSongCleanupRoomId = null;
+}
+
+function scheduleEmptyRoomSongCleanup(roomId, memberCount) {
+  if (memberCount > 0) {
+    clearEmptyRoomSongCleanupTimer();
+    return;
+  }
+  if (
+    emptyRoomSongCleanupRoomId === roomId &&
+    emptyRoomSongCleanupTimer !== null
+  )
+    return;
+
+  clearEmptyRoomSongCleanupTimer();
+  emptyRoomSongCleanupRoomId = roomId;
+  emptyRoomSongCleanupTimer = setTimeout(async () => {
+    emptyRoomSongCleanupTimer = null;
+    emptyRoomSongCleanupRoomId = null;
+    if (activeKaraokeRoomId !== roomId) return;
+    try {
+      const cleared = await KaraokeSessions.clearRoomSongsIfUnoccupied(roomId);
+      if (cleared)
+        console.log(`Cleared reserved songs from empty room ${roomId}`);
+    } catch (error) {
+      console.warn(
+        `Could not clear songs from empty room ${roomId}:`,
+        error.message,
+      );
+    }
+  }, EMPTY_ROOM_SONG_CLEANUP_DELAY_MS);
 }
 
 async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {

@@ -525,6 +525,21 @@
     ).length;
   }
 
+  async function clearRoomSongsIfUnoccupied(roomId) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
+    const result = await roomRef(roomId).transaction((room) => {
+      if (!room) return undefined;
+      const hasActiveMembers = Object.values(room.members || {}).some(
+        (member) => member && Number(member.lastSeen) >= cutoff,
+      );
+      if (hasActiveMembers) return undefined;
+      if (!room.queue && !room.currentSong) return undefined;
+      return { ...room, queue: null, currentSong: null };
+    });
+    return result.committed;
+  }
+
   function normalizeVolume(value) {
     const volume = Number(value);
     if (!Number.isFinite(volume)) return DEFAULT_ROOM_VOLUME;
@@ -792,6 +807,7 @@
     claimNextSong,
     createRoom,
     createRoomRequest,
+    clearRoomSongsIfUnoccupied,
     deleteRoomRequest,
     deleteRoom,
     ensureDefaultRoom,
