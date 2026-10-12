@@ -1095,10 +1095,6 @@
             return;
           }
           selectPerformerRoom(roomId);
-          if (localStorage.getItem("karaoke_logged_in_user")) {
-            window.location.href = `performer-portal.html?room=${encodeURIComponent(roomId)}`;
-            return;
-          }
           document.getElementById("singerUsername").focus();
         } catch (error) {
           console.warn("Could not check Room ID:", error.message);
