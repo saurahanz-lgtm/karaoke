@@ -333,6 +333,7 @@ function listenToKaraokeDisplayRoomRequest(state) {
           "Room request unavailable",
           "The request could not be found. Please contact the administrator.",
           true,
+          currentState.anchorRoomId,
         );
       } else if (request.status === "approved" && request.approvedRoomId) {
         currentState.status = "approved";
@@ -360,6 +361,7 @@ function listenToKaraokeDisplayRoomRequest(state) {
           "Room request rejected",
           "The administrator could not open another room. Please contact them for assistance.",
           true,
+          currentState.anchorRoomId,
         );
       } else if (request.status === "approving") {
         showKaraokeDisplayRoomRequestStatus(
