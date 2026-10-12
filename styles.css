@@ -1887,31 +1887,22 @@ body.admin-page {
   white-space: nowrap;
 }
 .karaoke-room-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0;
+  white-space: nowrap;
 }
 .karaoke-room-actions > button {
-  margin: 0 !important;
+  flex: 0 0 auto;
 }
-@media (max-width: 768px) and (orientation: portrait) {
-  .karaoke-room-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    min-width: 138px;
-    gap: 6px;
-  }
-  .karaoke-room-actions > button {
-    width: 100%;
-    min-height: 34px;
-    padding: 5px;
-    line-height: 1.2;
-    white-space: normal;
-  }
-  .karaoke-room-actions > span {
-    grid-column: 1 / -1;
-  }
+.karaoke-room-actions > span {
+  margin-left: 3px;
+  color: #a7b6d6;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.room-request-row-actions {
+  justify-content: flex-end;
 }
 .table-action {
   display: inline-grid;

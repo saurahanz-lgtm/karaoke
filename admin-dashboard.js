@@ -900,6 +900,11 @@ function renderRoomRequests(requests) {
         const dateCell = document.createElement("td");
         const statusCell = document.createElement("td");
         const actionCell = document.createElement("td");
+        const actionGroup = document.createElement("div");
+        const actionButtons = document.createElement("div");
+        actionGroup.className =
+          "account-request-row-actions room-request-row-actions";
+        actionButtons.className = "account-actions";
         singerCell.textContent = request.username || "Performer";
         if (request.type === "extension") {
           const requestedTime = document.createElement("small");
@@ -921,11 +926,23 @@ function renderRoomRequests(requests) {
           const approveButton = document.createElement("button");
           const rejectButton = document.createElement("button");
           approveButton.type = "button";
-          approveButton.className = "btn btn-sm btn-success me-2";
-          approveButton.textContent = "Approve";
+          approveButton.className = "table-action";
+          approveButton.title = "Approve request";
+          approveButton.setAttribute(
+            "aria-label",
+            `Approve room request from ${request.username || "performer"}`,
+          );
+          approveButton.innerHTML =
+            '<i class="bi bi-check2-circle" aria-hidden="true"></i>';
           rejectButton.type = "button";
-          rejectButton.className = "btn btn-sm btn-outline-danger";
-          rejectButton.textContent = "Reject";
+          rejectButton.className = "table-action table-action-danger";
+          rejectButton.title = "Reject request";
+          rejectButton.setAttribute(
+            "aria-label",
+            `Reject room request from ${request.username || "performer"}`,
+          );
+          rejectButton.innerHTML =
+            '<i class="bi bi-x-circle" aria-hidden="true"></i>';
           approveButton.addEventListener("click", () =>
             handleRoomRequestDecision(request, "approve", [
               approveButton,
@@ -938,24 +955,40 @@ function renderRoomRequests(requests) {
               rejectButton,
             ]),
           );
-          actionCell.append(approveButton, rejectButton);
+          actionButtons.append(approveButton, rejectButton);
         } else if (
           currentRoomRequestView === "history" &&
           ["approved", "rejected"].includes(request.status)
         ) {
           const deleteButton = document.createElement("button");
           deleteButton.type = "button";
-          deleteButton.className = "btn btn-sm btn-outline-danger";
-          deleteButton.textContent = "Delete";
+          deleteButton.className = "table-action table-action-danger";
+          deleteButton.title = "Delete request";
+          deleteButton.setAttribute(
+            "aria-label",
+            `Delete room request from ${request.username || "performer"}`,
+          );
+          deleteButton.innerHTML =
+            '<i class="bi bi-trash3" aria-hidden="true"></i>';
           deleteButton.addEventListener("click", () =>
             handleDeleteRoomRequest(request, deleteButton),
           );
-          actionCell.appendChild(deleteButton);
+          actionButtons.appendChild(deleteButton);
         } else {
-          actionCell.textContent = request.approvedRoomId
-            ? `Room ${request.approvedRoomId}`
-            : "-";
+          const resolution = document.createElement("span");
+          resolution.className = "account-request-resolution";
+          resolution.textContent =
+            request.status === "approving"
+              ? "Approval in progress"
+              : request.approvedRoomId
+                ? `Room ${request.approvedRoomId}`
+                : "-";
+          actionGroup.appendChild(resolution);
         }
+        if (actionButtons.childElementCount > 0) {
+          actionGroup.appendChild(actionButtons);
+        }
+        actionCell.appendChild(actionGroup);
         row.append(singerCell, roomCell, dateCell, statusCell, actionCell);
         return row;
       }),
@@ -1100,7 +1133,7 @@ function renderKaraokeRooms() {
         const statusCell = document.createElement("td");
         const actionCell = document.createElement("td");
         const roomActions = document.createElement("div");
-        roomActions.className = "karaoke-room-actions";
+        roomActions.className = "account-actions karaoke-room-actions";
         nameCell.textContent = room.name;
         codeCell.textContent = room.id;
         const deviceCount = roomDeviceCounts.get(room.id) || 0;
@@ -1128,16 +1161,24 @@ function renderKaraokeRooms() {
         }
         const renameButton = document.createElement("button");
         renameButton.type = "button";
-        renameButton.className = "btn btn-sm btn-outline-light me-2";
-        renameButton.textContent = "Rename";
+        renameButton.className = "table-action";
+        renameButton.title = "Rename room";
+        renameButton.setAttribute("aria-label", `Rename ${room.name}`);
+        renameButton.innerHTML =
+          '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
         renameButton.addEventListener("click", () =>
           handleRenameRoom(room, renameButton),
         );
         roomActions.appendChild(renameButton);
         const timeLimitButton = document.createElement("button");
         timeLimitButton.type = "button";
-        timeLimitButton.className = "btn btn-sm btn-outline-info";
-        timeLimitButton.textContent = "Set Time Limit";
+        timeLimitButton.className = "table-action";
+        timeLimitButton.setAttribute(
+          "aria-label",
+          `Set time limit for ${room.name}`,
+        );
+        timeLimitButton.innerHTML =
+          '<i class="bi bi-clock-history" aria-hidden="true"></i>';
         timeLimitButton.title = "Set room duration in hours and minutes";
         timeLimitButton.addEventListener("click", () =>
           handleSetRoomTimeLimit(room, timeLimitButton),
@@ -1150,8 +1191,11 @@ function renderKaraokeRooms() {
         } else {
           const deleteButton = document.createElement("button");
           deleteButton.type = "button";
-          deleteButton.className = "btn btn-sm btn-outline-danger";
-          deleteButton.textContent = "Delete";
+          deleteButton.className = "table-action table-action-danger";
+          deleteButton.title = `Delete ${room.name}`;
+          deleteButton.setAttribute("aria-label", `Delete ${room.name}`);
+          deleteButton.innerHTML =
+            '<i class="bi bi-trash3" aria-hidden="true"></i>';
           deleteButton.disabled = deviceCount > 0;
           deleteButton.title =
             deviceCount > 0
