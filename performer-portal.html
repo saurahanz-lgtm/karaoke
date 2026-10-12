@@ -482,6 +482,113 @@
         margin-top: 1rem;
       }
 
+      .reserved-songs-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .reserved-songs-heading h3 {
+        margin: 0;
+      }
+
+      .reserved-song-count {
+        display: inline-grid;
+        flex: 0 0 28px;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid rgba(32, 212, 176, 0.42);
+        border-radius: 50%;
+        color: #a7f3e3;
+        background: rgba(8, 66, 68, 0.48);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      #reservedSongs {
+        display: grid;
+        gap: 6px;
+        max-height: min(40vh, 360px);
+        max-height: min(40dvh, 360px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 2px 5px 2px 1px;
+        overscroll-behavior: contain;
+        scrollbar-color: rgba(130, 152, 255, 0.48) transparent;
+        scrollbar-width: thin;
+      }
+
+      .reserved-song-row {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 9px;
+        min-height: 52px;
+        padding: 7px 9px;
+        border: 1px solid rgba(130, 152, 255, 0.2);
+        border-radius: 7px;
+        background: rgba(11, 23, 54, 0.68);
+      }
+
+      .reserved-song-index {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        color: #c2cde6;
+        background: rgba(130, 152, 255, 0.14);
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .reserved-song-details {
+        min-width: 0;
+      }
+
+      .reserved-song-title,
+      .reserved-song-meta {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .reserved-song-title {
+        margin: 0;
+        color: #edf2ff;
+        font-size: 0.86rem;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+
+      .reserved-song-meta {
+        margin: 2px 0 0;
+        color: #9aabd0;
+        font-size: 0.72rem;
+        line-height: 1.3;
+      }
+
+      .reserved-song-playing {
+        padding: 4px 6px;
+        border: 1px solid rgba(32, 212, 176, 0.28);
+        border-radius: 4px;
+        color: #a7f3e3;
+        background: rgba(8, 66, 68, 0.36);
+        font-size: 0.62rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .reserved-song-empty {
+        padding: 16px 10px;
+        color: #9aabd0;
+        font-size: 0.82rem;
+        text-align: center;
+      }
+
       @media (max-width: 768px) {
         .song-thumbnail {
           height: 120px;
@@ -498,6 +605,33 @@
       }
 
       @media (max-width: 480px) {
+        .searchbox input {
+          min-width: 0;
+        }
+
+        .searchbox > .searchbtn {
+          flex: 0 0 44px;
+          width: 44px;
+          padding: 8px;
+        }
+
+        #reservedSongs {
+          max-height: min(34vh, 280px);
+          max-height: min(34dvh, 280px);
+        }
+
+        .reserved-song-row {
+          grid-template-columns: 26px minmax(0, 1fr) auto;
+          gap: 7px;
+          min-height: 48px;
+          padding: 6px 7px;
+        }
+
+        .reserved-song-playing {
+          padding: 4px;
+          font-size: 0.58rem;
+        }
+
         .compact-song-item {
           grid-template-columns: 76px minmax(0, 1fr);
           gap: 6px;
@@ -730,6 +864,21 @@
       }
 
       @media (max-height: 480px) and (orientation: landscape) {
+        #reservedSongs {
+          max-height: min(30vh, 150px);
+          max-height: min(30dvh, 150px);
+        }
+
+        .reserved-song-row {
+          min-height: 42px;
+          padding-top: 5px;
+          padding-bottom: 5px;
+        }
+
+        .card-ui {
+          margin-bottom: 12px;
+        }
+
         .footer-section {
           margin-top: 16px;
           padding-top: 10px;
@@ -933,8 +1082,16 @@
 
       <!-- RESERVED -->
       <div class="card-ui">
-        <h3>Reserved Songs</h3>
-        <div id="reservedSongs"></div>
+        <div class="reserved-songs-heading">
+          <h3>Reserved Songs</h3>
+          <span
+            id="reservedSongCount"
+            class="reserved-song-count"
+            aria-label="0 reserved songs"
+            >0</span
+          >
+        </div>
+        <div id="reservedSongs" aria-live="polite"></div>
       </div>
     </div>
 
@@ -2436,25 +2593,39 @@
       function displayReservedSongs() {
         const container = document.getElementById("reservedSongs");
         if (!container) return;
+        const count = document.getElementById("reservedSongCount");
+        if (count) {
+          count.textContent = String(reservedSongs.length);
+          count.setAttribute(
+            "aria-label",
+            `${reservedSongs.length} reserved ${reservedSongs.length === 1 ? "song" : "songs"}`,
+          );
+        }
 
         if (reservedSongs.length === 0) {
           container.innerHTML =
-            '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem; font-style: italic;">No reserved songs yet. Search and request songs!</div>';
+            '<div class="reserved-song-empty">No reserved songs yet.</div>';
           return;
         }
 
-        let html = "";
-        reservedSongs.forEach((song, index) => {
-          html += `
-                    <div class="song-item">
-                        <div style="font-weight: 600; margin-bottom: 5px;">#${index + 1} ${song.title}</div>
-                        <div style="font-size: 0.9rem; opacity: 0.8;">🎤 ${song.artist}</div>
-                        <div style="font-size: 0.85rem; opacity: 0.7; margin-top: 3px;">👤 ${song.requestedBy || "Unknown"}</div>
-                    </div>
-                `;
-        });
-
-        container.innerHTML = html;
+        container.innerHTML = reservedSongs
+          .map((song, index) => {
+            const isPlaying = Boolean(
+              roomCurrentSong?.videoId &&
+              roomCurrentSong.videoId === song.videoId,
+            );
+            return `
+              <div class="reserved-song-row">
+                <span class="reserved-song-index">${index + 1}</span>
+                <div class="reserved-song-details">
+                  <p class="reserved-song-title" title="${escapeHTML(song.title)}">${escapeHTML(song.title)}</p>
+                  <p class="reserved-song-meta">${escapeHTML(song.artist || "Unknown artist")} · ${escapeHTML(song.requestedBy || "Unknown")}</p>
+                </div>
+                ${isPlaying ? '<span class="reserved-song-playing">NOW PLAYING</span>' : ""}
+              </div>
+            `;
+          })
+          .join("");
       }
 
       function updateReservedSongsFromRoom() {
