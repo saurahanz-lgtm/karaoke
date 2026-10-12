@@ -56,6 +56,7 @@ let roomUsageTimer = null;
 let roomTimeExpired = false;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
+let activeRoomDeviceCount = 0;
 let karaokeDisplayEnabled = true;
 let tvDisabledAnnouncement = "";
 let tvAvailabilityListenerAttached = false;
@@ -362,6 +363,14 @@ function renderKaraokeRooms() {
   if (code) code.textContent = activeRoom ? `Room ID: ${activeRoom.id}` : "";
 }
 
+function renderKaraokeRoomDeviceCount(roomId) {
+  if (activeKaraokeRoomId !== roomId) return;
+  const memberCount = document.getElementById("roomMemberCount");
+  if (!memberCount) return;
+  const room = karaokeRooms.find((item) => item.id === roomId);
+  memberCount.textContent = `${activeRoomDeviceCount} / ${KaraokeSessions.getRoomDeviceLimit(room)} phones`;
+}
+
 function activateKaraokeRoom(roomId) {
   if (!roomId || (roomId === activeKaraokeRoomId && stopListeningToRoom))
     return;
@@ -376,6 +385,7 @@ function activateKaraokeRoom(roomId) {
   stopListeningToRoomUsage?.();
   stopListeningToRoomUsage = null;
   activeKaraokeRoomId = roomId;
+  activeRoomDeviceCount = 0;
   roomDisplayEnabled = true;
   roomUsageSettings = null;
   roomTimeExpired = false;
@@ -451,10 +461,8 @@ function activateKaraokeRoom(roomId) {
   );
 
   stopListeningToMembers = KaraokeSessions.listenMembers(roomId, (count) => {
-    const memberCount = document.getElementById("roomMemberCount");
-    if (memberCount) {
-      memberCount.textContent = `${count} / ${KaraokeSessions.MAX_DEVICES} phones`;
-    }
+    activeRoomDeviceCount = count;
+    renderKaraokeRoomDeviceCount(roomId);
     scheduleEmptyRoomSongCleanup(roomId, count);
   });
 
@@ -486,7 +494,10 @@ function activateKaraokeRoom(roomId) {
 
   stopListeningToRoomUsage = KaraokeSessions.listenRoomUsage(
     roomId,
-    updateKaraokeDisplayRoomUsage,
+    (settings) => {
+      updateKaraokeDisplayRoomUsage(settings);
+      renderKaraokeRoomDeviceCount(roomId);
+    },
     (error) => console.warn("Could not follow room time limit:", error.message),
   );
 }

@@ -267,6 +267,26 @@
         border: 1px solid rgba(239, 68, 68, 0.5);
       }
 
+      .room-device-limit-dialog {
+        max-width: 360px;
+      }
+
+      .room-device-limit-dialog .modal-content {
+        max-height: min(90dvh, 420px);
+        overflow-y: auto;
+        background: linear-gradient(145deg, #101d46, #09142f);
+        border: 1px solid rgba(97, 124, 218, 0.45);
+        color: #edf2ff;
+      }
+
+      @media (orientation: landscape) and (max-height: 500px) {
+        .room-device-limit-dialog .modal-header,
+        .room-device-limit-dialog .modal-body,
+        .room-device-limit-dialog .modal-footer {
+          padding-block: 0.55rem;
+        }
+      }
+
       @media (max-width: 768px) {
         .admin-header {
           margin-bottom: 22px;
@@ -1320,6 +1340,66 @@
           </section>
 
         </main>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="roomDeviceLimitModal"
+      tabindex="-1"
+      aria-labelledby="roomDeviceLimitModalTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable room-device-limit-dialog">
+        <div class="modal-content">
+          <div class="modal-header border-0">
+            <div>
+              <h5 class="modal-title" id="roomDeviceLimitModalTitle">
+                Connected devices
+              </h5>
+              <p class="mb-0 mt-1 text-white-50" id="roomDeviceLimitRoomName"></p>
+            </div>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <label class="form-label" for="roomDeviceLimitInput">
+              Maximum devices
+            </label>
+            <input
+              class="form-control"
+              id="roomDeviceLimitInput"
+              type="number"
+              min="1"
+              max="100"
+              step="1"
+              inputmode="numeric"
+              required
+            />
+            <p class="mt-2 mb-0 text-white-50">Choose from 1 to 100 devices.</p>
+          </div>
+          <div class="modal-footer border-0">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="saveRoomDeviceLimitButton"
+              onclick="saveRoomDeviceLimit()"
+            >
+              Save limit
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 

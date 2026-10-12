@@ -55,6 +55,9 @@ let selectedRoomDisplayId = null;
 let roomBeingEditedTimeLimit = null;
 let roomTimeLimitTriggerButton = null;
 let roomTimeLimitModal = null;
+let roomBeingEditedDeviceLimit = null;
+let roomDeviceLimitTriggerButton = null;
+let roomDeviceLimitModal = null;
 let knownPendingGlobalRoomRequestIds = new Set();
 let allRoomRequests = [];
 let stopListeningToAllRoomRequests = null;
@@ -1559,7 +1562,8 @@ function renderKaraokeRooms() {
         nameCell.textContent = room.name;
         codeCell.textContent = room.id;
         const deviceCount = roomDeviceCounts.get(room.id) || 0;
-        devicesCell.textContent = `${deviceCount} / ${KaraokeSessions.MAX_DEVICES}`;
+        const deviceLimit = KaraokeSessions.getRoomDeviceLimit(room);
+        devicesCell.textContent = `${deviceCount} / ${deviceLimit}`;
         const statusBadge = document.createElement("span");
         const timeExpired =
           Number(room.timeLimitMinutes) > 0 &&
@@ -1567,7 +1571,7 @@ function renderKaraokeRooms() {
           Date.now() >= Number(room.expiresAt);
         const roomStatus = timeExpired
           ? "expired"
-          : deviceCount >= KaraokeSessions.MAX_DEVICES
+          : deviceCount >= deviceLimit
             ? "full"
             : deviceCount > 0
               ? "occupied"
@@ -1606,6 +1610,20 @@ function renderKaraokeRooms() {
           handleSetRoomTimeLimit(room, timeLimitButton),
         );
         roomActions.appendChild(timeLimitButton);
+        const deviceLimitButton = document.createElement("button");
+        deviceLimitButton.type = "button";
+        deviceLimitButton.className = "table-action";
+        deviceLimitButton.setAttribute(
+          "aria-label",
+          `Set device limit for ${room.name}`,
+        );
+        deviceLimitButton.innerHTML =
+          '<i class="bi bi-phone-plus" aria-hidden="true"></i>';
+        deviceLimitButton.title = "Set connected-device limit";
+        deviceLimitButton.addEventListener("click", () =>
+          handleSetRoomDeviceLimit(room, deviceLimitButton),
+        );
+        roomActions.appendChild(deviceLimitButton);
         if (room.id === "main") {
           const defaultLabel = document.createElement("span");
           defaultLabel.textContent = "Default room";
@@ -1770,6 +1788,62 @@ async function saveRoomTimeLimit() {
       error.message === "ROOM_NOT_FOUND"
         ? "That room no longer exists."
         : "Could not set the room time limit. Check the Firebase connection.",
+      "danger",
+    );
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
+function handleSetRoomDeviceLimit(room, button) {
+  roomBeingEditedDeviceLimit = room;
+  roomDeviceLimitTriggerButton = button;
+  document.getElementById("roomDeviceLimitRoomName").textContent =
+    `${room.name} (${room.id})`;
+  document.getElementById("roomDeviceLimitInput").value = String(
+    KaraokeSessions.getRoomDeviceLimit(room),
+  );
+  const modalElement = document.getElementById("roomDeviceLimitModal");
+  if (!roomDeviceLimitModal) {
+    roomDeviceLimitModal = new bootstrap.Modal(modalElement);
+    modalElement.addEventListener("hidden.bs.modal", () => {
+      roomDeviceLimitTriggerButton?.focus();
+      roomDeviceLimitTriggerButton = null;
+    });
+  }
+  roomDeviceLimitModal.show();
+}
+
+async function saveRoomDeviceLimit() {
+  if (!roomBeingEditedDeviceLimit) return;
+  const limit = Number(document.getElementById("roomDeviceLimitInput").value);
+  if (
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > KaraokeSessions.MAX_ROOM_DEVICES
+  ) {
+    showNotification(
+      `Enter a whole number from 1 to ${KaraokeSessions.MAX_ROOM_DEVICES}.`,
+      "warning",
+    );
+    return;
+  }
+
+  const saveButton = document.getElementById("saveRoomDeviceLimitButton");
+  saveButton.disabled = true;
+  try {
+    await KaraokeSessions.setRoomDeviceLimit(
+      roomBeingEditedDeviceLimit.id,
+      limit,
+    );
+    roomDeviceLimitModal.hide();
+    showNotification(`Room device limit set to ${limit}.`, "success");
+  } catch (error) {
+    console.error("Could not set room device limit:", error.message);
+    showNotification(
+      error.message === "ROOM_NOT_FOUND"
+        ? "That room no longer exists."
+        : "Could not set the room device limit. Check the Firebase connection.",
       "danger",
     );
   } finally {
@@ -3097,7 +3171,8 @@ function renderDashboard() {
   ).length;
   const availableRooms = karaokeRooms.filter(
     (room) =>
-      (roomDeviceCounts.get(room.id) || 0) < KaraokeSessions.MAX_DEVICES,
+      (roomDeviceCounts.get(room.id) || 0) <
+      KaraokeSessions.getRoomDeviceLimit(room),
   ).length;
   totalUsers.textContent = String(users.length);
   document.getElementById("dashboardOnlineUsers").textContent =
@@ -3113,12 +3188,12 @@ function renderDashboard() {
     const item = document.createElement("li");
     const count = roomDeviceCounts.get(room.id) || 0;
     const status =
-      count >= KaraokeSessions.MAX_DEVICES
+      count >= KaraokeSessions.getRoomDeviceLimit(room)
         ? "Full"
         : count > 0
           ? "Occupied"
           : "Available";
-    item.innerHTML = `<span class="room-dot ${count ? "room-dot-active" : "room-dot-idle"}"></span><span class="dashboard-room-name">${escapeHtml(room.name)}</span><span class="dashboard-room-meta">${status}</span><span class="dashboard-room-count">${count}/${KaraokeSessions.MAX_DEVICES}</span>`;
+    item.innerHTML = `<span class="room-dot ${count ? "room-dot-active" : "room-dot-idle"}"></span><span class="dashboard-room-name">${escapeHtml(room.name)}</span><span class="dashboard-room-meta">${status}</span><span class="dashboard-room-count">${count}/${KaraokeSessions.getRoomDeviceLimit(room)}</span>`;
     roomList.appendChild(item);
   });
   if (!karaokeRooms.length) {

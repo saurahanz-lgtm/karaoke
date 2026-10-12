@@ -1582,6 +1582,15 @@
           );
           const connectedRoomId = membership.room.id;
           activeKaraokeRoomId = connectedRoomId;
+          let roomDeviceLimit = membership.maxDevices;
+          let roomDeviceCount = 0;
+          const updateRoomCapacityNotice = () => {
+            const roomIsFull = roomDeviceCount >= roomDeviceLimit;
+            document.getElementById("roomCapacityNotice").hidden = !roomIsFull;
+            document.getElementById("roomCapacityMessage").textContent =
+              `This room has reached its ${roomDeviceLimit}-device limit.`;
+            if (roomIsFull) roomRequestRoomId = connectedRoomId;
+          };
           if (membership.autoAssigned) {
             const assignedRoomUrl = new URL(
               "performer-portal.html",
@@ -1594,7 +1603,11 @@
           stopListeningToRoomUsage?.();
           stopListeningToRoomUsage = KaraokeSessions.listenRoomUsage(
             connectedRoomId,
-            updatePerformerRoomTime,
+            (settings) => {
+              roomDeviceLimit = KaraokeSessions.getRoomDeviceLimit(settings);
+              updateRoomCapacityNotice();
+              updatePerformerRoomTime(settings);
+            },
             (error) =>
               console.warn("Could not follow room time limit:", error.message),
           );
@@ -1602,12 +1615,8 @@
           stopListeningToRoomMembers = KaraokeSessions.listenMembers(
             connectedRoomId,
             (count) => {
-              const roomIsFull = count >= KaraokeSessions.MAX_DEVICES;
-              document.getElementById("roomCapacityNotice").hidden =
-                !roomIsFull;
-              document.getElementById("roomCapacityMessage").textContent =
-                `This room has reached its ${KaraokeSessions.MAX_DEVICES}-device limit.`;
-              if (roomIsFull) roomRequestRoomId = connectedRoomId;
+              roomDeviceCount = count;
+              updateRoomCapacityNotice();
             },
           );
           stopListeningToRoomVolume?.();
@@ -1658,7 +1667,7 @@
             document.getElementById("roomFullMessage").textContent =
               error.message === "NO_AVAILABLE_ROOMS"
                 ? "No room is available right now. Send a request to User Management to open another room."
-                : `This room already has ${KaraokeSessions.MAX_DEVICES} connected phones. Send a request to User Management to open another room.`;
+                : "This room is full. Send a request to User Management to open another room.";
             document.getElementById("singerApp").hidden = true;
             document.getElementById("roomUnavailablePage").hidden = false;
             return;

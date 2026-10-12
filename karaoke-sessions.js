@@ -4,6 +4,7 @@
   const ROOM_REQUESTS_PATH = "roomRequests";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
   const MAX_DEVICES = 3;
+  const MAX_ROOM_DEVICES = 100;
   const DEFAULT_ROOM_VOLUME = 70;
   const MAX_ROOM_TIME_LIMIT_MINUTES = 10080;
   const MEMBER_TIMEOUT_MS = 60000;
@@ -80,6 +81,21 @@
       throw new Error("ROOM_TIME_LIMIT_INVALID");
     }
     return duration;
+  }
+
+  function getRoomDeviceLimit(room) {
+    const limit = Number(room?.maxDevices);
+    return Number.isInteger(limit) && limit >= 1 && limit <= MAX_ROOM_DEVICES
+      ? limit
+      : MAX_DEVICES;
+  }
+
+  function normalizeRoomDeviceLimit(devices) {
+    const limit = Number(devices);
+    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_ROOM_DEVICES) {
+      throw new Error("ROOM_DEVICE_LIMIT_INVALID");
+    }
+    return limit;
   }
 
   async function assertKaraokeDisplayEnabled(roomId) {
@@ -331,6 +347,7 @@
         id: generateRoomId(),
         name: roomName,
         createdAt: Date.now(),
+        maxDevices: MAX_DEVICES,
         timeLimitMinutes: 0,
         usageStartedAt: null,
         expiresAt: null,
@@ -389,6 +406,18 @@
           expiresAt: startedAt ? startedAt + minutes * 60000 : null,
         };
       });
+    if (!result.committed) throw new Error("ROOM_NOT_FOUND");
+    return result.snapshot.val();
+  }
+
+  async function setRoomDeviceLimit(roomId, deviceLimit) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    const limit = normalizeRoomDeviceLimit(deviceLimit);
+    const result = await database()
+      .ref(`${ROOM_LIST_PATH}/${roomId}`)
+      .transaction((room) =>
+        room ? { ...room, maxDevices: limit } : undefined,
+      );
     if (!result.committed) throw new Error("ROOM_NOT_FOUND");
     return result.snapshot.val();
   }
@@ -781,8 +810,7 @@
       const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
       const activeMemberIds = Object.entries(members)
         .filter(([, member]) => member && Number(member.lastSeen) >= cutoff)
-        .map(([id]) => id)
-        .slice(0, MAX_DEVICES);
+        .map(([id]) => id);
       callback(activeMemberIds.length, activeMemberIds);
     };
     const handler = (snapshot) => {
@@ -955,6 +983,7 @@
     throwIfRoomTimeExpired(roomSnapshot.val());
 
     const deviceId = await getDeviceId();
+    const maxDevices = getRoomDeviceLimit(roomSnapshot.val());
     const memberRef = db.ref(`${ROOM_DATA_PATH}/${roomId}/members/${deviceId}`);
     await memberRef.onDisconnect().remove();
 
@@ -971,7 +1000,7 @@
 
         if (
           !activeMembers[deviceId] &&
-          Object.keys(activeMembers).length >= MAX_DEVICES
+          Object.keys(activeMembers).length >= maxDevices
         ) {
           return activeMembers;
         }
@@ -1022,7 +1051,7 @@
     return {
       room: { ...roomSnapshot.val(), id: roomId },
       deviceId,
-      maxDevices: MAX_DEVICES,
+      maxDevices,
     };
   }
 
@@ -1183,6 +1212,7 @@
 
   global.KaraokeSessions = {
     MAX_DEVICES,
+    MAX_ROOM_DEVICES,
     DEFAULT_ROOM_VOLUME,
     addSong,
     advanceToNextSong,
@@ -1224,6 +1254,8 @@
     setRoomDisplayAvailability,
     setPlaybackState,
     setRoomTimeLimit,
+    setRoomDeviceLimit,
+    getRoomDeviceLimit,
     sendControl,
   };
 })(window);
