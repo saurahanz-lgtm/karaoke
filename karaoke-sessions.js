@@ -1058,11 +1058,9 @@
         })),
     );
     const availableCandidates = candidates
-      .filter((room) => room.activeCount < MAX_DEVICES)
+      .filter((room) => room.activeCount === 0)
       .sort(
-        (first, second) =>
-          first.activeCount - second.activeCount ||
-          (first.createdAt || 0) - (second.createdAt || 0),
+        (first, second) => (first.createdAt || 0) - (second.createdAt || 0),
       );
     const requestedCount = requestedMembers.length;
     const orderedRooms =
