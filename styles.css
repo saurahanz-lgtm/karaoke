@@ -71,9 +71,19 @@ body {
 }
 
 .app-action-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  transform: translate(-50%, -50%);
   width: min(420px, calc(100vw - 28px));
   max-width: none;
+  max-height: calc(100dvh - 24px);
   padding: 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(130, 152, 255, 0.42);
   border-radius: 10px;
   color: #edf2ff;
@@ -125,6 +135,8 @@ body {
 
 .app-action-dialog__actions {
   display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
 }
@@ -138,6 +150,7 @@ body {
   font: inherit;
   font-size: 0.82rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
