@@ -75,16 +75,40 @@ let microphoneStream = null;
 let microphoneAudioContext = null;
 let microphoneAnalyser = null;
 let microphoneSamples = null;
+let pitchDetector = null;
+let pitchDetectorPromise = null;
 let scoreAudioContext = null;
 let scoreAudioBuffer = null;
 let scoreAudioLoadPromise = null;
 let micScoringEnabled = false;
-let micActivityMs = 0;
 let micObservedPlayingMs = 0;
-let micNoiseFloorRms = 0.006;
+let pitchDetectedMs = 0;
+let pitchStableMs = 0;
+let previousPitchHz = null;
 let lastMicSampleAt = null;
 let micSamplingTimer = null;
 const MIC_MIN_ACTIVITY_RMS = 0.02;
+const PITCH_MIN_FREQUENCY_HZ = 75;
+const PITCH_MAX_FREQUENCY_HZ = 1000;
+const PITCH_MIN_CLARITY = 0.85;
+const PITCH_STABILITY_TOLERANCE_CENTS = 75;
+
+function loadPitchDetector() {
+  if (!pitchDetectorPromise) {
+    pitchDetectorPromise = import("https://esm.sh/pitchy@4.1.0").then(
+      ({ PitchDetector }) => PitchDetector,
+    );
+  }
+  return pitchDetectorPromise;
+}
+
+function resetPitchScore() {
+  micObservedPlayingMs = 0;
+  pitchDetectedMs = 0;
+  pitchStableMs = 0;
+  previousPitchHz = null;
+  lastMicSampleAt = null;
+}
 
 function showMicConsentDialog() {
   const dialog = document.getElementById("micConsentDialog");
@@ -146,6 +170,7 @@ async function enableMicScoring() {
   );
 
   try {
+    const PitchDetector = await loadPitchDetector();
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Microphone access requires HTTPS or localhost.");
     }
@@ -168,17 +193,18 @@ async function enableMicScoring() {
     microphoneAnalyser = microphoneAudioContext.createAnalyser();
     microphoneAnalyser.fftSize = 2048;
     microphoneSamples = new Float32Array(microphoneAnalyser.fftSize);
+    pitchDetector = PitchDetector.forFloat32Array(microphoneAnalyser.fftSize);
     microphoneAudioContext
       .createMediaStreamSource(microphoneStream)
       .connect(microphoneAnalyser);
     await microphoneAudioContext.resume();
 
     micScoringEnabled = true;
-    lastMicSampleAt = null;
-    micSamplingTimer = window.setInterval(sampleMicrophoneActivity, 100);
+    resetPitchScore();
+    micSamplingTimer = window.setInterval(sampleMicrophonePitch, 100);
     if (status) {
       status.textContent =
-        "Mic activity scoring is on. Audio stays on this device and is not recorded or sent.";
+        "Pitch stability scoring is on. Audio stays on this device and is not recorded or sent.";
     }
     if (dialog?.open) dialog.close("allowed");
   } catch (error) {
@@ -208,19 +234,31 @@ function stopMicScoring() {
   microphoneStream = null;
   microphoneAnalyser = null;
   microphoneSamples = null;
+  pitchDetector = null;
   if (microphoneAudioContext && microphoneAudioContext.state !== "closed") {
     microphoneAudioContext.close().catch(() => {});
   }
   microphoneAudioContext = null;
 }
 
-function sampleMicrophoneActivity() {
-  if (!micScoringEnabled || !microphoneAnalyser || !microphoneSamples) return;
+function sampleMicrophonePitch() {
+  if (
+    !micScoringEnabled ||
+    !microphoneAnalyser ||
+    !microphoneSamples ||
+    !pitchDetector
+  ) {
+    return;
+  }
 
   microphoneAnalyser.getFloatTimeDomainData(microphoneSamples);
   let sumSquares = 0;
   for (const sample of microphoneSamples) sumSquares += sample * sample;
   const rms = Math.sqrt(sumSquares / microphoneSamples.length);
+  const [pitchHz, clarity] = pitchDetector.findPitch(
+    microphoneSamples,
+    microphoneAudioContext.sampleRate,
+  );
   const now = performance.now();
   const activePlayer = window.tvPlayer || player;
   const isSongPlaying =
@@ -229,8 +267,8 @@ function sampleMicrophoneActivity() {
     activePlayer.getPlayerState?.() === YT.PlayerState.PLAYING;
 
   if (!isSongPlaying) {
-    micNoiseFloorRms = micNoiseFloorRms * 0.9 + rms * 0.1;
     lastMicSampleAt = now;
+    previousPitchHz = null;
     return;
   }
 
@@ -242,11 +280,26 @@ function sampleMicrophoneActivity() {
   const elapsedMs = Math.min(now - lastMicSampleAt, 200);
   lastMicSampleAt = now;
   micObservedPlayingMs += elapsedMs;
-  const activityThreshold = Math.max(
-    MIC_MIN_ACTIVITY_RMS,
-    micNoiseFloorRms * 2.5,
-  );
-  if (rms >= activityThreshold) micActivityMs += elapsedMs;
+  if (
+    rms < MIC_MIN_ACTIVITY_RMS ||
+    clarity < PITCH_MIN_CLARITY ||
+    pitchHz < PITCH_MIN_FREQUENCY_HZ ||
+    pitchHz > PITCH_MAX_FREQUENCY_HZ
+  ) {
+    previousPitchHz = null;
+    return;
+  }
+
+  pitchDetectedMs += elapsedMs;
+  if (previousPitchHz !== null) {
+    const pitchChangeCents = Math.abs(
+      1200 * Math.log2(pitchHz / previousPitchHz),
+    );
+    if (pitchChangeCents <= PITCH_STABILITY_TOLERANCE_CENTS) {
+      pitchStableMs += elapsedMs;
+    }
+  }
+  previousPitchHz = pitchHz;
 }
 
 window.addEventListener("pagehide", stopMicScoring);
@@ -1669,8 +1722,7 @@ function toggleFullscreen() {
 function loadSong(song) {
   // Boot-up video disabled - create player directly with karaoke song
   currentPerformerName = song.singer || song.requestedBy || "Karaoke performer";
-  micActivityMs = 0;
-  micObservedPlayingMs = 0;
+  resetPitchScore();
   currentVideoId = song.videoId;
   setNoSongMessage(false);
 
@@ -1954,8 +2006,7 @@ function playVideo(videoId, title, artist, singer) {
   // Initialize scoring for new song
   currentPerformerName = singer || "Unknown Performer";
   songDurationMs = 0;
-  micActivityMs = 0;
-  micObservedPlayingMs = 0;
+  resetPitchScore();
 
   player = new YT.Player(container, {
     height: "100%",
@@ -2074,18 +2125,20 @@ function onPlayerStateChange(e) {
 // Show score/results when video ends
 async function showScore() {
   const score =
-    micScoringEnabled && micObservedPlayingMs > 0
+    micScoringEnabled && pitchDetectedMs > 0
       ? Math.min(
           100,
-          Math.max(0, Math.round((micActivityMs / micObservedPlayingMs) * 100)),
+          Math.max(0, Math.round((pitchStableMs / pitchDetectedMs) * 100)),
         )
-      : null;
-  const activitySeconds = (micActivityMs / 1000).toFixed(1);
-  const observedSeconds = (micObservedPlayingMs / 1000).toFixed(1);
+      : micScoringEnabled
+        ? 0
+        : null;
+  const pitchSeconds = (pitchDetectedMs / 1000).toFixed(1);
+  const stableSeconds = (pitchStableMs / 1000).toFixed(1);
 
-  console.log("Mic participation score:", score, {
-    activitySeconds,
-    observedSeconds,
+  console.log("Mic pitch stability score:", score, {
+    pitchSeconds,
+    stableSeconds,
   });
   displayScoreModal(score);
 
@@ -2144,17 +2197,17 @@ function displayScoreModal(score) {
   const feedback = document.createElement("p");
   feedback.className = "score-modal-feedback";
   if (score === null) {
-    feedback.textContent = "Let's sing together next time!";
+    feedback.textContent = "Try pitch scoring on the next song!";
   } else if (score === 100) {
-    feedback.textContent = "You're a great singer!";
+    feedback.textContent = "Your pitch was super steady!";
   } else if (score >= 80) {
-    feedback.textContent = "Amazing singing! Keep it up!";
+    feedback.textContent = "Great pitch consistency! Keep it up!";
   } else if (score >= 60) {
-    feedback.textContent = "You're finding your rhythm!";
+    feedback.textContent = "You're finding a steady pitch!";
   } else if (score > 0) {
-    feedback.textContent = "Keep going, you've got this!";
+    feedback.textContent = "Keep practicing your pitch!";
   } else {
-    feedback.textContent = "The next song is yours!";
+    feedback.textContent = "Try holding a note steadily next time!";
   }
 
   scoreDisplay.append(title, value, feedback);
