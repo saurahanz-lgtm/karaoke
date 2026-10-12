@@ -3043,6 +3043,52 @@ body.karaoke-display-page {
   outline-offset: 2px;
 }
 
+.history-bulk-actions:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #b8c7e8;
+  font-size: 11px;
+}
+
+.history-select-all-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.history-select-all-label input,
+.history-row-select {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #8876ff;
+}
+
+.history-select-column {
+  width: 34px;
+}
+
+.history-select-cell {
+  width: 34px;
+  text-align: center;
+}
+
+@media (max-width: 540px) {
+  .history-bulk-actions:not([hidden]) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-bulk-actions > button {
+    align-self: flex-end;
+  }
+}
+
 .account-request-row-actions {
   display: flex;
   align-items: center;

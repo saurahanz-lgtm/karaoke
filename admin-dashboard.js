@@ -37,6 +37,8 @@ const USERS_PER_PAGE = 5;
 const KARAOKE_ROOMS_PER_PAGE = 5;
 const ROOM_REQUESTS_PER_PAGE = 5;
 const ACCOUNT_REQUESTS_PER_PAGE = 5;
+const selectedAccountHistoryIds = new Set();
+const selectedRoomHistoryIds = new Set();
 let activeLoginSessions = {};
 let firebasePresenceLoaded = false;
 let accountRequests = [];
@@ -258,6 +260,18 @@ document.addEventListener("DOMContentLoaded", function () {
       currentAccountRequestPage += 1;
       renderAccountRequests();
     });
+  document
+    .getElementById("selectAllAccountHistory")
+    .addEventListener("change", toggleAccountHistoryPageSelection);
+  document
+    .getElementById("deleteSelectedAccountHistory")
+    .addEventListener("click", deleteSelectedAccountHistory);
+  document
+    .getElementById("selectAllRoomHistory")
+    .addEventListener("change", toggleRoomHistoryPageSelection);
+  document
+    .getElementById("deleteSelectedRoomHistory")
+    .addEventListener("click", deleteSelectedRoomHistory);
   document
     .getElementById("createRoomForm")
     .addEventListener("submit", handleCreateRoom);
@@ -517,12 +531,31 @@ function renderAccountRequests() {
       : accountRequests.filter((request) =>
           ["pending", "approving"].includes(request.status),
         );
+  const historyRequestIds = new Set(
+    accountRequests
+      .filter((request) => ["approved", "rejected"].includes(request.status))
+      .map((request) => request.id),
+  );
+  for (const id of selectedAccountHistoryIds) {
+    if (!historyRequestIds.has(id)) selectedAccountHistoryIds.delete(id);
+  }
   if (visibleRequests.length === 0) {
     currentAccountRequestPage = 1;
     pagination.hidden = true;
+    updateHistorySelectionControls({
+      selectedIds: selectedAccountHistoryIds,
+      pageRequests: [],
+      isHistory: currentAccountRequestView === "history",
+      headerId: "accountHistorySelectHeader",
+      selectAllId: "selectAllAccountHistory",
+      bulkActionsId: "accountHistoryBulkActions",
+      deleteButtonId: "deleteSelectedAccountHistory",
+      countId: "selectedAccountHistoryCount",
+      tableBodyId: "accountRequestsTableBody",
+    });
     tableBody.innerHTML =
       currentAccountRequestView === "history"
-        ? '<tr><td colspan="4" class="text-center text-white-50">No approved or rejected requests yet.</td></tr>'
+        ? '<tr><td colspan="5" class="text-center text-white-50">No approved or rejected requests yet.</td></tr>'
         : '<tr><td colspan="4" class="text-center text-white-50">No pending account requests.</td></tr>';
     return;
   }
@@ -544,109 +577,252 @@ function renderAccountRequests() {
     String(pageCount);
   const firstRequestIndex =
     (currentAccountRequestPage - 1) * ACCOUNT_REQUESTS_PER_PAGE;
+  const pageRequests = visibleRequests.slice(
+    firstRequestIndex,
+    firstRequestIndex + ACCOUNT_REQUESTS_PER_PAGE,
+  );
+  updateHistorySelectionControls({
+    selectedIds: selectedAccountHistoryIds,
+    pageRequests: currentAccountRequestView === "history" ? pageRequests : [],
+    isHistory: currentAccountRequestView === "history",
+    headerId: "accountHistorySelectHeader",
+    selectAllId: "selectAllAccountHistory",
+    bulkActionsId: "accountHistoryBulkActions",
+    deleteButtonId: "deleteSelectedAccountHistory",
+    countId: "selectedAccountHistoryCount",
+    tableBodyId: "accountRequestsTableBody",
+  });
 
   tableBody.replaceChildren(
-    ...visibleRequests
-      .slice(firstRequestIndex, firstRequestIndex + ACCOUNT_REQUESTS_PER_PAGE)
-      .map((request) => {
-        const row = document.createElement("tr");
-        const usernameCell = document.createElement("td");
-        const dateCell = document.createElement("td");
-        const statusCell = document.createElement("td");
-        const actionCell = document.createElement("td");
-        const actionGroup = document.createElement("div");
-        const actionButtons = document.createElement("div");
-        actionGroup.className = "account-request-row-actions";
-        actionButtons.className = "account-actions";
-        usernameCell.textContent = request.username || "Unknown username";
-        dateCell.textContent = request.createdAt
-          ? new Date(request.createdAt).toLocaleString()
-          : "-";
+    ...pageRequests.map((request) => {
+      const row = document.createElement("tr");
+      const selectCell = document.createElement("td");
+      const usernameCell = document.createElement("td");
+      const dateCell = document.createElement("td");
+      const statusCell = document.createElement("td");
+      const actionCell = document.createElement("td");
+      const actionGroup = document.createElement("div");
+      const actionButtons = document.createElement("div");
+      actionGroup.className = "account-request-row-actions";
+      actionButtons.className = "account-actions";
+      if (currentAccountRequestView === "history") {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "history-row-select";
+        checkbox.value = request.id;
+        checkbox.checked = selectedAccountHistoryIds.has(request.id);
+        checkbox.setAttribute(
+          "aria-label",
+          `Select account request history from ${request.username || "unknown user"}`,
+        );
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) selectedAccountHistoryIds.add(request.id);
+          else selectedAccountHistoryIds.delete(request.id);
+          updateHistorySelectionControls({
+            selectedIds: selectedAccountHistoryIds,
+            pageRequests,
+            isHistory: true,
+            headerId: "accountHistorySelectHeader",
+            selectAllId: "selectAllAccountHistory",
+            bulkActionsId: "accountHistoryBulkActions",
+            deleteButtonId: "deleteSelectedAccountHistory",
+            countId: "selectedAccountHistoryCount",
+            tableBodyId: "accountRequestsTableBody",
+          });
+        });
+        selectCell.className = "history-select-cell";
+        selectCell.appendChild(checkbox);
+      }
+      usernameCell.textContent = request.username || "Unknown username";
+      dateCell.textContent = request.createdAt
+        ? new Date(request.createdAt).toLocaleString()
+        : "-";
 
-        const status =
-          request.status === "approving" ? "processing" : request.status;
-        const statusBadge = document.createElement("span");
-        statusBadge.className = `request-status request-status-${status || "pending"}`;
-        statusBadge.textContent = status || "pending";
-        statusCell.appendChild(statusBadge);
+      const status =
+        request.status === "approving" ? "processing" : request.status;
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `request-status request-status-${status || "pending"}`;
+      statusBadge.textContent = status || "pending";
+      statusCell.appendChild(statusBadge);
 
-        if (request.status === "pending") {
-          const approveButton = document.createElement("button");
-          const rejectButton = document.createElement("button");
-          approveButton.type = "button";
-          approveButton.className = "table-action";
-          approveButton.title = "Approve request";
-          approveButton.setAttribute(
-            "aria-label",
-            `Approve account request from ${request.username || "unknown user"}`,
-          );
-          approveButton.innerHTML =
-            '<i class="bi bi-check2-circle" aria-hidden="true"></i>';
-          rejectButton.type = "button";
-          rejectButton.className = "table-action table-action-danger";
-          rejectButton.title = "Reject request";
-          rejectButton.setAttribute(
-            "aria-label",
-            `Reject account request from ${request.username || "unknown user"}`,
-          );
-          rejectButton.innerHTML =
-            '<i class="bi bi-x-circle" aria-hidden="true"></i>';
-          approveButton.addEventListener("click", () =>
-            handleAccountRequestDecision(request, "approve", [
-              approveButton,
-              rejectButton,
-            ]),
-          );
-          rejectButton.addEventListener("click", () =>
-            handleAccountRequestDecision(request, "reject", [
-              approveButton,
-              rejectButton,
-            ]),
-          );
-          actionButtons.append(approveButton, rejectButton);
-        } else if (request.status === "approved") {
-          const resolution = document.createElement("span");
-          resolution.className = "account-request-resolution";
-          resolution.textContent = "Account created";
-          actionGroup.appendChild(resolution);
-        } else if (request.status === "rejected") {
-          const resolution = document.createElement("span");
-          resolution.className = "account-request-resolution";
-          resolution.textContent =
-            request.resolutionMessage || "Request declined";
-          actionGroup.appendChild(resolution);
-        } else {
-          const resolution = document.createElement("span");
-          resolution.className = "account-request-resolution";
-          resolution.textContent = "Approval in progress";
-          actionGroup.appendChild(resolution);
-        }
+      if (request.status === "pending") {
+        const approveButton = document.createElement("button");
+        const rejectButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.className = "table-action";
+        approveButton.title = "Approve request";
+        approveButton.setAttribute(
+          "aria-label",
+          `Approve account request from ${request.username || "unknown user"}`,
+        );
+        approveButton.innerHTML =
+          '<i class="bi bi-check2-circle" aria-hidden="true"></i>';
+        rejectButton.type = "button";
+        rejectButton.className = "table-action table-action-danger";
+        rejectButton.title = "Reject request";
+        rejectButton.setAttribute(
+          "aria-label",
+          `Reject account request from ${request.username || "unknown user"}`,
+        );
+        rejectButton.innerHTML =
+          '<i class="bi bi-x-circle" aria-hidden="true"></i>';
+        approveButton.addEventListener("click", () =>
+          handleAccountRequestDecision(request, "approve", [
+            approveButton,
+            rejectButton,
+          ]),
+        );
+        rejectButton.addEventListener("click", () =>
+          handleAccountRequestDecision(request, "reject", [
+            approveButton,
+            rejectButton,
+          ]),
+        );
+        actionButtons.append(approveButton, rejectButton);
+      } else if (request.status === "approved") {
+        const resolution = document.createElement("span");
+        resolution.className = "account-request-resolution";
+        resolution.textContent = "Account created";
+        actionGroup.appendChild(resolution);
+      } else if (request.status === "rejected") {
+        const resolution = document.createElement("span");
+        resolution.className = "account-request-resolution";
+        resolution.textContent =
+          request.resolutionMessage || "Request declined";
+        actionGroup.appendChild(resolution);
+      } else {
+        const resolution = document.createElement("span");
+        resolution.className = "account-request-resolution";
+        resolution.textContent = "Approval in progress";
+        actionGroup.appendChild(resolution);
+      }
 
-        if (request.status !== "approving") {
-          const deleteButton = document.createElement("button");
-          deleteButton.type = "button";
-          deleteButton.className = "table-action table-action-danger";
-          deleteButton.title = "Delete request";
-          deleteButton.setAttribute(
-            "aria-label",
-            `Delete account request from ${request.username || "unknown user"}`,
-          );
-          deleteButton.innerHTML =
-            '<i class="bi bi-trash3" aria-hidden="true"></i>';
-          deleteButton.addEventListener("click", () =>
-            deleteAccountRequest(request, deleteButton),
-          );
-          actionButtons.appendChild(deleteButton);
-        }
+      if (request.status !== "approving") {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "table-action table-action-danger";
+        deleteButton.title = "Delete request";
+        deleteButton.setAttribute(
+          "aria-label",
+          `Delete account request from ${request.username || "unknown user"}`,
+        );
+        deleteButton.innerHTML =
+          '<i class="bi bi-trash3" aria-hidden="true"></i>';
+        deleteButton.addEventListener("click", () =>
+          deleteAccountRequest(request, deleteButton),
+        );
+        actionButtons.appendChild(deleteButton);
+      }
 
-        if (actionButtons.childElementCount > 0) {
-          actionGroup.appendChild(actionButtons);
-        }
-        actionCell.appendChild(actionGroup);
-        row.append(usernameCell, dateCell, statusCell, actionCell);
-        return row;
-      }),
+      if (actionButtons.childElementCount > 0) {
+        actionGroup.appendChild(actionButtons);
+      }
+      actionCell.appendChild(actionGroup);
+      if (currentAccountRequestView === "history") row.appendChild(selectCell);
+      row.append(usernameCell, dateCell, statusCell, actionCell);
+      return row;
+    }),
   );
+}
+
+function updateHistorySelectionControls({
+  selectedIds,
+  pageRequests,
+  isHistory,
+  headerId,
+  selectAllId,
+  bulkActionsId,
+  deleteButtonId,
+  countId,
+  tableBodyId,
+}) {
+  const header = document.getElementById(headerId);
+  const selectAll = document.getElementById(selectAllId);
+  const bulkActions = document.getElementById(bulkActionsId);
+  const deleteButton = document.getElementById(deleteButtonId);
+  const pageSelectedCount = pageRequests.filter((request) =>
+    selectedIds.has(request.id),
+  ).length;
+
+  header.hidden = !isHistory || pageRequests.length === 0;
+  bulkActions.hidden = !isHistory || pageRequests.length === 0;
+  selectAll.checked =
+    pageRequests.length > 0 && pageSelectedCount === pageRequests.length;
+  selectAll.indeterminate =
+    pageSelectedCount > 0 && pageSelectedCount < pageRequests.length;
+  document.getElementById(countId).textContent = String(selectedIds.size);
+  deleteButton.disabled = selectedIds.size === 0;
+  document
+    .querySelectorAll(`#${tableBodyId} .history-row-select`)
+    .forEach((checkbox) => {
+      checkbox.checked = selectedIds.has(checkbox.value);
+    });
+}
+
+function toggleAccountHistoryPageSelection(event) {
+  document
+    .querySelectorAll("#accountRequestsTableBody .history-row-select")
+    .forEach((checkbox) => {
+      if (event.target.checked) selectedAccountHistoryIds.add(checkbox.value);
+      else selectedAccountHistoryIds.delete(checkbox.value);
+    });
+  updateHistorySelectionControls({
+    selectedIds: selectedAccountHistoryIds,
+    pageRequests: accountRequests
+      .filter((request) => ["approved", "rejected"].includes(request.status))
+      .slice(
+        (currentAccountRequestPage - 1) * ACCOUNT_REQUESTS_PER_PAGE,
+        currentAccountRequestPage * ACCOUNT_REQUESTS_PER_PAGE,
+      ),
+    isHistory: currentAccountRequestView === "history",
+    headerId: "accountHistorySelectHeader",
+    selectAllId: "selectAllAccountHistory",
+    bulkActionsId: "accountHistoryBulkActions",
+    deleteButtonId: "deleteSelectedAccountHistory",
+    countId: "selectedAccountHistoryCount",
+    tableBodyId: "accountRequestsTableBody",
+  });
+}
+
+async function deleteSelectedAccountHistory() {
+  const selectedRequests = accountRequests.filter(
+    (request) =>
+      selectedAccountHistoryIds.has(request.id) &&
+      ["approved", "rejected"].includes(request.status),
+  );
+  if (selectedRequests.length === 0) return;
+  if (
+    !window.confirm(
+      `Delete ${selectedRequests.length} selected account request history item(s)? This cannot be undone.`,
+    )
+  ) {
+    return;
+  }
+
+  const deleteButton = document.getElementById("deleteSelectedAccountHistory");
+  deleteButton.disabled = true;
+  const results = await Promise.allSettled(
+    selectedRequests.map((request) =>
+      KaraokeAccountRequests.remove(request.id),
+    ),
+  );
+  let deletedCount = 0;
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      selectedAccountHistoryIds.delete(selectedRequests[index].id);
+      deletedCount += 1;
+    } else {
+      console.error("Could not delete account request:", result.reason);
+    }
+  });
+  const failedCount = results.length - deletedCount;
+  showNotification(
+    failedCount
+      ? `${deletedCount} account request(s) deleted; ${failedCount} could not be deleted.`
+      : `${deletedCount} account request(s) deleted.`,
+    failedCount ? "danger" : "info",
+  );
+  renderAccountRequests();
 }
 
 function enableRequestNotificationSound() {
@@ -714,7 +890,9 @@ function playRequestNotificationSoundNow(audioContext) {
 }
 
 function selectAccountRequestView(view) {
-  currentAccountRequestView = view === "history" ? "history" : "pending";
+  const nextView = view === "history" ? "history" : "pending";
+  if (nextView !== currentAccountRequestView) selectedAccountHistoryIds.clear();
+  currentAccountRequestView = nextView;
   currentAccountRequestPage = 1;
   document
     .querySelectorAll("[data-account-request-filter]")
@@ -885,9 +1063,28 @@ function renderRoomRequests(requests) {
       ? ["approved", "rejected"].includes(request.status)
       : ["pending", "approving"].includes(request.status),
   );
+  const historyRequestIds = new Set(
+    requests
+      .filter((request) => ["approved", "rejected"].includes(request.status))
+      .map((request) => request.id),
+  );
+  for (const id of selectedRoomHistoryIds) {
+    if (!historyRequestIds.has(id)) selectedRoomHistoryIds.delete(id);
+  }
   if (visibleRequests.length === 0) {
     currentRoomRequestPage = 1;
     pagination.hidden = true;
+    updateHistorySelectionControls({
+      selectedIds: selectedRoomHistoryIds,
+      pageRequests: [],
+      isHistory: currentRoomRequestView === "history",
+      headerId: "roomHistorySelectHeader",
+      selectAllId: "selectAllRoomHistory",
+      bulkActionsId: "roomHistoryBulkActions",
+      deleteButtonId: "deleteSelectedRoomHistory",
+      countId: "selectedRoomHistoryCount",
+      tableBodyId: "roomRequestsTableBody",
+    });
     const emptyMessage =
       currentRoomRequestType === "extension"
         ? currentRoomRequestView === "history"
@@ -896,7 +1093,7 @@ function renderRoomRequests(requests) {
         : currentRoomRequestView === "history"
           ? "No room request history."
           : "No pending room requests.";
-    tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-white-50">${emptyMessage}</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="${currentRoomRequestView === "history" ? 6 : 5}" class="text-center text-white-50">${emptyMessage}</td></tr>`;
     return;
   }
 
@@ -915,114 +1112,229 @@ function renderRoomRequests(requests) {
     String(pageCount);
   const firstRequestIndex =
     (currentRoomRequestPage - 1) * ROOM_REQUESTS_PER_PAGE;
+  const pageRequests = visibleRequests.slice(
+    firstRequestIndex,
+    firstRequestIndex + ROOM_REQUESTS_PER_PAGE,
+  );
+  updateHistorySelectionControls({
+    selectedIds: selectedRoomHistoryIds,
+    pageRequests: currentRoomRequestView === "history" ? pageRequests : [],
+    isHistory: currentRoomRequestView === "history",
+    headerId: "roomHistorySelectHeader",
+    selectAllId: "selectAllRoomHistory",
+    bulkActionsId: "roomHistoryBulkActions",
+    deleteButtonId: "deleteSelectedRoomHistory",
+    countId: "selectedRoomHistoryCount",
+    tableBodyId: "roomRequestsTableBody",
+  });
 
   tableBody.replaceChildren(
-    ...visibleRequests
-      .slice(firstRequestIndex, firstRequestIndex + ROOM_REQUESTS_PER_PAGE)
-      .map((request) => {
-        const row = document.createElement("tr");
-        const singerCell = document.createElement("td");
-        const roomCell = document.createElement("td");
-        const dateCell = document.createElement("td");
-        const statusCell = document.createElement("td");
-        const actionCell = document.createElement("td");
-        const actionGroup = document.createElement("div");
-        const actionButtons = document.createElement("div");
-        actionGroup.className =
-          "account-request-row-actions room-request-row-actions";
-        actionButtons.className = "account-actions";
-        singerCell.textContent = request.username || "Performer";
-        if (request.type === "extension") {
-          const requestedTime = document.createElement("small");
-          requestedTime.className = "d-block text-white-50 mt-1";
-          requestedTime.textContent = `+${request.requestedMinutes} minutes requested`;
-          singerCell.appendChild(requestedTime);
-        }
-        roomCell.textContent = request.roomId || "Unknown room";
-        dateCell.textContent = request.createdAt
-          ? new Date(request.createdAt).toLocaleString()
-          : "-";
-        const status =
-          request.status === "approving" ? "processing" : request.status;
-        const statusBadge = document.createElement("span");
-        statusBadge.className = `request-status request-status-${status || "pending"}`;
-        statusBadge.textContent = status || "pending";
-        statusCell.appendChild(statusBadge);
-        if (request.status === "pending") {
-          const approveButton = document.createElement("button");
-          const rejectButton = document.createElement("button");
-          approveButton.type = "button";
-          approveButton.className = "table-action";
-          approveButton.title = "Approve request";
-          approveButton.setAttribute(
-            "aria-label",
-            `Approve room request from ${request.username || "performer"}`,
-          );
-          approveButton.innerHTML =
-            '<i class="bi bi-check2-circle" aria-hidden="true"></i>';
-          rejectButton.type = "button";
-          rejectButton.className = "table-action table-action-danger";
-          rejectButton.title = "Reject request";
-          rejectButton.setAttribute(
-            "aria-label",
-            `Reject room request from ${request.username || "performer"}`,
-          );
-          rejectButton.innerHTML =
-            '<i class="bi bi-x-circle" aria-hidden="true"></i>';
-          approveButton.addEventListener("click", () =>
-            handleRoomRequestDecision(request, "approve", [
-              approveButton,
-              rejectButton,
-            ]),
-          );
-          rejectButton.addEventListener("click", () =>
-            handleRoomRequestDecision(request, "reject", [
-              approveButton,
-              rejectButton,
-            ]),
-          );
-          actionButtons.append(approveButton, rejectButton);
-        } else if (
-          currentRoomRequestView === "history" &&
-          ["approved", "rejected"].includes(request.status)
-        ) {
-          const deleteButton = document.createElement("button");
-          deleteButton.type = "button";
-          deleteButton.className = "table-action table-action-danger";
-          deleteButton.title = "Delete request";
-          deleteButton.setAttribute(
-            "aria-label",
-            `Delete room request from ${request.username || "performer"}`,
-          );
-          deleteButton.innerHTML =
-            '<i class="bi bi-trash3" aria-hidden="true"></i>';
-          deleteButton.addEventListener("click", () =>
-            handleDeleteRoomRequest(request, deleteButton),
-          );
-          actionButtons.appendChild(deleteButton);
-        } else {
-          const resolution = document.createElement("span");
-          resolution.className = "account-request-resolution";
-          resolution.textContent =
-            request.status === "approving"
-              ? "Approval in progress"
-              : request.approvedRoomId
-                ? `Room ${request.approvedRoomId}`
-                : "-";
-          actionGroup.appendChild(resolution);
-        }
-        if (actionButtons.childElementCount > 0) {
-          actionGroup.appendChild(actionButtons);
-        }
-        actionCell.appendChild(actionGroup);
-        row.append(singerCell, roomCell, dateCell, statusCell, actionCell);
-        return row;
-      }),
+    ...pageRequests.map((request) => {
+      const row = document.createElement("tr");
+      const selectCell = document.createElement("td");
+      const singerCell = document.createElement("td");
+      const roomCell = document.createElement("td");
+      const dateCell = document.createElement("td");
+      const statusCell = document.createElement("td");
+      const actionCell = document.createElement("td");
+      const actionGroup = document.createElement("div");
+      const actionButtons = document.createElement("div");
+      actionGroup.className =
+        "account-request-row-actions room-request-row-actions";
+      actionButtons.className = "account-actions";
+      if (currentRoomRequestView === "history") {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "history-row-select";
+        checkbox.value = request.id;
+        checkbox.checked = selectedRoomHistoryIds.has(request.id);
+        checkbox.setAttribute(
+          "aria-label",
+          `Select ${request.type === "extension" ? "time extension" : "room request"} history from ${request.username || "performer"}`,
+        );
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) selectedRoomHistoryIds.add(request.id);
+          else selectedRoomHistoryIds.delete(request.id);
+          updateHistorySelectionControls({
+            selectedIds: selectedRoomHistoryIds,
+            pageRequests,
+            isHistory: true,
+            headerId: "roomHistorySelectHeader",
+            selectAllId: "selectAllRoomHistory",
+            bulkActionsId: "roomHistoryBulkActions",
+            deleteButtonId: "deleteSelectedRoomHistory",
+            countId: "selectedRoomHistoryCount",
+            tableBodyId: "roomRequestsTableBody",
+          });
+        });
+        selectCell.className = "history-select-cell";
+        selectCell.appendChild(checkbox);
+      }
+      singerCell.textContent = request.username || "Performer";
+      if (request.type === "extension") {
+        const requestedTime = document.createElement("small");
+        requestedTime.className = "d-block text-white-50 mt-1";
+        requestedTime.textContent = `+${request.requestedMinutes} minutes requested`;
+        singerCell.appendChild(requestedTime);
+      }
+      roomCell.textContent = request.roomId || "Unknown room";
+      dateCell.textContent = request.createdAt
+        ? new Date(request.createdAt).toLocaleString()
+        : "-";
+      const status =
+        request.status === "approving" ? "processing" : request.status;
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `request-status request-status-${status || "pending"}`;
+      statusBadge.textContent = status || "pending";
+      statusCell.appendChild(statusBadge);
+      if (request.status === "pending") {
+        const approveButton = document.createElement("button");
+        const rejectButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.className = "table-action";
+        approveButton.title = "Approve request";
+        approveButton.setAttribute(
+          "aria-label",
+          `Approve room request from ${request.username || "performer"}`,
+        );
+        approveButton.innerHTML =
+          '<i class="bi bi-check2-circle" aria-hidden="true"></i>';
+        rejectButton.type = "button";
+        rejectButton.className = "table-action table-action-danger";
+        rejectButton.title = "Reject request";
+        rejectButton.setAttribute(
+          "aria-label",
+          `Reject room request from ${request.username || "performer"}`,
+        );
+        rejectButton.innerHTML =
+          '<i class="bi bi-x-circle" aria-hidden="true"></i>';
+        approveButton.addEventListener("click", () =>
+          handleRoomRequestDecision(request, "approve", [
+            approveButton,
+            rejectButton,
+          ]),
+        );
+        rejectButton.addEventListener("click", () =>
+          handleRoomRequestDecision(request, "reject", [
+            approveButton,
+            rejectButton,
+          ]),
+        );
+        actionButtons.append(approveButton, rejectButton);
+      } else if (
+        currentRoomRequestView === "history" &&
+        ["approved", "rejected"].includes(request.status)
+      ) {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "table-action table-action-danger";
+        deleteButton.title = "Delete request";
+        deleteButton.setAttribute(
+          "aria-label",
+          `Delete room request from ${request.username || "performer"}`,
+        );
+        deleteButton.innerHTML =
+          '<i class="bi bi-trash3" aria-hidden="true"></i>';
+        deleteButton.addEventListener("click", () =>
+          handleDeleteRoomRequest(request, deleteButton),
+        );
+        actionButtons.appendChild(deleteButton);
+      } else {
+        const resolution = document.createElement("span");
+        resolution.className = "account-request-resolution";
+        resolution.textContent =
+          request.status === "approving"
+            ? "Approval in progress"
+            : request.approvedRoomId
+              ? `Room ${request.approvedRoomId}`
+              : "-";
+        actionGroup.appendChild(resolution);
+      }
+      if (actionButtons.childElementCount > 0) {
+        actionGroup.appendChild(actionButtons);
+      }
+      actionCell.appendChild(actionGroup);
+      if (currentRoomRequestView === "history") row.appendChild(selectCell);
+      row.append(singerCell, roomCell, dateCell, statusCell, actionCell);
+      return row;
+    }),
   );
 }
 
+function toggleRoomHistoryPageSelection(event) {
+  document
+    .querySelectorAll("#roomRequestsTableBody .history-row-select")
+    .forEach((checkbox) => {
+      if (event.target.checked) selectedRoomHistoryIds.add(checkbox.value);
+      else selectedRoomHistoryIds.delete(checkbox.value);
+    });
+  const pageRequests = Array.from(
+    document.querySelectorAll("#roomRequestsTableBody .history-row-select"),
+    (checkbox) => ({ id: checkbox.value }),
+  );
+  updateHistorySelectionControls({
+    selectedIds: selectedRoomHistoryIds,
+    pageRequests,
+    isHistory: currentRoomRequestView === "history",
+    headerId: "roomHistorySelectHeader",
+    selectAllId: "selectAllRoomHistory",
+    bulkActionsId: "roomHistoryBulkActions",
+    deleteButtonId: "deleteSelectedRoomHistory",
+    countId: "selectedRoomHistoryCount",
+    tableBodyId: "roomRequestsTableBody",
+  });
+}
+
+async function deleteSelectedRoomHistory() {
+  const requestsById = new Map(
+    [...Array.from(roomRequestsByRoom.values()).flat(), ...allRoomRequests].map(
+      (request) => [request.id, request],
+    ),
+  );
+  const selectedRequests = [...selectedRoomHistoryIds]
+    .map((id) => requestsById.get(id))
+    .filter(
+      (request) => request && ["approved", "rejected"].includes(request.status),
+    );
+  if (selectedRequests.length === 0) return;
+  if (
+    !window.confirm(
+      `Delete ${selectedRequests.length} selected room request history item(s)? This cannot be undone.`,
+    )
+  ) {
+    return;
+  }
+
+  const deleteButton = document.getElementById("deleteSelectedRoomHistory");
+  deleteButton.disabled = true;
+  const results = await Promise.allSettled(
+    selectedRequests.map((request) =>
+      KaraokeSessions.deleteRoomRequest(request.roomId, request.id),
+    ),
+  );
+  let deletedCount = 0;
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      selectedRoomHistoryIds.delete(selectedRequests[index].id);
+      deletedCount += 1;
+    } else {
+      console.error("Could not delete room request:", result.reason);
+    }
+  });
+  const failedCount = results.length - deletedCount;
+  showNotification(
+    failedCount
+      ? `${deletedCount} room request(s) deleted; ${failedCount} could not be deleted.`
+      : `${deletedCount} room request(s) deleted.`,
+    failedCount ? "danger" : "info",
+  );
+  renderCurrentRoomRequests();
+}
+
 function selectRoomRequestView(view) {
-  currentRoomRequestView = view === "history" ? "history" : "pending";
+  const nextView = view === "history" ? "history" : "pending";
+  if (nextView !== currentRoomRequestView) selectedRoomHistoryIds.clear();
+  currentRoomRequestView = nextView;
   currentRoomRequestPage = 1;
   document.querySelectorAll("[data-room-request-filter]").forEach((button) => {
     button.setAttribute(
@@ -1034,7 +1346,9 @@ function selectRoomRequestView(view) {
 }
 
 function selectRoomRequestType(type) {
-  currentRoomRequestType = type === "extension" ? "extension" : "room";
+  const nextType = type === "extension" ? "extension" : "room";
+  if (nextType !== currentRoomRequestType) selectedRoomHistoryIds.clear();
+  currentRoomRequestType = nextType;
   currentRoomRequestPage = 1;
   document.querySelectorAll("[data-room-request-type]").forEach((button) => {
     button.setAttribute(

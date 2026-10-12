@@ -912,12 +912,31 @@
                 </div>
               </div>
             </div>
+            <div class="history-bulk-actions" id="roomHistoryBulkActions" hidden>
+              <button
+                class="btn btn-sm btn-outline-danger"
+                id="deleteSelectedRoomHistory"
+                type="button"
+                disabled
+              >
+                <i class="bi bi-trash3" aria-hidden="true"></i>
+                Delete selected (<span id="selectedRoomHistoryCount">0</span>)
+              </button>
+            </div>
             <div class="table-responsive">
               <table class="table table-dark table-hover">
                 <thead
                   style="background: linear-gradient(135deg, #b7791f, #975a16)"
                 >
                   <tr>
+                    <th class="history-select-column" id="roomHistorySelectHeader" hidden>
+                      <input
+                        class="history-row-select"
+                        id="selectAllRoomHistory"
+                        type="checkbox"
+                        aria-label="Select all room request history on this page"
+                      />
+                    </th>
                     <th>Performer</th>
                     <th>Requested From</th>
                     <th>Requested</th>
@@ -1031,10 +1050,37 @@
                   </div>
                 </div>
               </div>
+              <div
+                class="history-bulk-actions"
+                id="accountHistoryBulkActions"
+                hidden
+              >
+                <button
+                  class="btn btn-sm btn-outline-danger"
+                  id="deleteSelectedAccountHistory"
+                  type="button"
+                  disabled
+                >
+                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                  Delete selected (<span id="selectedAccountHistoryCount">0</span>)
+                </button>
+              </div>
               <div class="table-responsive">
                 <table class="table table-dark table-hover">
                   <thead>
                     <tr>
+                      <th
+                        class="history-select-column"
+                        id="accountHistorySelectHeader"
+                        hidden
+                      >
+                        <input
+                          class="history-row-select"
+                          id="selectAllAccountHistory"
+                          type="checkbox"
+                          aria-label="Select all account request history on this page"
+                        />
+                      </th>
                       <th>Requested Username</th>
                       <th>Submitted</th>
                       <th>Status</th>
