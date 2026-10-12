@@ -606,6 +606,48 @@
         border-color: rgba(240, 147, 251, 0.6);
       }
 
+      .footer-privacy {
+        margin: clamp(18px, 4vw, 26px) 0 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.16);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+        text-align: left;
+      }
+
+      .footer-privacy summary {
+        min-height: 44px;
+        padding: 12px 2px;
+        color: #f093fb;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .footer-privacy summary:focus-visible {
+        outline: 2px solid #20d4b0;
+        outline-offset: 3px;
+      }
+
+      .footer-privacy-content {
+        max-width: 760px;
+        padding: 0 2px 15px;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 0.82rem;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+      }
+
+      .footer-privacy-content p {
+        margin: 0 0 10px;
+      }
+
+      .footer-privacy-content p:last-child {
+        margin-bottom: 0;
+      }
+
+      .footer-privacy-content strong {
+        color: #fff;
+      }
+
       .footer-copyright {
         font-size: clamp(0.75rem, 1.5vw, 0.85rem);
         opacity: 0.85;
@@ -854,6 +896,38 @@
             >
           </div>
         </div>
+
+        <details class="footer-privacy">
+          <summary>Privacy Policy</summary>
+          <div class="footer-privacy-content">
+            <p>
+              <strong>Information used.</strong> SD Karaoke processes account
+              usernames and credentials, room membership and activity, song
+              searches and reservations, and account or room requests to provide
+              sign-in, room access, queue, and moderation features.
+            </p>
+            <p>
+              <strong>Storage.</strong> Some session details, device
+              identifiers, saved favorites, and search cache are stored in your
+              browser's local or session storage. Account, room, membership, and
+              request records may be stored in Firebase Realtime Database,
+              depending on the system configuration. Signing out or clearing
+              browser storage does not necessarily delete records stored in
+              Firebase.
+            </p>
+            <p>
+              <strong>Third-party services.</strong> Song searches use the
+              YouTube Data API and playback uses the YouTube embedded player.
+              Search and playback requests are handled by Google/YouTube and are
+              subject to their privacy policies.
+            </p>
+            <p>
+              <strong>Developer:</strong> Shan Denver. For privacy or account
+              questions, use the contact links above or contact your system
+              administrator.
+            </p>
+          </div>
+        </details>
 
         <div class="footer-copyright">
           © 2026 SDkaraoke. All rights reserved. | Built with heart by Shan
