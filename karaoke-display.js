@@ -2139,7 +2139,7 @@ function displayScoreModal(score) {
 
   const value = document.createElement("div");
   value.className = "score-modal-value";
-  value.textContent = score === null ? "--" : `${score}%`;
+  value.textContent = score === null ? "--" : String(score);
 
   const feedback = document.createElement("p");
   feedback.className = "score-modal-feedback";
@@ -2160,7 +2160,7 @@ function displayScoreModal(score) {
   scoreDisplay.append(title, value, feedback);
 
   modal.appendChild(scoreDisplay);
-  document.body.appendChild(modal);
+  document.querySelector(".display-container")?.appendChild(modal);
 
   // Add CSS animations
   const style = document.createElement("style");
