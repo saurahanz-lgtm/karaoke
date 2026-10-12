@@ -2728,15 +2728,18 @@ body.karaoke-display-page {
 }
 
 .performer-page .footer-section {
-  border-top: 0;
-  background: transparent !important;
+  border-top: 1px solid var(--karaoke-panel-border);
+  background: linear-gradient(
+    145deg,
+    rgba(15, 31, 75, 0.96),
+    rgba(8, 20, 49, 0.96)
+  ) !important;
 }
 
 .performer-page .footer-title {
-  background: linear-gradient(110deg, #bba9ff, #78aaff) !important;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text;
+  color: #edf2ff !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
 body.karaoke-display-page {
