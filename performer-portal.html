@@ -557,10 +557,10 @@
 
       .footer-links {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
         justify-content: center;
-        gap: 14px;
+        gap: 0;
         color: rgba(194, 205, 230, 0.55);
         font-size: 0.875rem;
         line-height: 1.4;
@@ -570,10 +570,10 @@
         position: static;
       }
 
-      .footer-links details + details::before {
-        margin-right: 14px;
-        color: rgba(194, 205, 230, 0.55);
-        content: "|";
+      .footer-links details + details {
+        margin-left: 10px;
+        padding-left: 10px;
+        border-left: 1px solid rgba(194, 205, 230, 0.4);
       }
 
       .footer-links summary {
@@ -581,6 +581,7 @@
         font-weight: 600;
         cursor: pointer;
         list-style: none;
+        white-space: nowrap;
       }
 
       .footer-links summary::-webkit-details-marker {
@@ -719,11 +720,7 @@
         }
 
         .footer-links {
-          gap: 10px;
-        }
-
-        .footer-links details + details::before {
-          content: none;
+          font-size: 0.8rem;
         }
 
         .footer-popover {
@@ -733,10 +730,26 @@
       }
 
       @media (max-height: 480px) and (orientation: landscape) {
+        .footer-section {
+          margin-top: 16px;
+          padding-top: 10px;
+          padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+
+        .footer-content {
+          gap: 8px;
+        }
+
+        .footer-links details + details {
+          margin-left: 8px;
+          padding-left: 8px;
+        }
+
         .footer-popover {
-          bottom: calc(64px + env(safe-area-inset-bottom));
-          max-height: min(52vh, 240px);
-          max-height: min(52dvh, 240px);
+          bottom: calc(56px + env(safe-area-inset-bottom));
+          width: min(640px, calc(100vw - 24px));
+          max-height: min(54vh, 220px);
+          max-height: min(54dvh, 220px);
           padding: 10px 12px;
         }
       }
