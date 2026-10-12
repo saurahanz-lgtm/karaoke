@@ -83,33 +83,16 @@ let lastMicSampleAt = null;
 let micSamplingTimer = null;
 const MIC_MIN_ACTIVITY_RMS = 0.02;
 
-function updateMicScoringControl(message) {
-  const button = document.getElementById("micScoringButton");
-  const status = document.getElementById("micScoringStatus");
-
-  if (button) {
-    button.textContent = micScoringEnabled ? "Mic on" : "Mic score";
-    button.setAttribute("aria-pressed", String(micScoringEnabled));
-    button.setAttribute(
-      "aria-label",
-      micScoringEnabled
-        ? "Turn microphone scoring off"
-        : "Enable microphone participation scoring",
-    );
-  }
-
-  if (status) status.textContent = message;
+function showMicConsentDialog() {
+  document.getElementById("micConsentDialog")?.showModal();
 }
 
-async function toggleMicScoring() {
-  if (micScoringEnabled) {
-    stopMicScoring();
-    updateMicScoringControl("Microphone scoring is off.");
-    return;
-  }
-
-  const button = document.getElementById("micScoringButton");
-  if (button) button.disabled = true;
+async function enableMicScoring() {
+  const dialog = document.getElementById("micConsentDialog");
+  const allowButton = document.getElementById("allowMicScoringButton");
+  const status = document.getElementById("micConsentStatus");
+  if (allowButton) allowButton.disabled = true;
+  if (status) status.textContent = "Waiting for microphone permission...";
 
   try {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -142,16 +125,26 @@ async function toggleMicScoring() {
     micScoringEnabled = true;
     lastMicSampleAt = null;
     micSamplingTimer = window.setInterval(sampleMicrophoneActivity, 100);
-    updateMicScoringControl(
-      "Mic activity is measured locally; audio is not recorded or sent.",
-    );
+    if (status) {
+      status.textContent =
+        "Mic activity scoring is on. Audio stays on this device and is not recorded or sent.";
+    }
+    if (dialog?.open) dialog.close("allowed");
   } catch (error) {
     stopMicScoring();
-    updateMicScoringControl(error.message || "Microphone access was denied.");
+    if (status) {
+      status.textContent =
+        error.message ||
+        "Microphone access was denied. Karaoke will continue without scoring.";
+    }
   } finally {
-    if (button) button.disabled = false;
+    if (allowButton) allowButton.disabled = false;
   }
 }
+
+window.addEventListener("DOMContentLoaded", showMicConsentDialog, {
+  once: true,
+});
 
 function stopMicScoring() {
   micScoringEnabled = false;
