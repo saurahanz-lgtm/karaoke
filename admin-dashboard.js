@@ -898,6 +898,12 @@ function renderRoomRequests(requests) {
         const statusCell = document.createElement("td");
         const actionCell = document.createElement("td");
         singerCell.textContent = request.username || "Performer";
+        if (request.type === "extension") {
+          const requestedTime = document.createElement("small");
+          requestedTime.className = "d-block text-white-50 mt-1";
+          requestedTime.textContent = `+${request.requestedMinutes} minutes requested`;
+          singerCell.appendChild(requestedTime);
+        }
         roomCell.textContent = request.roomId || "Unknown room";
         dateCell.textContent = request.createdAt
           ? new Date(request.createdAt).toLocaleString()
@@ -1005,14 +1011,20 @@ async function handleRoomRequestDecision(request, decision, buttons) {
   });
   try {
     if (decision === "approve") {
-      await KaraokeSessions.approveRoomRequest(
-        request.roomId,
-        request.id,
-        `${request.username || "Performer"}'s Room`,
-      );
+      if (request.type === "extension") {
+        await KaraokeSessions.approveRoomExtension(request.roomId, request.id);
+      } else {
+        await KaraokeSessions.approveRoomRequest(
+          request.roomId,
+          request.id,
+          `${request.username || "Performer"}'s Room`,
+        );
+      }
       playRequestNotificationSound();
       showNotification(
-        `Room approved for ${request.username || "singer"}.`,
+        request.type === "extension"
+          ? `Added ${request.requestedMinutes} minutes to ${request.roomId}.`
+          : `Room approved for ${request.username || "singer"}.`,
         "success",
       );
     } else {
@@ -1089,8 +1101,13 @@ function renderKaraokeRooms() {
         const deviceCount = roomDeviceCounts.get(room.id) || 0;
         devicesCell.textContent = `${deviceCount} / ${KaraokeSessions.MAX_DEVICES}`;
         const statusBadge = document.createElement("span");
-        const roomStatus =
-          deviceCount >= KaraokeSessions.MAX_DEVICES
+        const timeExpired =
+          Number(room.timeLimitMinutes) > 0 &&
+          Number(room.expiresAt) > 0 &&
+          Date.now() >= Number(room.expiresAt);
+        const roomStatus = timeExpired
+          ? "expired"
+          : deviceCount >= KaraokeSessions.MAX_DEVICES
             ? "full"
             : deviceCount > 0
               ? "occupied"
@@ -1098,6 +1115,12 @@ function renderKaraokeRooms() {
         statusBadge.className = `account-state room-state-${roomStatus}`;
         statusBadge.textContent = roomStatus;
         statusCell.appendChild(statusBadge);
+        if (Number(room.timeLimitMinutes) > 0) {
+          const limitLabel = document.createElement("small");
+          limitLabel.className = "d-block text-white-50 mt-1";
+          limitLabel.textContent = `${room.timeLimitMinutes} min limit`;
+          statusCell.appendChild(limitLabel);
+        }
         const renameButton = document.createElement("button");
         renameButton.type = "button";
         renameButton.className = "btn btn-sm btn-outline-light me-2";
@@ -1106,6 +1129,15 @@ function renderKaraokeRooms() {
           handleRenameRoom(room, renameButton),
         );
         actionCell.appendChild(renameButton);
+        const timeLimitButton = document.createElement("button");
+        timeLimitButton.type = "button";
+        timeLimitButton.className = "btn btn-sm btn-outline-info me-2";
+        timeLimitButton.textContent = "Set Time Limit";
+        timeLimitButton.title = "Set room duration in hours and minutes";
+        timeLimitButton.addEventListener("click", () =>
+          handleSetRoomTimeLimit(room, timeLimitButton),
+        );
+        actionCell.appendChild(timeLimitButton);
         if (room.id === "main") {
           const defaultLabel = document.createElement("span");
           defaultLabel.textContent = "Default room";
@@ -1152,6 +1184,62 @@ async function handleRenameRoom(room, button) {
         : "Could not rename room. Check the Firebase connection.",
       "danger",
     );
+  }
+}
+
+async function handleSetRoomTimeLimit(room, button) {
+  const currentLimit = Number(room.timeLimitMinutes) || 0;
+  const hoursInput = window.prompt(
+    `Set ${room.name}'s time limit in hours (enter 0 hours and 0 minutes for unlimited):`,
+    String(Math.floor(currentLimit / 60)),
+  );
+  if (hoursInput === null) return;
+  const minutesInput = window.prompt(
+    "Set additional minutes (0 to 59):",
+    String(currentLimit % 60),
+  );
+  if (minutesInput === null) return;
+  if (!hoursInput.trim() || !minutesInput.trim()) {
+    showNotification("Enter whole hours and minutes.", "warning");
+    return;
+  }
+  const hours = Number(hoursInput.trim());
+  const additionalMinutes = Number(minutesInput.trim());
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(additionalMinutes) ||
+    hours < 0 ||
+    additionalMinutes < 0 ||
+    additionalMinutes > 59
+  ) {
+    showNotification("Enter whole hours and 0 to 59 minutes.", "warning");
+    return;
+  }
+  const minutes = hours * 60 + additionalMinutes;
+  if (minutes > 10080) {
+    showNotification("The room time limit cannot exceed 7 days.", "warning");
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    await KaraokeSessions.setRoomTimeLimit(room.id, minutes);
+    showNotification(
+      minutes
+        ? `Room limit set to ${minutes} minutes.`
+        : "Room time limit removed.",
+      "success",
+    );
+  } catch (error) {
+    console.error("Could not set room time limit:", error.message);
+    showNotification(
+      error.message === "ROOM_NOT_FOUND"
+        ? "That room no longer exists."
+        : "Could not set the room time limit. Check the Firebase connection.",
+      "danger",
+    );
+  } finally {
+    button.disabled = false;
   }
 }
 

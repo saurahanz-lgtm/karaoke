@@ -642,7 +642,7 @@
   <body class="performer-page">
     <main id="roomUnavailablePage" class="container-main" hidden>
       <section class="card-ui" role="status">
-        <h2>Room is full</h2>
+        <h2 id="roomUnavailableTitle">Room is full</h2>
         <p id="roomFullMessage"></p>
         <button
           class="searchbtn"
@@ -653,6 +653,45 @@
           Request another room
         </button>
         <p id="roomRequestStatus" aria-live="polite"></p>
+        <section id="roomTimeExtensionPanel" hidden>
+          <p id="roomTimeExpiredMessage">
+            This room's time limit has expired. Request additional time from the
+            administrator.
+          </p>
+          <div class="d-flex gap-3 flex-wrap">
+            <label>
+              Additional hours
+              <input
+                class="form-control"
+                id="roomExtensionHours"
+                type="number"
+                min="0"
+                max="168"
+                value="0"
+              />
+            </label>
+            <label>
+              Additional minutes
+              <input
+                class="form-control"
+                id="roomExtensionMinutes"
+                type="number"
+                min="0"
+                max="59"
+                value="30"
+              />
+            </label>
+          </div>
+          <button
+            class="searchbtn mt-3"
+            id="roomExtensionButton"
+            type="button"
+            onclick="submitRoomExtensionRequest()"
+          >
+            Request Additional Time
+          </button>
+          <p id="roomExtensionStatus" aria-live="polite"></p>
+        </section>
       </section>
     </main>
     <div id="singerApp" class="container-main">
@@ -667,6 +706,13 @@
       <div
         class="tv-availability-notice"
         id="displayAvailabilityNotice"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
+      <div
+        class="room-capacity-notice"
+        id="roomTimeNotice"
         role="status"
         aria-live="polite"
         hidden
@@ -829,6 +875,10 @@
       let usePerformerFirebase = false;
       let activeKaraokeRoomId = null;
       let roomRequestRoomId = null;
+      let stopListeningToRoomUsage = null;
+      let stopListeningToExtensionRequest = null;
+      let performerRoomUsage = null;
+      let performerRoomTimeInterval = null;
       let stopListeningToRoomMembers = null;
       let stopListeningToRoomData = null;
       let stopListeningToPlaybackState = null;
@@ -1204,6 +1254,13 @@
             window.location.replace(assignedRoomUrl.toString());
             return;
           }
+          stopListeningToRoomUsage?.();
+          stopListeningToRoomUsage = KaraokeSessions.listenRoomUsage(
+            connectedRoomId,
+            updatePerformerRoomTime,
+            (error) =>
+              console.warn("Could not follow room time limit:", error.message),
+          );
           stopListeningToRoomMembers?.();
           stopListeningToRoomMembers = KaraokeSessions.listenMembers(
             connectedRoomId,
@@ -1265,6 +1322,19 @@
               error.message === "NO_AVAILABLE_ROOMS"
                 ? "No room is available right now. Send a request to User Management to open another room."
                 : `This room already has ${KaraokeSessions.MAX_DEVICES} connected phones. Send a request to User Management to open another room.`;
+            document.getElementById("singerApp").hidden = true;
+            document.getElementById("roomUnavailablePage").hidden = false;
+            return;
+          }
+
+          if (error.message === "ROOM_TIME_EXPIRED") {
+            roomRequestRoomId = requestedRoomId;
+            document.getElementById("roomUnavailableTitle").textContent =
+              "Room time expired";
+            document.getElementById("roomFullMessage").textContent =
+              "This room's time limit has expired.";
+            document.getElementById("requestAnotherRoomButton").hidden = true;
+            document.getElementById("roomTimeExtensionPanel").hidden = false;
             document.getElementById("singerApp").hidden = true;
             document.getElementById("roomUnavailablePage").hidden = false;
             return;
@@ -1496,6 +1566,136 @@
 
         console.log("✅ Performer portal initialized successfully");
       });
+
+      function updatePerformerRoomTime(settings = {}) {
+        performerRoomUsage = settings;
+        if (performerRoomTimeInterval === null) {
+          performerRoomTimeInterval = setInterval(
+            renderPerformerRoomTime,
+            1000,
+          );
+        }
+        renderPerformerRoomTime();
+      }
+
+      function renderPerformerRoomTime() {
+        const notice = document.getElementById("roomTimeNotice");
+        const timeLimit = Number(performerRoomUsage?.timeLimitMinutes);
+        const expiresAt = Number(performerRoomUsage?.expiresAt);
+        if (
+          !notice ||
+          !Number.isFinite(timeLimit) ||
+          timeLimit <= 0 ||
+          !Number.isFinite(expiresAt) ||
+          expiresAt <= 0
+        ) {
+          if (notice) notice.hidden = true;
+          if (
+            performerRoomUsage &&
+            document.getElementById("roomUnavailablePage").hidden === false
+          ) {
+            window.location.reload();
+          }
+          return;
+        }
+
+        const remainingMs = expiresAt - Date.now();
+        if (remainingMs <= 0) {
+          roomRequestRoomId = activeKaraokeRoomId;
+          notice.hidden = true;
+          document.getElementById("roomUnavailableTitle").textContent =
+            "Room time expired";
+          document.getElementById("roomFullMessage").textContent =
+            "This room's time limit has expired.";
+          document.getElementById("requestAnotherRoomButton").hidden = true;
+          document.getElementById("roomTimeExtensionPanel").hidden = false;
+          document.getElementById("singerApp").hidden = true;
+          document.getElementById("roomUnavailablePage").hidden = false;
+          return;
+        }
+
+        if (document.getElementById("roomUnavailablePage").hidden === false) {
+          window.location.reload();
+          return;
+        }
+
+        const warningWindow = Math.min(5 * 60000, timeLimit * 60000 * 0.2);
+        notice.hidden = remainingMs > warningWindow;
+        if (!notice.hidden) {
+          const remainingMinutes = Math.ceil(remainingMs / 60000);
+          notice.textContent = `Room time is almost up. ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} remaining. Ask the administrator to approve more time.`;
+        }
+      }
+
+      async function submitRoomExtensionRequest() {
+        const button = document.getElementById("roomExtensionButton");
+        const status = document.getElementById("roomExtensionStatus");
+        const hours = Number(
+          document.getElementById("roomExtensionHours").value,
+        );
+        const minutes = Number(
+          document.getElementById("roomExtensionMinutes").value,
+        );
+        const requestedMinutes = hours * 60 + minutes;
+        if (
+          !roomRequestRoomId ||
+          !Number.isInteger(hours) ||
+          !Number.isInteger(minutes) ||
+          hours < 0 ||
+          minutes < 0 ||
+          minutes > 59 ||
+          requestedMinutes < 1 ||
+          requestedMinutes > 10080
+        ) {
+          status.textContent =
+            "Enter a valid extension between 1 minute and 7 days.";
+          return;
+        }
+
+        button.disabled = true;
+        status.textContent = "Sending request to the administrator...";
+        try {
+          const request = await KaraokeSessions.createRoomExtensionRequest(
+            loggedInUser?.username,
+            roomRequestRoomId,
+            requestedMinutes,
+          );
+          stopListeningToExtensionRequest?.();
+          stopListeningToExtensionRequest = KaraokeSessions.listenRoomRequest(
+            roomRequestRoomId,
+            request.id,
+            (updatedRequest) => {
+              if (updatedRequest?.status === "approved") {
+                status.textContent =
+                  "Extension approved. Reconnecting to your room...";
+                setTimeout(() => window.location.reload(), 1000);
+              } else if (updatedRequest?.status === "rejected") {
+                status.textContent =
+                  "Extension request declined. You can request a different duration.";
+                button.disabled = false;
+              } else {
+                status.textContent = "Waiting for administrator approval...";
+              }
+            },
+            (error) => {
+              console.warn(
+                "Could not follow extension request:",
+                error.message,
+              );
+              status.textContent =
+                "Request sent, but its status cannot be checked right now.";
+              button.disabled = false;
+            },
+          );
+        } catch (error) {
+          console.error("Could not request room extension:", error.message);
+          status.textContent =
+            error.message === "ROOM_TIME_LIMIT_NOT_SET"
+              ? "This room does not have a time limit configured. Contact the administrator."
+              : "Could not send the extension request. Check your connection and try again.";
+          button.disabled = false;
+        }
+      }
 
       async function submitRoomRequest(
         buttonId = "requestAnotherRoomButton",
@@ -1844,6 +2044,20 @@
           successCallback(btn, title);
         } catch (error) {
           console.error("Error requesting song:", error);
+          if (error.message === "ROOM_TIME_EXPIRED") {
+            roomRequestRoomId = activeKaraokeRoomId;
+            document.getElementById("roomUnavailableTitle").textContent =
+              "Room time expired";
+            document.getElementById("roomFullMessage").textContent =
+              "This room's time limit has expired.";
+            document.getElementById("requestAnotherRoomButton").hidden = true;
+            document.getElementById("roomTimeExtensionPanel").hidden = false;
+            document.getElementById("singerApp").hidden = true;
+            document.getElementById("roomUnavailablePage").hidden = false;
+            btn.disabled = false;
+            btn.textContent = "Reserve";
+            return;
+          }
           showAlert(
             error.message === "KARAOKE_DISPLAY_DISABLED"
               ? `${error.announcement || tvDisabledAnnouncement} Song reservations are temporarily disabled.`
@@ -2139,8 +2353,14 @@
         ) {
           try {
             firebase.database();
-            KaraokeSessions.sendControl(activeKaraokeRoomId, "restart");
-            showAlert("Restarting current song on karaoke display", "info");
+            KaraokeSessions.sendControl(activeKaraokeRoomId, "restart")
+              .then(() =>
+                showAlert("Restarting current song on karaoke display", "info"),
+              )
+              .catch((error) => {
+                console.warn("Firebase control error:", error.message);
+                showAlert("Could not send restart command", "warning");
+              });
           } catch (err) {
             console.warn("Firebase control error:", err.message);
             showAlert("Could not send restart command", "warning");
@@ -2174,8 +2394,14 @@
         ) {
           try {
             firebase.database();
-            KaraokeSessions.sendControl(activeKaraokeRoomId, "togglePlay");
-            showAlert("Sent play/pause command to karaoke display", "info");
+            KaraokeSessions.sendControl(activeKaraokeRoomId, "togglePlay")
+              .then(() =>
+                showAlert("Sent play/pause command to karaoke display", "info"),
+              )
+              .catch((error) => {
+                console.warn("Firebase control error:", error.message);
+                showAlert("Could not send play/pause command", "warning");
+              });
           } catch (err) {
             console.warn("Firebase control error:", err.message);
             showAlert("Could not send play/pause command", "warning");
@@ -2200,8 +2426,14 @@
         ) {
           try {
             firebase.database();
-            KaraokeSessions.sendControl(activeKaraokeRoomId, "skip");
-            showAlert("Skipping to next song on karaoke display", "info");
+            KaraokeSessions.sendControl(activeKaraokeRoomId, "skip")
+              .then(() =>
+                showAlert("Skipping to next song on karaoke display", "info"),
+              )
+              .catch((error) => {
+                console.warn("Firebase control error:", error.message);
+                showAlert("Could not send skip command", "warning");
+              });
           } catch (err) {
             console.warn("Firebase control error:", err.message);
             showAlert("Could not send skip command", "warning");

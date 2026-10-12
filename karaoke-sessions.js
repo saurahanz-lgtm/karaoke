@@ -5,6 +5,7 @@
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
   const MAX_DEVICES = 3;
   const DEFAULT_ROOM_VOLUME = 70;
+  const MAX_ROOM_TIME_LIMIT_MINUTES = 10080;
   const MEMBER_TIMEOUT_MS = 60000;
   const HEARTBEAT_INTERVAL_MS = 15000;
   let heartbeatTimer = null;
@@ -18,6 +19,33 @@
     return firebase.database();
   }
 
+  function isRoomTimeExpired(room, now = Date.now()) {
+    return (
+      Number(room?.timeLimitMinutes) > 0 &&
+      Number(room?.expiresAt) > 0 &&
+      now >= Number(room.expiresAt)
+    );
+  }
+
+  function throwIfRoomTimeExpired(room) {
+    if (!isRoomTimeExpired(room)) return;
+    const error = new Error("ROOM_TIME_EXPIRED");
+    error.expiresAt = Number(room.expiresAt);
+    throw error;
+  }
+
+  function normalizeRoomTimeLimit(minutes) {
+    const duration = Number(minutes);
+    if (
+      !Number.isInteger(duration) ||
+      duration < 0 ||
+      duration > MAX_ROOM_TIME_LIMIT_MINUTES
+    ) {
+      throw new Error("ROOM_TIME_LIMIT_INVALID");
+    }
+    return duration;
+  }
+
   async function assertKaraokeDisplayEnabled(roomId) {
     const snapshot = await database().ref("tvControl").once("value");
     const settings = snapshot.val() || {};
@@ -29,6 +57,11 @@
       throw error;
     }
     if (roomId) {
+      const roomSnapshot = await database()
+        .ref(`${ROOM_LIST_PATH}/${roomId}`)
+        .once("value");
+      if (!roomSnapshot.exists()) throw new Error("ROOM_NOT_FOUND");
+      throwIfRoomTimeExpired(roomSnapshot.val());
       const roomSettingsSnapshot = await roomRef(roomId, "displayControl").once(
         "value",
       );
@@ -218,6 +251,13 @@
     return () => ref.off("value", handler);
   }
 
+  function listenRoomUsage(roomId, callback, onError) {
+    const ref = database().ref(`${ROOM_LIST_PATH}/${roomId}`);
+    const handler = (snapshot) => callback(snapshot.val() || {});
+    ref.on("value", handler, onError);
+    return () => ref.off("value", handler);
+  }
+
   async function getActiveRoomId() {
     const snapshot = await database().ref(ACTIVE_ROOM_PATH).once("value");
     return snapshot.val();
@@ -232,6 +272,9 @@
         id: generateRoomId(),
         name: roomName,
         createdAt: Date.now(),
+        timeLimitMinutes: 0,
+        usageStartedAt: null,
+        expiresAt: null,
       };
       const roomRef = db.ref(`${ROOM_LIST_PATH}/${room.id}`);
       const reservation = await roomRef.transaction((current) =>
@@ -253,6 +296,42 @@
     }
 
     throw new Error("ROOM_ID_GENERATION_FAILED");
+  }
+
+  async function setRoomTimeLimit(roomId, durationMinutes) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    const minutes = normalizeRoomTimeLimit(durationMinutes);
+    const activeMemberCount = minutes ? await getActiveMemberCount(roomId) : 0;
+    const now = Date.now();
+    const result = await database()
+      .ref(`${ROOM_LIST_PATH}/${roomId}`)
+      .transaction((room) => {
+        if (!room) return undefined;
+        if (minutes === 0) {
+          return {
+            ...room,
+            timeLimitMinutes: 0,
+            usageStartedAt: null,
+            expiresAt: null,
+          };
+        }
+        const existingExpiry = Number(room.expiresAt);
+        const existingStart = Number(room.usageStartedAt);
+        const startedAt =
+          existingStart > 0 && existingExpiry > now
+            ? existingStart
+            : activeMemberCount > 0
+              ? now
+              : null;
+        return {
+          ...room,
+          timeLimitMinutes: minutes,
+          usageStartedAt: startedAt,
+          expiresAt: startedAt ? startedAt + minutes * 60000 : null,
+        };
+      });
+    if (!result.committed) throw new Error("ROOM_NOT_FOUND");
+    return result.snapshot.val();
   }
 
   async function renameRoom(roomId, name) {
@@ -316,6 +395,42 @@
         .trim()
         .slice(0, 40),
       roomId: String(roomId || "").slice(0, 128),
+      status: "pending",
+      createdAt: Date.now(),
+    };
+    await db.ref().update({
+      [`${ROOM_DATA_PATH}/${roomId}/roomRequests/${request.id}`]: request,
+      [`${ROOM_REQUESTS_PATH}/${request.id}`]: request,
+    });
+    return request;
+  }
+
+  async function createRoomExtensionRequest(
+    username,
+    roomId,
+    requestedMinutes,
+  ) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    const minutes = normalizeRoomTimeLimit(requestedMinutes);
+    if (minutes === 0) throw new Error("ROOM_EXTENSION_DURATION_REQUIRED");
+    const db = database();
+    const roomSnapshot = await db
+      .ref(`${ROOM_LIST_PATH}/${roomId}`)
+      .once("value");
+    if (!roomSnapshot.exists()) throw new Error("ROOM_NOT_FOUND");
+    if (!(Number(roomSnapshot.val()?.timeLimitMinutes) > 0)) {
+      throw new Error("ROOM_TIME_LIMIT_NOT_SET");
+    }
+
+    const requestRef = roomRef(roomId, "roomRequests").push();
+    const request = {
+      id: requestRef.key,
+      type: "extension",
+      username: String(username || "Performer")
+        .trim()
+        .slice(0, 40),
+      roomId: String(roomId).slice(0, 128),
+      requestedMinutes: minutes,
       status: "pending",
       createdAt: Date.now(),
     };
@@ -424,6 +539,86 @@
         );
       } catch (rollbackError) {
         console.error("Could not restore pending room request:", rollbackError);
+      }
+      throw error;
+    }
+  }
+
+  async function approveRoomExtension(roomId, requestId) {
+    const db = database();
+    const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
+    const globalRequestRef = db.ref(`${ROOM_REQUESTS_PATH}/${requestId}`);
+    const claim = await requestRef.transaction((request) =>
+      request?.type === "extension" && request.status === "pending"
+        ? { ...request, status: "approving" }
+        : undefined,
+    );
+    if (!claim.committed) throw new Error("ROOM_REQUEST_ALREADY_RESOLVED");
+
+    const request = claim.snapshot.val();
+    let roomUpdated = false;
+    try {
+      const extraMinutes = normalizeRoomTimeLimit(request.requestedMinutes);
+      if (extraMinutes === 0)
+        throw new Error("ROOM_EXTENSION_DURATION_REQUIRED");
+      const roomResult = await db
+        .ref(`${ROOM_LIST_PATH}/${roomId}`)
+        .transaction((room) => {
+          if (!room) return undefined;
+          const now = Date.now();
+          const currentExpiry = Number(room.expiresAt);
+          const isStillRunning = currentExpiry > now;
+          const baseExpiry = isStillRunning ? currentExpiry : now;
+          const startedAt =
+            isStillRunning && Number(room.usageStartedAt) > 0
+              ? Number(room.usageStartedAt)
+              : now;
+          return {
+            ...room,
+            timeLimitMinutes: isStillRunning
+              ? Number(room.timeLimitMinutes || 0) + extraMinutes
+              : extraMinutes,
+            usageStartedAt: startedAt,
+            expiresAt: baseExpiry + extraMinutes * 60000,
+          };
+        });
+      if (!roomResult.committed) throw new Error("ROOM_NOT_FOUND");
+      roomUpdated = true;
+
+      const handledAt = Date.now();
+      const approved = {
+        status: "approved",
+        handledAt,
+        approvedMinutes: extraMinutes,
+        approvedExpiresAt: roomResult.snapshot.val().expiresAt,
+      };
+      await db.ref().update({
+        [`${ROOM_DATA_PATH}/${roomId}/roomRequests/${requestId}`]: {
+          ...request,
+          ...approved,
+        },
+        [`${ROOM_REQUESTS_PATH}/${requestId}`]: {
+          ...((await globalRequestRef.once("value")).val() || {}),
+          ...request,
+          roomId,
+          ...approved,
+        },
+      });
+      return roomResult.snapshot.val();
+    } catch (error) {
+      if (!roomUpdated) {
+        try {
+          await requestRef.transaction((current) =>
+            current?.status === "approving"
+              ? { ...current, status: "pending" }
+              : undefined,
+          );
+        } catch (rollbackError) {
+          console.error(
+            "Could not restore pending extension request:",
+            rollbackError,
+          );
+        }
       }
       throw error;
     }
@@ -553,6 +748,28 @@
     ).length;
   }
 
+  async function startRoomUsage(roomId) {
+    const now = Date.now();
+    return database()
+      .ref(`${ROOM_LIST_PATH}/${roomId}`)
+      .transaction((room) => {
+        const duration = Number(room?.timeLimitMinutes);
+        if (
+          !room ||
+          !Number.isFinite(duration) ||
+          duration <= 0 ||
+          Number(room.expiresAt) > 0
+        ) {
+          return undefined;
+        }
+        return {
+          ...room,
+          usageStartedAt: now,
+          expiresAt: now + duration * 60000,
+        };
+      });
+  }
+
   async function clearRoomSongsIfUnoccupied(roomId) {
     if (!roomId) throw new Error("ROOM_REQUIRED");
     const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
@@ -597,7 +814,8 @@
     return () => ref.off("value", handler);
   }
 
-  function setPlaybackState(roomId, playing) {
+  async function setPlaybackState(roomId, playing) {
+    await assertKaraokeDisplayEnabled(roomId);
     return roomRef(roomId, "control").update({ playing: Boolean(playing) });
   }
 
@@ -617,6 +835,7 @@
       .ref(`${ROOM_LIST_PATH}/${roomId}`)
       .once("value");
     if (!roomSnapshot.exists()) throw new Error("ROOM_NOT_FOUND");
+    throwIfRoomTimeExpired(roomSnapshot.val());
 
     const deviceId = getDeviceId();
     const memberRef = db.ref(`${ROOM_DATA_PATH}/${roomId}/members/${deviceId}`);
@@ -654,6 +873,21 @@
       throw new Error("ROOM_FULL");
     }
 
+    try {
+      await startRoomUsage(roomId);
+      const latestRoomSnapshot = await db
+        .ref(`${ROOM_LIST_PATH}/${roomId}`)
+        .once("value");
+      throwIfRoomTimeExpired(latestRoomSnapshot.val());
+    } catch (error) {
+      await memberRef.remove();
+      await memberRef
+        .onDisconnect()
+        .cancel()
+        .catch(() => {});
+      throw error;
+    }
+
     joinedRoomId = roomId;
     joinedMemberRef = memberRef;
     global.sessionStorage.setItem("karaokeRoomId", roomId);
@@ -678,6 +912,8 @@
     const rooms = Object.entries(roomsSnapshot.val() || {}).map(
       ([id, room]) => ({ ...room, id }),
     );
+    const requestedRoom = rooms.find((room) => room.id === roomId);
+    throwIfRoomTimeExpired(requestedRoom);
     const getActiveMembers = async (candidateRoomId) => {
       const snapshot = await database()
         .ref(`${ROOM_DATA_PATH}/${candidateRoomId}/members`)
@@ -695,7 +931,7 @@
 
     const candidates = await Promise.all(
       rooms
-        .filter((room) => room.id !== roomId)
+        .filter((room) => room.id !== roomId && !isRoomTimeExpired(room))
         .map(async (room) => ({
           ...room,
           activeCount: (await getActiveMembers(room.id)).length,
@@ -835,6 +1071,7 @@
     claimNextSong,
     createRoom,
     createRoomRequest,
+    createRoomExtensionRequest,
     clearRoomSongsIfUnoccupied,
     deleteRoomRequest,
     deleteRoom,
@@ -853,17 +1090,20 @@
     listenRoom,
     listenRoomRequest,
     listenRooms,
+    listenRoomUsage,
     listenRoomRequests,
     listenRoomDisplayStatus,
     listenVolume,
     roomRef,
     renameRoom,
     approveRoomRequest,
+    approveRoomExtension,
     rejectRoomRequest,
     setRoomVolume,
     setRoomMuted,
     setRoomDisplayAvailability,
     setPlaybackState,
+    setRoomTimeLimit,
     sendControl,
   };
 })(window);

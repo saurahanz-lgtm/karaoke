@@ -49,7 +49,11 @@ let stopListeningToRooms = null;
 let stopListeningToRoomVolume = null;
 let stopListeningToRoomMuted = null;
 let stopListeningToRoomDisplayStatus = null;
+let stopListeningToRoomUsage = null;
 let roomDisplayEnabled = true;
+let roomUsageSettings = null;
+let roomUsageTimer = null;
+let roomTimeExpired = false;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
 let karaokeDisplayEnabled = true;
@@ -145,8 +149,12 @@ function activateKaraokeRoom(roomId) {
   stopListeningToRoomMuted?.();
   stopListeningToRoomDisplayStatus?.();
   stopListeningToRoomDisplayStatus = null;
+  stopListeningToRoomUsage?.();
+  stopListeningToRoomUsage = null;
   activeKaraokeRoomId = roomId;
   roomDisplayEnabled = true;
+  roomUsageSettings = null;
+  roomTimeExpired = false;
   activeRoomVolume = KaraokeSessions.DEFAULT_ROOM_VOLUME;
   activeRoomMuted = false;
   sessionStorage.setItem("karaokeTvRoomId", roomId);
@@ -251,6 +259,77 @@ function activateKaraokeRoom(roomId) {
     (error) =>
       console.warn("Could not load room display status:", error.message),
   );
+
+  stopListeningToRoomUsage = KaraokeSessions.listenRoomUsage(
+    roomId,
+    updateKaraokeDisplayRoomUsage,
+    (error) => console.warn("Could not follow room time limit:", error.message),
+  );
+}
+
+function updateKaraokeDisplayRoomUsage(settings = {}) {
+  roomUsageSettings = settings;
+  if (roomUsageTimer === null) {
+    roomUsageTimer = setInterval(renderKaraokeDisplayRoomTime, 1000);
+  }
+  renderKaraokeDisplayRoomTime();
+}
+
+function renderKaraokeDisplayRoomTime() {
+  const notice = document.getElementById("roomTimeNotice");
+  if (!notice) return;
+  const timeLimit = Number(roomUsageSettings?.timeLimitMinutes);
+  const expiresAt = Number(roomUsageSettings?.expiresAt);
+  if (
+    !Number.isFinite(timeLimit) ||
+    timeLimit <= 0 ||
+    !Number.isFinite(expiresAt) ||
+    expiresAt <= 0
+  ) {
+    notice.hidden = true;
+    notice.classList.remove("is-expired");
+    if (roomTimeExpired) window.location.reload();
+    return;
+  }
+
+  const remainingMs = expiresAt - Date.now();
+  if (remainingMs <= 0) {
+    if (!roomTimeExpired) {
+      roomTimeExpired = true;
+      karaokeDisplayEnabled = false;
+      stopListeningToRoom?.();
+      stopListeningToRoom = null;
+      stopListeningToRoomVolume?.();
+      stopListeningToRoomVolume = null;
+      stopListeningToRoomMuted?.();
+      stopListeningToRoomMuted = null;
+      clearCurrentSongPlayback();
+    }
+    notice.classList.add("is-expired");
+    notice.textContent =
+      "Room time expired. A performer can request additional time; playback resumes after admin approval.";
+    notice.hidden = false;
+    return;
+  }
+
+  if (roomTimeExpired) {
+    window.location.reload();
+    return;
+  }
+
+  const warningWindow = Math.min(5 * 60000, timeLimit * 60000 * 0.2);
+  notice.classList.remove("is-expired");
+  notice.hidden = remainingMs > warningWindow;
+  if (!notice.hidden) {
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const remaining = hours
+      ? `${hours}h ${minutes}m ${seconds}s`
+      : `${minutes}m ${seconds}s`;
+    notice.textContent = `Room time is almost up. ${remaining} remaining.`;
+  }
 }
 
 function clearEmptyRoomSongCleanupTimer() {
@@ -317,6 +396,13 @@ async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
     ),
   );
   const savedRoomId = sessionStorage.getItem("karaokeTvRoomId");
+  const retainedOccupiedRoomId = [requestedRoomId, savedRoomId].find(
+    (roomId) =>
+      rooms.some((room) => room.id === roomId) &&
+      (roomCounts.get(roomId) || 0) > 0,
+  );
+  if (retainedOccupiedRoomId) return retainedOccupiedRoomId;
+
   const emptyRooms = rooms
     .filter((room) => (roomCounts.get(room.id) || 0) === 0)
     .sort((first, second) => (first.createdAt || 0) - (second.createdAt || 0));

@@ -160,6 +160,31 @@
         object-fit: cover;
       }
 
+      #roomTimeNotice:not([hidden]) {
+        position: fixed;
+        top: clamp(96px, 12vh, 140px);
+        left: 50%;
+        z-index: 120;
+        width: min(88vw, 640px);
+        padding: 14px 20px;
+        transform: translateX(-50%);
+        border: 1px solid rgba(255, 194, 92, 0.85);
+        border-radius: 10px;
+        background: rgba(37, 29, 17, 0.94);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+        color: #fff1d2;
+        font-size: clamp(0.95rem, 2vw, 1.3rem);
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: center;
+      }
+
+      #roomTimeNotice.is-expired {
+        border-color: rgba(255, 105, 125, 0.9);
+        background: rgba(57, 15, 25, 0.96);
+        color: #ffe4e8;
+      }
+
       #noSongMessage {
         position: absolute;
         inset: 0;
@@ -693,6 +718,7 @@
     <div class="display-container">
       <!-- Video Player -->
       <div class="now-playing-section">
+        <div id="roomTimeNotice" role="status" aria-live="polite" hidden></div>
         <div class="now-playing-card">
           <div id="videoPlayer"></div>
           <div id="noSongMessage" role="status" aria-live="polite">

@@ -1875,6 +1875,11 @@ body.admin-page {
   color: #ff9eac;
   background: rgba(220, 53, 69, 0.15);
 }
+.room-state-expired {
+  border-color: rgba(255, 105, 125, 0.5);
+  color: #ffe4e8;
+  background: rgba(120, 25, 42, 0.3);
+}
 .account-disabled {
   opacity: 0.66;
 }
