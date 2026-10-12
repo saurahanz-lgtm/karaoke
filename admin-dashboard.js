@@ -195,6 +195,9 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("addUserForm")
     .addEventListener("submit", handleAddUser);
+  document
+    .getElementById("toggleAddUserForm")
+    .addEventListener("click", toggleAddUserPanel);
   document.getElementById("userSearch").addEventListener("input", () => {
     currentUserPage = 1;
     displayUsers();
@@ -353,12 +356,25 @@ function setAdminView(viewName) {
     display: ["Karaoke Display Control", "Manage the shared display."],
     rooms: ["Karaoke Rooms", "Monitor rooms and connected performers."],
     requests: ["Room Requests", "Review requests waiting for approval."],
-    addUser: ["Add New User", "Create an account for your karaoke system."],
   }[viewName];
   if (viewCopy && heading && subheading) {
     heading.textContent = viewCopy[0];
     subheading.textContent = viewCopy[1];
   }
+}
+
+function toggleAddUserPanel() {
+  const panel = document.getElementById("addUserSection");
+  const button = document.getElementById("toggleAddUserForm");
+  const isOpening = panel.hidden;
+  panel.hidden = !isOpening;
+  button.setAttribute("aria-expanded", String(isOpening));
+  button.querySelector("i").className = isOpening
+    ? "bi bi-x-lg"
+    : "bi bi-plus-lg";
+  button.querySelector("span").textContent = isOpening ? "Close" : "Add user";
+  if (isOpening) document.getElementById("userName").focus();
+  else button.focus();
 }
 
 function initializeRoomManagement() {
@@ -2848,8 +2864,7 @@ function continueAddUser(username, password, role) {
   // Reset form
   document.getElementById("addUserForm").reset();
 
-  // Close modal
-  setAdminView("users");
+  toggleAddUserPanel();
 
   showNotification(`✅ User "${username}" added successfully!`, "success");
   displayUsers();

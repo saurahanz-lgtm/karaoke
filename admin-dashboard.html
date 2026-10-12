@@ -375,14 +375,6 @@
           >
             <i class="bi bi-inbox"></i><span>Room Requests</span>
           </button>
-          <button
-            class="admin-nav-link"
-            type="button"
-            data-admin-view-target="addUser"
-            aria-controls="addUserSection"
-          >
-            <i class="bi bi-person-plus"></i><span>Add New User</span>
-          </button>
         </nav>
         <div class="sidebar-note">
           <i class="bi bi-soundwave"></i
@@ -1004,11 +996,75 @@
               <button
                 type="button"
                 class="primary-action"
-                data-admin-view-target="addUser"
+                id="toggleAddUserForm"
+                aria-expanded="false"
+                aria-controls="addUserSection"
               >
-                <i class="bi bi-plus-lg"></i> Add account
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>Add user</span>
               </button>
             </div>
+            <section
+              id="addUserSection"
+              class="account-create-panel"
+              aria-labelledby="addUserHeading"
+              hidden
+            >
+              <div class="section-toolbar">
+                <div>
+                  <h3 id="addUserHeading">Create account</h3>
+                  <p>Add a user or administrator to the account database.</p>
+                </div>
+              </div>
+              <form id="addUserForm" class="account-form">
+                <div class="form-field">
+                  <label for="userName">Username</label>
+                  <input
+                    class="form-control"
+                    id="userName"
+                    name="username"
+                    type="text"
+                    minlength="3"
+                    maxlength="40"
+                    autocomplete="username"
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+                <div class="form-field">
+                  <label for="userPassword">Password</label>
+                  <input
+                    class="form-control"
+                    id="userPassword"
+                    name="password"
+                    type="password"
+                    minlength="6"
+                    autocomplete="new-password"
+                    placeholder="At least 6 characters"
+                    required
+                  />
+                </div>
+                <div class="form-field">
+                  <label for="userRole">Account role</label>
+                  <select
+                    class="form-control"
+                    id="userRole"
+                    name="role"
+                    required
+                  >
+                    <option value="">Select a role</option>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div class="form-actions">
+                  <button class="primary-action" type="submit">
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
+                    Create account
+                  </button>
+                </div>
+              </form>
+            </section>
             <section
               class="account-requests-panel"
               aria-labelledby="accountRequestsHeading"
@@ -1243,69 +1299,6 @@
             </div>
           </section>
 
-          <section
-            id="addUserSection"
-            class="add-user-view"
-            data-admin-view="addUser"
-            aria-labelledby="addUserHeading"
-            hidden
-          >
-            <div class="section-toolbar">
-              <div>
-                <h2 id="addUserHeading">Create Account</h2>
-                <p>
-                  Add a user or administrator to the existing account database.
-                </p>
-              </div>
-            </div>
-            <form id="addUserForm" class="account-form">
-              <div class="form-field">
-                <label for="userName">Username</label
-                ><input
-                  class="form-control"
-                  id="userName"
-                  name="username"
-                  type="text"
-                  minlength="3"
-                  maxlength="40"
-                  autocomplete="username"
-                  placeholder="Enter username"
-                  required
-                />
-              </div>
-              <div class="form-field">
-                <label for="userPassword">Password</label
-                ><input
-                  class="form-control"
-                  id="userPassword"
-                  name="password"
-                  type="password"
-                  minlength="6"
-                  autocomplete="new-password"
-                  placeholder="At least 6 characters"
-                  required
-                />
-              </div>
-              <div class="form-field">
-                <label for="userRole">Account role</label
-                ><select
-                  class="form-control"
-                  id="userRole"
-                  name="role"
-                  required
-                >
-                  <option value="">Select a role</option>
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <div class="form-actions">
-                <button class="primary-action" type="submit">
-                  <i class="bi bi-person-plus"></i> Create account
-                </button>
-              </div>
-            </form>
-          </section>
         </main>
       </div>
     </div>
