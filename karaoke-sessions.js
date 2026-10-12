@@ -7,6 +7,7 @@
   const DEFAULT_ROOM_VOLUME = 70;
   const MAX_ROOM_TIME_LIMIT_MINUTES = 10080;
   const MEMBER_TIMEOUT_MS = 60000;
+  const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 10 * 60 * 1000;
   const HEARTBEAT_INTERVAL_MS = 15000;
   const DEVICE_ID_STORAGE_KEY = "karaoke_room_tab_device_id";
   const TAB_INSTANCE_ID = global.crypto?.randomUUID
@@ -828,19 +829,77 @@
       });
   }
 
-  async function clearRoomSongsIfUnoccupied(roomId) {
+  async function markRoomEmptySince(roomId, emptySince) {
     if (!roomId) throw new Error("ROOM_REQUIRED");
-    const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
+    const requestedTimestamp = Number(emptySince);
+    const suppliedTimestamp =
+      Number.isFinite(requestedTimestamp) && requestedTimestamp > 0
+        ? requestedTimestamp
+        : null;
+    const now = Date.now();
+    const cutoff = now - MEMBER_TIMEOUT_MS;
     const result = await roomRef(roomId).transaction((room) => {
       if (!room) return undefined;
       const hasActiveMembers = Object.values(room.members || {}).some(
         (member) => member && Number(member.lastSeen) >= cutoff,
       );
-      if (hasActiveMembers) return undefined;
-      if (!room.queue && !room.currentSong) return undefined;
-      return { ...room, queue: null, currentSong: null };
+      if (hasActiveMembers) {
+        return Number(room.emptySince) > 0
+          ? { ...room, emptySince: null }
+          : undefined;
+      }
+      if (Number(room.emptySince) > 0) return undefined;
+      const lastActivityAt = Math.max(
+        0,
+        ...Object.values(room.members || {}).map(
+          (member) => Number(member?.lastSeen) || 0,
+        ),
+      );
+      const timestamp = suppliedTimestamp || lastActivityAt || now;
+      return { ...room, emptySince: Math.min(timestamp, now) };
     });
+    return Number(result.snapshot.val()?.emptySince) || null;
+  }
+
+  async function clearRoomEmptySince(roomId) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    const result = await roomRef(roomId, "emptySince").transaction((current) =>
+      Number(current) > 0 ? null : undefined,
+    );
     return result.committed;
+  }
+
+  async function clearRoomSongsIfUnoccupied(roomId) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    const now = Date.now();
+    const cutoff = now - MEMBER_TIMEOUT_MS;
+    const sessionRef = roomRef(roomId);
+    const beforeSnapshot = await sessionRef.once("value");
+    const hadSongs = Boolean(
+      beforeSnapshot.val()?.queue || beforeSnapshot.val()?.currentSong,
+    );
+    const result = await sessionRef.transaction((room) => {
+      if (!room) return undefined;
+      const hasActiveMembers = Object.values(room.members || {}).some(
+        (member) => member && Number(member.lastSeen) >= cutoff,
+      );
+      if (hasActiveMembers) {
+        return Number(room.emptySince) > 0
+          ? { ...room, emptySince: null }
+          : undefined;
+      }
+      const emptySince = Number(room.emptySince);
+      if (!Number.isFinite(emptySince) || emptySince <= 0) return undefined;
+      if (now - emptySince < EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS) return undefined;
+      if (!room.queue && !room.currentSong) {
+        return { ...room, emptySince: null };
+      }
+      return { ...room, queue: null, currentSong: null, emptySince: null };
+    });
+    const room = result.snapshot.val();
+    return Boolean(
+      hadSongs && result.committed && !room?.queue && !room?.currentSong,
+    );
   }
 
   function normalizeVolume(value) {
@@ -930,6 +989,9 @@
       await memberRef.onDisconnect().cancel();
       throw new Error("ROOM_FULL");
     }
+    clearRoomEmptySince(roomId).catch((error) => {
+      console.warn("Could not reset room idle timer:", error.message);
+    });
 
     try {
       await startRoomUsage(roomId);
@@ -1131,6 +1193,8 @@
     createRoomRequest,
     createRoomExtensionRequest,
     clearRoomSongsIfUnoccupied,
+    markRoomEmptySince,
+    clearRoomEmptySince,
     deleteRoomRequest,
     deleteRoom,
     ensureDefaultRoom,

@@ -61,7 +61,6 @@ let tvDisabledAnnouncement = "";
 let tvAvailabilityListenerAttached = false;
 const KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY = "karaoke_tv_room_request_v1";
 const EMPTY_ROOM_SONG_CLEANUP_DELAY_MS = 10 * 60 * 1000;
-const EMPTY_ROOM_SONG_CLEANUP_STORAGE_PREFIX = "karaoke_empty_room_since_";
 let stopListeningToKaraokeDisplayRoomRequest = null;
 let activeKaraokeDisplayRoomRequestKey = null;
 let tvRoomRequestPollTimer = null;
@@ -566,77 +565,66 @@ function clearEmptyRoomSongCleanupTimer() {
 }
 
 function scheduleEmptyRoomSongCleanup(roomId, memberCount) {
-  const storageKey = `${EMPTY_ROOM_SONG_CLEANUP_STORAGE_PREFIX}${roomId}`;
+  if (activeKaraokeRoomId !== roomId) return;
+
   if (memberCount > 0) {
     clearEmptyRoomSongCleanupTimer();
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (error) {
-      console.warn("Could not reset empty-room cleanup timer:", error.message);
-    }
+    KaraokeSessions.clearRoomEmptySince(roomId).catch((error) => {
+      console.warn("Could not reset empty-room timer:", error.message);
+    });
     return;
   }
-  if (
-    emptyRoomSongCleanupRoomId === roomId &&
-    emptyRoomSongCleanupTimer !== null
-  )
-    return;
+  if (emptyRoomSongCleanupRoomId === roomId) return;
 
   clearEmptyRoomSongCleanupTimer();
-  let emptySince = 0;
-  try {
-    emptySince = Number(localStorage.getItem(storageKey));
-  } catch (error) {
-    console.warn("Could not restore empty-room cleanup timer:", error.message);
-  }
-  if (
-    !Number.isFinite(emptySince) ||
-    emptySince <= 0 ||
-    emptySince > Date.now()
-  ) {
-    emptySince = Date.now();
-    try {
-      localStorage.setItem(storageKey, String(emptySince));
-    } catch (error) {
-      console.warn(
-        "Could not persist empty-room cleanup timer:",
-        error.message,
-      );
-    }
-  }
-
   emptyRoomSongCleanupRoomId = roomId;
-  emptyRoomSongCleanupTimer = setTimeout(
-    async () => {
-      emptyRoomSongCleanupTimer = null;
-      emptyRoomSongCleanupRoomId = null;
-      if (activeKaraokeRoomId !== roomId) return;
-      try {
-        const cleared =
-          await KaraokeSessions.clearRoomSongsIfUnoccupied(roomId);
-        if (cleared) {
-          console.log(`Cleared reserved songs from empty room ${roomId}`);
+
+  KaraokeSessions.markRoomEmptySince(roomId)
+    .then((emptySince) => {
+      if (
+        !emptySince ||
+        activeKaraokeRoomId !== roomId ||
+        emptyRoomSongCleanupRoomId !== roomId
+      ) {
+        if (emptyRoomSongCleanupRoomId === roomId) {
+          emptyRoomSongCleanupRoomId = null;
         }
-        localStorage.removeItem(storageKey);
-      } catch (error) {
-        console.warn(
-          `Could not clear songs from empty room ${roomId}:`,
-          error.message,
-        );
-        try {
-          const retryTimestamp =
-            Date.now() - EMPTY_ROOM_SONG_CLEANUP_DELAY_MS + 60000;
-          localStorage.setItem(storageKey, String(retryTimestamp));
-        } catch (storageError) {
-          console.warn(
-            "Could not persist empty-room cleanup retry:",
-            storageError.message,
-          );
-        }
+        return;
       }
-    },
-    Math.max(0, EMPTY_ROOM_SONG_CLEANUP_DELAY_MS - (Date.now() - emptySince)),
-  );
+
+      const remainingMs = Math.max(
+        0,
+        EMPTY_ROOM_SONG_CLEANUP_DELAY_MS - (Date.now() - emptySince),
+      );
+      emptyRoomSongCleanupTimer = setTimeout(async () => {
+        emptyRoomSongCleanupTimer = null;
+        if (activeKaraokeRoomId !== roomId) {
+          emptyRoomSongCleanupRoomId = null;
+          return;
+        }
+
+        try {
+          const cleared =
+            await KaraokeSessions.clearRoomSongsIfUnoccupied(roomId);
+          if (cleared) {
+            console.log(`Cleared reserved songs from empty room ${roomId}`);
+          }
+          emptyRoomSongCleanupRoomId = null;
+        } catch (error) {
+          console.warn(
+            `Could not clear songs from empty room ${roomId}:`,
+            error.message,
+          );
+          emptyRoomSongCleanupRoomId = null;
+          setTimeout(() => scheduleEmptyRoomSongCleanup(roomId, 0), 60000);
+        }
+      }, remainingMs);
+    })
+    .catch((error) => {
+      console.warn("Could not persist empty-room timer:", error.message);
+      emptyRoomSongCleanupRoomId = null;
+      setTimeout(() => scheduleEmptyRoomSongCleanup(roomId, 0), 60000);
+    });
 }
 
 async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
