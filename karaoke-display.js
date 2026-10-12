@@ -2036,12 +2036,7 @@ function showScore() {
     activitySeconds,
     observedSeconds,
   });
-  displayScoreModal(
-    currentPerformerName,
-    score,
-    activitySeconds,
-    observedSeconds,
-  );
+  displayScoreModal(score);
 
   // Wait for score display before playing next song
   setTimeout(() => {
@@ -2050,12 +2045,7 @@ function showScore() {
 }
 
 // Display score modal
-function displayScoreModal(
-  singerName,
-  score,
-  activitySeconds,
-  observedSeconds,
-) {
+function displayScoreModal(score) {
   const existingModal = document.getElementById("scoreModal");
   existingModal?.remove();
 
@@ -2068,17 +2058,8 @@ function displayScoreModal(
   const scoreDisplay = document.createElement("div");
   scoreDisplay.className = "score-modal-card";
 
-  const icon = document.createElement("div");
-  icon.className = "score-modal-icon";
-  icon.setAttribute("aria-hidden", "true");
-  icon.textContent = "♪";
-
   const title = document.createElement("h2");
   title.textContent = "Your score is";
-
-  const singer = document.createElement("p");
-  singer.className = "score-modal-singer";
-  singer.textContent = singerName;
 
   const value = document.createElement("div");
   value.className = "score-modal-value";
@@ -2087,26 +2068,20 @@ function displayScoreModal(
   const feedback = document.createElement("p");
   feedback.className = "score-modal-feedback";
   if (score === null) {
-    feedback.textContent = "Enable mic scoring for your next song.";
+    feedback.textContent = "Let's sing together next time!";
   } else if (score === 100) {
     feedback.textContent = "You're a great singer!";
   } else if (score >= 80) {
-    feedback.textContent = "Amazing singing energy! Keep it up!";
+    feedback.textContent = "Amazing singing! Keep it up!";
   } else if (score >= 60) {
     feedback.textContent = "You're finding your rhythm!";
   } else if (score > 0) {
-    feedback.textContent = "Keep going, you're warming up!";
+    feedback.textContent = "Keep going, you've got this!";
   } else {
-    feedback.textContent = "Ready for the next song? Give it a try!";
+    feedback.textContent = "The next song is yours!";
   }
 
-  const note = document.createElement("p");
-  note.className = "score-modal-note";
-  note.textContent =
-    score === null
-      ? "Mic scoring was off or no playback time was measured."
-      : `Your mic registered activity for ${activitySeconds}s of ${observedSeconds}s monitored. This measures sound, not pitch accuracy; room noise or music may affect it.`;
-  scoreDisplay.append(icon, title, singer, value, feedback, note);
+  scoreDisplay.append(title, value, feedback);
 
   modal.appendChild(scoreDisplay);
   document.body.appendChild(modal);
