@@ -2201,15 +2201,6 @@
             timestamp: new Date().toLocaleString(),
           };
 
-          // Mark that this song is being sung (for scoring system)
-          if (typeof markSinging !== "undefined") {
-            try {
-              markSinging();
-            } catch (e) {
-              console.warn("⚠️ Could not mark singing activity:", e.message);
-            }
-          }
-
           if (!activeKaraokeRoomId) throw new Error("No karaoke room joined");
           await KaraokeSessions.addSong(activeKaraokeRoomId, newSong);
           addToLocalQueue(newSong);

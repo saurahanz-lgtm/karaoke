@@ -69,16 +69,143 @@ let emptyRoomSongCleanupTimer = null;
 let emptyRoomSongCleanupRoomId = null;
 
 // SCORING SYSTEM
-let songStartTime = null;
-let hasSinging = false;
 let currentPerformerName = "";
 let songDurationMs = 0;
+let microphoneStream = null;
+let microphoneAudioContext = null;
+let microphoneAnalyser = null;
+let microphoneSamples = null;
+let micScoringEnabled = false;
+let micActivityMs = 0;
+let micObservedPlayingMs = 0;
+let micNoiseFloorRms = 0.006;
+let lastMicSampleAt = null;
+let micSamplingTimer = null;
+const MIC_MIN_ACTIVITY_RMS = 0.02;
 
-// Mark that someone is singing (can be called from singer.js or other pages)
-function markSinging() {
-  hasSinging = true;
-  console.log(`🎤 Singing marked for ${currentPerformerName}`);
+function updateMicScoringControl(message) {
+  const button = document.getElementById("micScoringButton");
+  const status = document.getElementById("micScoringStatus");
+
+  if (button) {
+    button.textContent = micScoringEnabled ? "Mic on" : "Mic score";
+    button.setAttribute("aria-pressed", String(micScoringEnabled));
+    button.setAttribute(
+      "aria-label",
+      micScoringEnabled
+        ? "Turn microphone scoring off"
+        : "Enable microphone participation scoring",
+    );
+  }
+
+  if (status) status.textContent = message;
 }
+
+async function toggleMicScoring() {
+  if (micScoringEnabled) {
+    stopMicScoring();
+    updateMicScoringControl("Microphone scoring is off.");
+    return;
+  }
+
+  const button = document.getElementById("micScoringButton");
+  if (button) button.disabled = true;
+
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Microphone access requires HTTPS or localhost.");
+    }
+
+    const AudioContextConstructor =
+      window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextConstructor) {
+      throw new Error("This browser does not support microphone scoring.");
+    }
+
+    microphoneStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: false,
+      },
+      video: false,
+    });
+    microphoneAudioContext = new AudioContextConstructor();
+    microphoneAnalyser = microphoneAudioContext.createAnalyser();
+    microphoneAnalyser.fftSize = 2048;
+    microphoneSamples = new Float32Array(microphoneAnalyser.fftSize);
+    microphoneAudioContext
+      .createMediaStreamSource(microphoneStream)
+      .connect(microphoneAnalyser);
+    await microphoneAudioContext.resume();
+
+    micScoringEnabled = true;
+    lastMicSampleAt = null;
+    micSamplingTimer = window.setInterval(sampleMicrophoneActivity, 100);
+    updateMicScoringControl(
+      "Mic activity is measured locally; audio is not recorded or sent.",
+    );
+  } catch (error) {
+    stopMicScoring();
+    updateMicScoringControl(error.message || "Microphone access was denied.");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function stopMicScoring() {
+  micScoringEnabled = false;
+  lastMicSampleAt = null;
+  if (micSamplingTimer !== null) {
+    window.clearInterval(micSamplingTimer);
+    micSamplingTimer = null;
+  }
+  microphoneStream?.getTracks().forEach((track) => track.stop());
+  microphoneStream = null;
+  microphoneAnalyser = null;
+  microphoneSamples = null;
+  if (microphoneAudioContext && microphoneAudioContext.state !== "closed") {
+    microphoneAudioContext.close().catch(() => {});
+  }
+  microphoneAudioContext = null;
+}
+
+function sampleMicrophoneActivity() {
+  if (!micScoringEnabled || !microphoneAnalyser || !microphoneSamples) return;
+
+  microphoneAnalyser.getFloatTimeDomainData(microphoneSamples);
+  let sumSquares = 0;
+  for (const sample of microphoneSamples) sumSquares += sample * sample;
+  const rms = Math.sqrt(sumSquares / microphoneSamples.length);
+  const now = performance.now();
+  const activePlayer = window.tvPlayer || player;
+  const isSongPlaying =
+    typeof YT !== "undefined" &&
+    activePlayer &&
+    activePlayer.getPlayerState?.() === YT.PlayerState.PLAYING;
+
+  if (!isSongPlaying) {
+    micNoiseFloorRms = micNoiseFloorRms * 0.9 + rms * 0.1;
+    lastMicSampleAt = now;
+    return;
+  }
+
+  if (lastMicSampleAt === null) {
+    lastMicSampleAt = now;
+    return;
+  }
+
+  const elapsedMs = Math.min(now - lastMicSampleAt, 200);
+  lastMicSampleAt = now;
+  micObservedPlayingMs += elapsedMs;
+  const activityThreshold = Math.max(
+    MIC_MIN_ACTIVITY_RMS,
+    micNoiseFloorRms * 2.5,
+  );
+  if (rms >= activityThreshold) micActivityMs += elapsedMs;
+}
+
+window.addEventListener("pagehide", stopMicScoring);
 
 function hideBootupSplash() {
   if (bootupHidden) return; // Only hide once
@@ -1497,6 +1624,9 @@ function toggleFullscreen() {
 // E. PLAYER CREATION (ONCE LANG)
 function loadSong(song) {
   // Boot-up video disabled - create player directly with karaoke song
+  currentPerformerName = song.singer || song.requestedBy || "Karaoke performer";
+  micActivityMs = 0;
+  micObservedPlayingMs = 0;
   currentVideoId = song.videoId;
   setNoSongMessage(false);
 
@@ -1778,10 +1908,10 @@ function playVideo(videoId, title, artist, singer) {
   container.innerHTML = "";
 
   // Initialize scoring for new song
-  songStartTime = Date.now();
-  hasSinging = false;
   currentPerformerName = singer || "Unknown Performer";
   songDurationMs = 0;
+  micActivityMs = 0;
+  micObservedPlayingMs = 0;
 
   player = new YT.Player(container, {
     height: "100%",
@@ -1899,39 +2029,26 @@ function onPlayerStateChange(e) {
 
 // Show score/results when video ends
 function showScore() {
-  console.log("✅ Video ended - calculating score");
+  const score =
+    micScoringEnabled && micObservedPlayingMs > 0
+      ? Math.min(
+          100,
+          Math.max(0, Math.round((micActivityMs / micObservedPlayingMs) * 100)),
+        )
+      : null;
+  const activitySeconds = (micActivityMs / 1000).toFixed(1);
+  const observedSeconds = (micObservedPlayingMs / 1000).toFixed(1);
 
-  // Calculate score based on singing activity
-  let score = 0;
-
-  if (hasSinging) {
-    // If someone sang, calculate score based on song duration
-    // Score = (Duration in seconds) * 10 + bonus
-    const songSeconds = Math.round(songDurationMs / 1000);
-    const baseScore = songSeconds * 10;
-
-    // Add bonus for completing the song (if they sang the whole thing)
-    let bonus = 100;
-
-    score = baseScore + bonus;
-
-    // Cap score at 1000
-    if (score > 1000) score = 1000;
-
-    console.log(
-      `🎤 ${currentPerformerName} sang! Score: ${score} (Duration: ${songSeconds}s, Base: ${baseScore}, Bonus: ${bonus})`,
-    );
-
-    // Display score modal
-    displayScoreModal(currentPerformerName, score, true);
-  } else {
-    // No singing detected - score is 0
-    score = 0;
-    console.log(`❌ No singing detected. Score: 0`);
-
-    // Display zero score
-    displayScoreModal(currentPerformerName, score, false);
-  }
+  console.log("Mic participation score:", score, {
+    activitySeconds,
+    observedSeconds,
+  });
+  displayScoreModal(
+    currentPerformerName,
+    score,
+    activitySeconds,
+    observedSeconds,
+  );
 
   // Wait for score display before playing next song
   setTimeout(() => {
@@ -1940,64 +2057,51 @@ function showScore() {
 }
 
 // Display score modal
-function displayScoreModal(singerName, score, hasSung) {
-  // Remove existing score modal if any
+function displayScoreModal(
+  singerName,
+  score,
+  activitySeconds,
+  observedSeconds,
+) {
   const existingModal = document.getElementById("scoreModal");
-  if (existingModal) {
-    existingModal.remove();
-  }
+  existingModal?.remove();
 
-  // Create score modal
   const modal = document.createElement("div");
   modal.id = "scoreModal";
-  modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.2);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        animation: fadeIn 0.4s ease;
-        backdrop-filter: blur(2px);
-    `;
+  modal.className = "score-modal-overlay";
+  modal.setAttribute("role", "status");
+  modal.setAttribute("aria-live", "polite");
 
   const scoreDisplay = document.createElement("div");
-  scoreDisplay.style.cssText = `
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 30px;
-        padding: 60px 80px;
-        text-align: center;
-        color: white;
-        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.5);
-        animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        transform: scale(1);
-    `;
+  scoreDisplay.className = "score-modal-card";
 
-  if (hasSung) {
-    scoreDisplay.innerHTML = `
-            <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px; animation: popIn 0.5s ease 0.1s both;">🎤</div>
-            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; animation: slideInDown 0.5s ease 0.2s both;">Maganda!</div>
-            <div style="font-size: 1.8rem; margin-bottom: 30px; opacity: 0.95; animation: slideInDown 0.5s ease 0.3s both;">${singerName}</div>
-            <div style="font-size: 4rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); animation: scaleUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;">
-                ${score}
-            </div>
-            <div style="font-size: 1.2rem; margin-top: 30px; opacity: 0.9; animation: slideInUp 0.5s ease 0.5s both;">POINTS</div>
-        `;
-  } else {
-    scoreDisplay.innerHTML = `
-            <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px; animation: popIn 0.5s ease 0.1s both;">🎙️</div>
-            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; animation: slideInDown 0.5s ease 0.2s both;">Song Completed</div>
-            <div style="font-size: 1.8rem; margin-bottom: 30px; opacity: 0.95; animation: slideInDown 0.5s ease 0.3s both;">${singerName}</div>
-            <div style="font-size: 4rem; font-weight: 900; color: #ff6b6b; animation: scaleUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;">
-                ${score}
-            </div>
-            <div style="font-size: 1.2rem; margin-top: 30px; opacity: 0.9; animation: slideInUp 0.5s ease 0.5s both;">POINTS<br><span style="font-size: 0.9rem;">(No singing detected)</span></div>
-        `;
-  }
+  const icon = document.createElement("div");
+  icon.className = "score-modal-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "♪";
+
+  const title = document.createElement("h2");
+  title.textContent = "Mic activity score";
+
+  const singer = document.createElement("p");
+  singer.className = "score-modal-singer";
+  singer.textContent = singerName;
+
+  const value = document.createElement("div");
+  value.className = "score-modal-value";
+  value.textContent = score === null ? "--" : `${score}%`;
+
+  const label = document.createElement("p");
+  label.className = "score-modal-label";
+  label.textContent = "Mic activity";
+
+  const note = document.createElement("p");
+  note.className = "score-modal-note";
+  note.textContent =
+    score === null
+      ? "Mic scoring was off or no playback time was measured. Enable it before the next song."
+      : `${activitySeconds}s of mic activity during ${observedSeconds}s of monitored playback. This measures sound activity, not pitch accuracy; room noise or music may affect it.`;
+  scoreDisplay.append(icon, title, singer, value, label, note);
 
   modal.appendChild(scoreDisplay);
   document.body.appendChild(modal);
@@ -2071,13 +2175,9 @@ function displayScoreModal(singerName, score, hasSung) {
     `;
   document.head.appendChild(style);
 
-  // Auto remove after 3 seconds
   setTimeout(() => {
-    modal.style.animation = "fadeIn 0.4s ease reverse";
-    setTimeout(() => {
-      modal.remove();
-    }, 400);
-  }, 3000);
+    modal.remove();
+  }, 2600);
 }
 
 // Show video unavailable message
