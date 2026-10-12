@@ -198,6 +198,22 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("toggleAddUserForm")
     .addEventListener("click", toggleAddUserPanel);
+  document
+    .getElementById("closeAddUserForm")
+    .addEventListener("click", () => closeAddUserDialog());
+  document
+    .getElementById("cancelAddUserForm")
+    .addEventListener("click", () => closeAddUserDialog());
+  document
+    .getElementById("addUserDialog")
+    .addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) closeAddUserDialog();
+    });
+  document.getElementById("addUserDialog").addEventListener("close", () => {
+    document
+      .getElementById("toggleAddUserForm")
+      .setAttribute("aria-expanded", "false");
+  });
   document.getElementById("userSearch").addEventListener("input", () => {
     currentUserPage = 1;
     displayUsers();
@@ -364,17 +380,24 @@ function setAdminView(viewName) {
 }
 
 function toggleAddUserPanel() {
-  const panel = document.getElementById("addUserSection");
+  const dialog = document.getElementById("addUserDialog");
   const button = document.getElementById("toggleAddUserForm");
-  const isOpening = panel.hidden;
-  panel.hidden = !isOpening;
-  button.setAttribute("aria-expanded", String(isOpening));
-  button.querySelector("i").className = isOpening
-    ? "bi bi-x-lg"
-    : "bi bi-plus-lg";
-  button.querySelector("span").textContent = isOpening ? "Close" : "Add user";
-  if (isOpening) document.getElementById("userName").focus();
-  else button.focus();
+  if (dialog.open) {
+    closeAddUserDialog();
+    return;
+  }
+
+  button.setAttribute("aria-expanded", "true");
+  dialog.showModal();
+  document.getElementById("userName").focus();
+}
+
+function closeAddUserDialog() {
+  const dialog = document.getElementById("addUserDialog");
+  if (dialog.open) dialog.close();
+  document
+    .getElementById("toggleAddUserForm")
+    .setAttribute("aria-expanded", "false");
 }
 
 function initializeRoomManagement() {

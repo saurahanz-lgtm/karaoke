@@ -1874,31 +1874,81 @@ body.admin-page {
   font-size: 11px;
 }
 
-.account-create-panel {
-  margin-bottom: 18px;
-}
-
 #toggleAddUserForm {
   white-space: nowrap;
 }
 
-.account-create-panel[hidden] {
-  display: none !important;
+.account-create-dialog {
+  width: min(520px, calc(100vw - 28px));
 }
 
-.account-create-panel .section-toolbar {
-  margin-bottom: 10px;
+.account-create-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.account-create-panel .section-toolbar h3 {
-  margin: 0;
-  color: #f1f4ff;
-  font-size: 15px;
-  font-weight: 600;
+.account-create-dialog__close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border: 1px solid rgba(153, 173, 255, 0.3);
+  border-radius: 7px;
+  color: #dce6ff;
+  background: rgba(49, 92, 251, 0.14);
+  cursor: pointer;
 }
 
-.account-create-panel .section-toolbar p {
-  max-width: 100%;
+.account-create-dialog__close:hover {
+  border-color: #20d4b0;
+  color: #fff;
+}
+
+.account-create-dialog__close:focus-visible {
+  outline: 2px solid #20d4b0;
+  outline-offset: 2px;
+}
+
+.account-create-form {
+  display: grid;
+  width: 100%;
+  max-width: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.account-create-dialog .account-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.account-create-form .form-field {
+  min-width: 0;
+}
+
+.account-create-role,
+.account-create-dialog__actions {
+  grid-column: 1 / -1;
+}
+
+.account-create-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .primary-action {
@@ -2668,12 +2718,16 @@ body.admin-page {
     grid-template-columns: 1fr;
     padding: 15px;
   }
-  .account-create-panel .section-toolbar {
-    align-items: flex-start;
+  .account-create-form {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
   }
-  .account-create-panel .form-actions {
-    display: flex;
-    flex-wrap: wrap;
+  .account-create-dialog .account-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-create-role,
+  .account-create-dialog__actions {
+    grid-column: auto;
   }
   .form-actions {
     grid-column: auto;
@@ -2690,6 +2744,46 @@ body.admin-page {
   .admin-page .display-btn {
     flex: 1;
     white-space: normal;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .app-action-dialog.account-create-dialog {
+    width: min(680px, calc(100vw - 32px));
+    padding: 12px 18px;
+  }
+
+  .account-create-dialog__header {
+    margin-bottom: 2px;
+  }
+
+  .account-create-dialog > .app-action-dialog__message {
+    margin: 3px 0 8px;
+    font-size: 0.8rem;
+  }
+
+  .account-create-dialog .account-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+
+  .account-create-role {
+    grid-column: auto;
+  }
+
+  .account-create-dialog .form-field label {
+    margin-bottom: 4px;
+    font-size: 10px;
+  }
+
+  .account-create-dialog .form-control {
+    min-height: 36px;
+    padding: 7px 9px;
+  }
+
+  .account-create-dialog__actions {
+    grid-column: 1 / -1;
+    margin-top: 0;
   }
 }
 
