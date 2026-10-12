@@ -557,6 +557,7 @@
 
       .footer-links {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: center;
         gap: 14px;
@@ -566,7 +567,7 @@
       }
 
       .footer-links details {
-        position: relative;
+        position: static;
       }
 
       .footer-links summary {
@@ -593,15 +594,17 @@
         margin: 0;
       }
 
-      .footer-privacy-content {
-        position: absolute;
-        bottom: calc(100% + 12px);
+      .footer-popover {
+        position: fixed;
+        bottom: calc(74px + env(safe-area-inset-bottom));
         left: 50%;
         z-index: 20;
         width: min(760px, calc(100vw - 32px));
-        max-height: min(60vh, 420px);
+        max-height: min(62vh, 420px);
+        max-height: min(62dvh, 420px);
         padding: 16px;
         overflow: auto;
+        overscroll-behavior: contain;
         transform: translateX(-50%);
         border: 1px solid rgba(130, 152, 255, 0.35);
         border-radius: 8px;
@@ -627,20 +630,44 @@
       }
 
       .footer-about-content {
-        position: absolute;
-        bottom: calc(100% + 12px);
-        left: 50%;
-        width: min(360px, calc(100vw - 32px));
-        padding: 12px 14px;
-        transform: translateX(-50%);
-        border: 1px solid rgba(130, 152, 255, 0.35);
-        border-radius: 8px;
-        color: #c2cde6;
-        background: #0b1736;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-        font-size: 0.82rem;
-        line-height: 1.5;
-        text-align: left;
+        width: min(440px, calc(100vw - 32px));
+      }
+
+      .footer-about-content p {
+        margin: 0 0 10px;
+      }
+
+      .footer-about-content p:last-child {
+        margin-bottom: 0;
+      }
+
+      @media (max-width: 480px) {
+        .footer-section {
+          padding-right: 12px;
+          padding-left: 12px;
+        }
+
+        .footer-content {
+          gap: 10px;
+        }
+
+        .footer-links {
+          gap: 10px;
+        }
+
+        .footer-popover {
+          width: calc(100vw - 24px);
+          padding: 12px;
+        }
+      }
+
+      @media (max-height: 480px) and (orientation: landscape) {
+        .footer-popover {
+          bottom: calc(64px + env(safe-area-inset-bottom));
+          max-height: min(52vh, 240px);
+          max-height: min(52dvh, 240px);
+          padding: 10px 12px;
+        }
       }
     </style>
   </head>
@@ -836,7 +863,7 @@
         <nav class="footer-links" aria-label="Footer links">
           <details class="footer-privacy">
             <summary>Privacy Policy</summary>
-            <div class="footer-privacy-content">
+            <div class="footer-popover footer-privacy-content">
               <p>
                 <strong>Information used.</strong> SD Karaoke processes account
                 usernames and credentials, room membership and activity, song
@@ -860,23 +887,38 @@
               </p>
               <p>
                 <strong>Developer:</strong> Shan Denver. For privacy or account
-                questions, use the contact links above or contact your system
-                administrator.
+                questions, contact your system administrator.
               </p>
             </div>
           </details>
           <span aria-hidden="true">|</span>
           <details>
             <summary>About</summary>
-            <div class="footer-about-content">
-              Turn any screen into a karaoke machine with SD Karaoke. Search
-              songs, reserve your favorites, and sing along with YouTube music.
+            <div class="footer-popover footer-about-content">
+              <p>
+                <strong>SD Karaoke</strong> is a browser-based karaoke system
+                for shared rooms. Performers can search YouTube songs and add
+                them to a room's reserved queue, while administrators manage
+                accounts, rooms, and display settings.
+              </p>
+              <p><strong>Developer:</strong> Shan Denver.</p>
             </div>
           </details>
         </nav>
       </div>
     </footer>
     <script>
+      const footerPanels = document.querySelectorAll(".footer-links details");
+      footerPanels.forEach((panel) => {
+        panel.addEventListener("toggle", () => {
+          if (panel.open) {
+            footerPanels.forEach((otherPanel) => {
+              if (otherPanel !== panel) otherPanel.open = false;
+            });
+          }
+        });
+      });
+
       fetch("package.json")
         .then((response) => (response.ok ? response.json() : null))
         .then((packageInfo) => {
