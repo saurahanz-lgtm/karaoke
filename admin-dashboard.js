@@ -1612,14 +1612,14 @@ function renderKaraokeRooms() {
         roomActions.appendChild(timeLimitButton);
         const deviceLimitButton = document.createElement("button");
         deviceLimitButton.type = "button";
-        deviceLimitButton.className = "table-action";
+        deviceLimitButton.className = "table-action device-limit-action";
         deviceLimitButton.setAttribute(
           "aria-label",
           `Set device limit for ${room.name}`,
         );
         deviceLimitButton.innerHTML =
-          '<i class="bi bi-phone-plus" aria-hidden="true"></i>';
-        deviceLimitButton.title = "Set connected-device limit";
+          '<i class="bi bi-phone" aria-hidden="true"></i>';
+        deviceLimitButton.title = "Set device limit";
         deviceLimitButton.addEventListener("click", () =>
           handleSetRoomDeviceLimit(room, deviceLimitButton),
         );
