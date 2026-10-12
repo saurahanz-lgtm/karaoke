@@ -570,6 +570,12 @@
         position: static;
       }
 
+      .footer-links details + details::before {
+        margin-right: 14px;
+        color: rgba(194, 205, 230, 0.55);
+        content: "|";
+      }
+
       .footer-links summary {
         color: #d8dfff;
         font-weight: 600;
@@ -641,6 +647,67 @@
         margin-bottom: 0;
       }
 
+      .footer-contact-content {
+        width: min(420px, calc(100vw - 32px));
+      }
+
+      .footer-contact-content h3 {
+        margin: 0 0 12px;
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .footer-social-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .footer-social-link {
+        display: inline-flex;
+        flex: 1 1 135px;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 40px;
+        padding: 7px 11px;
+        border: 1px solid rgba(130, 152, 255, 0.35);
+        border-radius: 6px;
+        color: #d8dfff;
+        background: rgba(5, 13, 37, 0.72);
+        font-weight: 600;
+        text-decoration: none;
+        transition:
+          border-color 150ms ease,
+          background-color 150ms ease,
+          color 150ms ease;
+      }
+
+      .footer-social-link:hover {
+        border-color: rgba(32, 212, 176, 0.72);
+        color: #fff;
+        background: rgba(33, 49, 101, 0.92);
+      }
+
+      .footer-social-link:focus-visible {
+        outline: 2px solid #20d4b0;
+        outline-offset: 2px;
+      }
+
+      .footer-social-mark {
+        display: grid;
+        flex: 0 0 22px;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        color: #fff;
+        background: rgba(130, 152, 255, 0.28);
+        font-size: 0.8rem;
+        line-height: 1;
+      }
+
       @media (max-width: 480px) {
         .footer-section {
           padding-right: 12px;
@@ -653,6 +720,10 @@
 
         .footer-links {
           gap: 10px;
+        }
+
+        .footer-links details + details::before {
+          content: none;
         }
 
         .footer-popover {
@@ -891,7 +962,6 @@
               </p>
             </div>
           </details>
-          <span aria-hidden="true">|</span>
           <details>
             <summary>About</summary>
             <div class="footer-popover footer-about-content">
@@ -902,6 +972,34 @@
                 accounts, rooms, and display settings.
               </p>
               <p><strong>Developer:</strong> Shan Denver.</p>
+            </div>
+          </details>
+          <details>
+            <summary>Connect With Me</summary>
+            <div class="footer-popover footer-contact-content">
+              <h3>Connect With Me</h3>
+              <div class="footer-social-links">
+                <a
+                  class="footer-social-link"
+                  href="https://www.facebook.com/profile.php?id=61580750922961"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span class="footer-social-mark" aria-hidden="true">f</span>
+                  <span>Facebook</span>
+                </a>
+                <a
+                  class="footer-social-link"
+                  href="https://www.tiktok.com/@shnxxie18?is_from_webapp=1&amp;sender_device=pc"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span class="footer-social-mark" aria-hidden="true"
+                    >&#9834;</span
+                  >
+                  <span>TikTok</span>
+                </a>
+              </div>
             </div>
           </details>
         </nav>
