@@ -359,9 +359,7 @@ function renderKaraokeRooms() {
     (room) => room.id === activeKaraokeRoomId,
   );
   const name = document.getElementById("activeRoomName");
-  const code = document.getElementById("activeRoomCode");
   if (name) name.textContent = activeRoom?.name || "Room unavailable";
-  if (code) code.textContent = activeRoom ? `Room ID: ${activeRoom.id}` : "";
 }
 
 function renderKaraokeRoomDeviceCount(roomId) {
@@ -402,8 +400,6 @@ function activateKaraokeRoom(roomId) {
   const label = document.getElementById("roomCodeLabel");
   if (label)
     label.textContent = `${room?.name || "Karaoke Room"} · Scan to Join`;
-  const roomIdLabel = document.getElementById("roomIdLabel");
-  if (roomIdLabel) roomIdLabel.textContent = `Room ID: ${roomId}`;
   generateQRCode();
 
   stopListeningToRoomVolume = KaraokeSessions.listenVolume(roomId, (volume) => {
@@ -2374,87 +2370,51 @@ function playNextSong() {
 /* ===== UI RENDERING ===== */
 
 function displayQueue() {
-  // Show queue with count and next song info
   try {
-    const nextSongTitle = document.getElementById("nextSongTitle");
-    const nextSongArtist = document.getElementById("nextSongArtist");
+    const nextSongDisplay = document.getElementById("nextSongDisplay");
+    const nextSongList = document.getElementById("nextSongList");
+    if (!nextSongDisplay || !nextSongList) return;
 
-    if (!nextSongTitle || !nextSongArtist) return;
+    const queue = Array.isArray(tvQueue) ? tvQueue : [];
+    const firstQueuedSongIsPlaying = Boolean(
+      currentSong?.videoId && queue[0]?.videoId === currentSong.videoId,
+    );
+    const upcomingSongs = queue
+      .slice(
+        firstQueuedSongIsPlaying ? 1 : 0,
+        (firstQueuedSongIsPlaying ? 1 : 0) + 5,
+      )
+      .filter(Boolean);
 
-    // Display queue from tvQueue (loaded from Firebase)
-    if (tvQueue && tvQueue.length > 0) {
-      const nextSong = tvQueue[0];
-      // Extract just the song name (remove artist if included)
-      let songName = nextSong.title;
-      if (songName.includes(" - ")) {
-        songName = songName.split(" - ")[0].trim();
-      }
-      nextSongTitle.textContent = `📋 Queue (${tvQueue.length}): ${songName}`;
-      nextSongArtist.textContent = `Reserved by: ${nextSong.requestedBy}`;
-      console.log("📺 Karaoke Display Queue Updated:", {
-        count: tvQueue.length,
-        currentSong: songName,
-        reservedBy: nextSong.requestedBy,
-        songs: tvQueue.map((s) => ({
-          title: s.title,
-          reservedBy: s.requestedBy,
-        })),
-      });
-    } else {
-      nextSongTitle.textContent = "No songs in queue";
-      nextSongArtist.textContent = "-";
-      console.log("📺 Karaoke Display Queue: Empty");
-    }
+    nextSongList.replaceChildren(
+      ...upcomingSongs.map((song, index) => {
+        const item = document.createElement("li");
+        const number = document.createElement("span");
+        const details = document.createElement("span");
+        const title = document.createElement("span");
+        const requester = document.createElement("span");
+        item.className = "next-song-item";
+        number.className = "next-song-number";
+        number.textContent = `${index + 1}.`;
+        details.className = "next-song-details";
+        title.className = "next-song-title";
+        title.textContent = song.title || "Untitled song";
+        requester.className = "next-song-requester";
+        requester.textContent = song.requestedBy || "Performer";
+        details.append(title, requester);
+        item.append(number, details);
+        return item;
+      }),
+    );
+    nextSongDisplay.hidden = upcomingSongs.length === 0;
   } catch (e) {
     console.warn("Error displaying queue:", e.message);
   }
 }
 
-// Update next song display (horizontal, in upper left)
+// Keep existing queue update call sites on the shared reserved-song renderer.
 function updateNextSongDisplay() {
-  const nextSongDisplay = document.getElementById("nextSongDisplay");
-  const nextSongTitle = document.getElementById("nextSongTitle");
-  const nextSongArtist = document.getElementById("nextSongArtist");
-
-  if (!nextSongDisplay) return; // Element might not exist yet
-
-  // Get the next song (skip the current playing song)
-  let nextSong = null;
-
-  if (tvQueue && tvQueue.length > 0) {
-    // If there's a current song and it matches the first in queue, show second song
-    if (currentSong && currentSong.videoId === tvQueue[0].videoId) {
-      nextSong = tvQueue.length > 1 ? tvQueue[1] : null;
-    } else {
-      // Otherwise show the first song in queue
-      nextSong = tvQueue[0];
-    }
-  }
-
-  if (nextSong) {
-    // Extract just the song name (remove artist if included)
-    let songName = nextSong.title;
-    if (songName.includes(" - ")) {
-      songName = songName.split(" - ")[0].trim();
-    }
-    nextSongTitle.textContent = songName;
-    nextSongArtist.textContent = `Reserved by: ${nextSong.requestedBy}`;
-    nextSongDisplay.style.display = "flex";
-  } else {
-    // Show current song if queue is empty but currentSong exists
-    if (currentSong && currentSong.title) {
-      let songName = currentSong.title;
-      if (songName.includes(" - ")) {
-        songName = songName.split(" - ")[0].trim();
-      }
-      nextSongTitle.textContent = `▶️ Now Playing: ${songName}`;
-      nextSongArtist.textContent = `by ${currentSong.singer || currentSong.requestedBy}`;
-    } else {
-      nextSongTitle.textContent = "🎤 Select a Song to Start";
-      nextSongArtist.textContent = "Scan the QR code to request a song";
-    }
-    nextSongDisplay.style.display = "flex";
-  }
+  displayQueue();
 }
 
 // Update reserve list in top right corner

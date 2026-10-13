@@ -3158,12 +3158,23 @@ body.karaoke-display-page {
   background-color: var(--karaoke-bg);
 }
 
-.karaoke-display-page #nextSongDisplay,
 .karaoke-display-page #connectionStatus {
   border: 1px solid rgba(111, 137, 225, 0.32);
   border-radius: 10px;
   background: rgba(8, 20, 49, 0.9) !important;
   color: var(--karaoke-text);
+}
+
+.karaoke-display-page #nextSongDisplay {
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.karaoke-display-page #nextSongDisplay[hidden] {
+  display: none;
 }
 
 .karaoke-display-page .active-room-display {
