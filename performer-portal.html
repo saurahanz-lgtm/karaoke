@@ -1626,6 +1626,15 @@
             window.location.replace(assignedRoomUrl.toString());
             return;
           }
+          const connectedRoomUrl = new URL(window.location.href);
+          if (connectedRoomUrl.searchParams.get("room") !== connectedRoomId) {
+            connectedRoomUrl.searchParams.set("room", connectedRoomId);
+            window.history.replaceState(
+              window.history.state,
+              "",
+              connectedRoomUrl.toString(),
+            );
+          }
           stopListeningToRoomUsage?.();
           stopListeningToRoomUsage = KaraokeSessions.listenRoomUsage(
             connectedRoomId,
