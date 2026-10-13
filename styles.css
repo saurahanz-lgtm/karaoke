@@ -921,21 +921,6 @@ body {
   font-size: 0.75rem;
 }
 
-#fullscreenBtn {
-  padding: 10px 14px !important;
-  font-size: 0.9rem !important;
-  top: 15px !important;
-  right: 130px !important;
-}
-
-/* Delete Queue Button */
-button[onclick="deleteQueue()"] {
-  top: 15px !important;
-  right: 15px !important;
-  padding: 10px 14px !important;
-  font-size: 0.9rem !important;
-}
-
 .video-info-overlay {
   padding: 20px 30px !important;
 }
