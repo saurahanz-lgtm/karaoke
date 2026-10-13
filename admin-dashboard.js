@@ -32,6 +32,7 @@ let currentRoomRequestType = "room";
 let currentKaraokeRoomPage = 1;
 let currentRoomRequestPage = 1;
 let currentAccountRequestView = "pending";
+let currentAccountRequestType = "account";
 let currentAccountRequestPage = 1;
 const USERS_PER_PAGE = 5;
 const KARAOKE_ROOMS_PER_PAGE = 5;
@@ -236,6 +237,11 @@ document.addEventListener("DOMContentLoaded", function () {
         selectAccountRequestView(button.dataset.accountRequestFilter),
       );
     });
+  document.querySelectorAll("[data-account-request-type]").forEach((button) => {
+    button.addEventListener("click", () =>
+      selectAccountRequestType(button.dataset.accountRequestType),
+    );
+  });
   document.querySelectorAll("[data-room-request-filter]").forEach((button) => {
     button.addEventListener("click", () =>
       selectRoomRequestView(button.dataset.roomRequestFilter),
@@ -558,7 +564,8 @@ function renderAccountRequests() {
   const pagination = document.getElementById("accountRequestsPagination");
   const previousButton = document.getElementById("previousAccountRequestsPage");
   const nextButton = document.getElementById("nextAccountRequestsPage");
-  const pendingCount = accountRequests.filter(
+  const requestsForType = getAccountRequestsForType();
+  const pendingCount = requestsForType.filter(
     (request) => request.status === "pending",
   ).length;
   document.getElementById("pendingAccountRequestCount").textContent =
@@ -567,14 +574,14 @@ function renderAccountRequests() {
 
   const visibleRequests =
     currentAccountRequestView === "history"
-      ? accountRequests.filter((request) =>
+      ? requestsForType.filter((request) =>
           ["approved", "rejected", "completed"].includes(request.status),
         )
-      : accountRequests.filter((request) =>
+      : requestsForType.filter((request) =>
           ["pending", "approving", "resetting"].includes(request.status),
         );
   const historyRequestIds = new Set(
-    accountRequests
+    requestsForType
       .filter((request) =>
         ["approved", "rejected", "completed"].includes(request.status),
       )
@@ -599,8 +606,8 @@ function renderAccountRequests() {
     });
     tableBody.innerHTML =
       currentAccountRequestView === "history"
-        ? '<tr><td colspan="5" class="text-center text-white-50">No completed requests yet.</td></tr>'
-        : '<tr><td colspan="4" class="text-center text-white-50">No pending account requests.</td></tr>';
+        ? `<tr><td colspan="5" class="text-center text-white-50">No ${currentAccountRequestType === "password-reset" ? "password reset" : "account"} request history yet.</td></tr>`
+        : `<tr><td colspan="4" class="text-center text-white-50">No pending ${currentAccountRequestType === "password-reset" ? "password reset" : "account"} requests.</td></tr>`;
     return;
   }
 
@@ -831,7 +838,7 @@ function toggleAccountHistoryPageSelection(event) {
     });
   updateHistorySelectionControls({
     selectedIds: selectedAccountHistoryIds,
-    pageRequests: accountRequests
+    pageRequests: getAccountRequestsForType()
       .filter((request) =>
         ["approved", "rejected", "completed"].includes(request.status),
       )
@@ -850,7 +857,7 @@ function toggleAccountHistoryPageSelection(event) {
 }
 
 async function deleteSelectedAccountHistory() {
-  const selectedRequests = accountRequests.filter(
+  const selectedRequests = getAccountRequestsForType().filter(
     (request) =>
       selectedAccountHistoryIds.has(request.id) &&
       ["approved", "rejected", "completed"].includes(request.status),
@@ -977,6 +984,28 @@ function selectAccountRequestView(view) {
   renderAccountRequests();
 }
 
+function getAccountRequestsForType(type = currentAccountRequestType) {
+  return accountRequests.filter((request) =>
+    type === "password-reset"
+      ? request.type === "password-reset"
+      : request.type !== "password-reset",
+  );
+}
+
+function selectAccountRequestType(type) {
+  const nextType = type === "password-reset" ? "password-reset" : "account";
+  if (nextType !== currentAccountRequestType) selectedAccountHistoryIds.clear();
+  currentAccountRequestType = nextType;
+  currentAccountRequestPage = 1;
+  document.querySelectorAll("[data-account-request-type]").forEach((button) => {
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.accountRequestType === currentAccountRequestType),
+    );
+  });
+  renderAccountRequests();
+}
+
 async function deleteAccountRequest(request, button) {
   if (
     !(await showAppConfirm(
@@ -1033,6 +1062,8 @@ function updateAdminRequestNotifications() {
             ? `Password reset from ${request.username || "unknown user"}`
             : `Account request from ${request.username || "unknown user"}`,
         view: "users",
+        requestType:
+          request.type === "password-reset" ? "password-reset" : "account",
         createdAt: request.createdAt || 0,
       })),
     ...roomRequests
@@ -1063,7 +1094,10 @@ function updateAdminRequestNotifications() {
       button.className = "admin-notification-item";
       button.textContent = request.label;
       button.addEventListener("click", () => {
-        if (request.view === "users") selectAccountRequestView("pending");
+        if (request.view === "users") {
+          selectAccountRequestType(request.requestType);
+          selectAccountRequestView("pending");
+        }
         if (request.view === "requests") {
           selectRoomRequestType(request.requestType);
           selectRoomRequestView("pending");
