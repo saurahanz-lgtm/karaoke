@@ -897,31 +897,30 @@
         ? requestedTimestamp
         : null;
     const now = Date.now();
-    const cutoff = now - MEMBER_TIMEOUT_MS;
     const result = await roomRef(roomId).transaction((room) => {
       if (!room) return undefined;
-      const hasActiveMembers = Object.values(room.members || {}).some(
-        (member) => member && Number(member.lastSeen) >= cutoff,
-      );
-      if (hasActiveMembers) {
-        return Number(room.emptySince) > 0
-          ? { ...room, emptySince: null }
-          : undefined;
-      }
       if (!room.queue && !room.currentSong) {
         return Number(room.emptySince) > 0
           ? { ...room, emptySince: null }
           : undefined;
       }
-      if (Number(room.emptySince) > 0) return undefined;
-      const lastActivityAt = Math.max(
+      const latestMemberActivity = Math.max(
         0,
         ...Object.values(room.members || {}).map(
           (member) => Number(member?.lastSeen) || 0,
         ),
       );
-      const timestamp = suppliedTimestamp || lastActivityAt || now;
-      return { ...room, emptySince: Math.min(timestamp, now) };
+      const existingEmptySince = Number(room.emptySince) || 0;
+      const lastActivityAt = Number(room.lastActivityAt) || 0;
+      const baseline = Math.max(existingEmptySince, lastActivityAt);
+      const fallbackTimestamp = baseline || latestMemberActivity || now;
+      const timestamp = Math.min(
+        Math.max(suppliedTimestamp || 0, fallbackTimestamp),
+        now,
+      );
+      return timestamp === existingEmptySince
+        ? undefined
+        : { ...room, emptySince: timestamp };
     });
     return Number(result.snapshot.val()?.emptySince) || null;
   }
@@ -937,7 +936,6 @@
   async function clearRoomSongsIfUnoccupied(roomId) {
     if (!roomId) throw new Error("ROOM_REQUIRED");
     const now = Date.now();
-    const cutoff = now - MEMBER_TIMEOUT_MS;
     const sessionRef = roomRef(roomId);
     const beforeSnapshot = await sessionRef.once("value");
     const hadSongs = Boolean(
@@ -945,19 +943,25 @@
     );
     const result = await sessionRef.transaction((room) => {
       if (!room) return undefined;
-      const hasActiveMembers = Object.values(room.members || {}).some(
-        (member) => member && Number(member.lastSeen) >= cutoff,
-      );
-      if (hasActiveMembers) {
-        return Number(room.emptySince) > 0
-          ? { ...room, emptySince: null }
-          : undefined;
-      }
-      const emptySince = Number(room.emptySince);
-      if (!Number.isFinite(emptySince) || emptySince <= 0) return undefined;
-      if (now - emptySince < EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS) return undefined;
       if (!room.queue && !room.currentSong) {
         return { ...room, emptySince: null };
+      }
+      const emptySince = Number(room.emptySince) || 0;
+      const lastActivityAt = Number(room.lastActivityAt) || 0;
+      const latestMemberActivity = Math.max(
+        0,
+        ...Object.values(room.members || {}).map(
+          (member) => Number(member?.lastSeen) || 0,
+        ),
+      );
+      const idleSince = Math.min(
+        Math.max(emptySince, lastActivityAt) || latestMemberActivity || now,
+        now,
+      );
+      if (now - idleSince < EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS) {
+        return idleSince === emptySince
+          ? undefined
+          : { ...room, emptySince: idleSince };
       }
       return { ...room, queue: null, currentSong: null, emptySince: null };
     });
@@ -996,8 +1000,17 @@
     return () => ref.off("value", handler);
   }
 
+  function touchRoomActivity(roomId) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    return roomRef(roomId).update({
+      lastActivityAt: Date.now(),
+      emptySince: null,
+    });
+  }
+
   async function setPlaybackState(roomId, playing) {
     await assertKaraokeDisplayEnabled(roomId);
+    await touchRoomActivity(roomId);
     return roomRef(roomId, "control").update({ playing: Boolean(playing) });
   }
 
@@ -1057,6 +1070,9 @@
     }
     clearRoomEmptySince(roomId).catch((error) => {
       console.warn("Could not reset room idle timer:", error.message);
+    });
+    touchRoomActivity(roomId).catch((error) => {
+      console.warn("Could not update room activity:", error.message);
     });
 
     try {
@@ -1168,11 +1184,22 @@
       }
 
       if (!room.currentSong?.videoId) {
-        return { ...room, currentSong: song, queue };
+        return {
+          ...room,
+          currentSong: song,
+          queue,
+          lastActivityAt: Date.now(),
+          emptySince: null,
+        };
       }
 
       queue.push(song);
-      return { ...room, queue };
+      return {
+        ...room,
+        queue,
+        lastActivityAt: Date.now(),
+        emptySince: null,
+      };
     });
     return result.snapshot.val();
   }
@@ -1184,7 +1211,12 @@
         (item) => item.videoId === song.videoId,
       );
       if (!queuedSong) return undefined;
-      return { ...room, currentSong: queuedSong };
+      return {
+        ...room,
+        currentSong: queuedSong,
+        lastActivityAt: Date.now(),
+        emptySince: null,
+      };
     });
   }
 
@@ -1200,6 +1232,8 @@
         ...room,
         currentSong,
         queue: queue.length > 0 ? queue : null,
+        lastActivityAt: Date.now(),
+        emptySince: null,
       };
     });
   }
@@ -1210,23 +1244,36 @@
       const room = current || {};
       const queue = normalizeQueue(room.queue);
       if (queue.length === 0) {
-        return { ...room, currentSong: null, queue: null };
+        return {
+          ...room,
+          currentSong: null,
+          queue: null,
+          lastActivityAt: Date.now(),
+          emptySince: null,
+        };
       }
       const currentSong = queue.shift();
       return {
         ...room,
         currentSong,
         queue: queue.length > 0 ? queue : null,
+        lastActivityAt: Date.now(),
+        emptySince: null,
       };
     });
   }
 
   async function sendControl(roomId, command, payload = {}) {
     await assertKaraokeDisplayEnabled(roomId);
+    const timestamp = Date.now();
+    await roomRef(roomId).update({
+      lastActivityAt: timestamp,
+      emptySince: null,
+    });
     return roomRef(roomId, "control").update({
       ...payload,
       command,
-      timestamp: Date.now(),
+      timestamp,
       eventId: `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
     });
   }
@@ -1284,6 +1331,7 @@
     setRoomMuted,
     setRoomDisplayAvailability,
     setPlaybackState,
+    touchRoomActivity,
     setRoomTimeLimit,
     setRoomDeviceLimit,
     getRoomDeviceLimit,

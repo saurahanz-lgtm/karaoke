@@ -2,7 +2,6 @@ const { timingSafeEqual } = require("node:crypto");
 const { cert, getApps, initializeApp } = require("firebase-admin/app");
 const { getDatabase: getAdminDatabase } = require("firebase-admin/database");
 
-const MEMBER_TIMEOUT_MS = 60 * 1000;
 const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 3 * 60 * 1000;
 
 function updateIdleRoomSession(room, now) {
@@ -12,13 +11,6 @@ function updateIdleRoomSession(room, now) {
     (member) => Number(member?.lastSeen) || 0,
   );
   const latestMemberActivity = Math.max(0, ...memberLastSeen);
-  const hasActiveMembers = latestMemberActivity >= now - MEMBER_TIMEOUT_MS;
-  if (hasActiveMembers) {
-    return Number(room.emptySince) > 0
-      ? { ...room, emptySince: null }
-      : undefined;
-  }
-
   const queue = Array.isArray(room.queue)
     ? room.queue
     : Object.values(room.queue || {});
@@ -29,13 +21,16 @@ function updateIdleRoomSession(room, now) {
       : undefined;
   }
 
-  const storedEmptySince = Number(room.emptySince);
-  const emptySince =
-    storedEmptySince > 0 && storedEmptySince <= now
-      ? storedEmptySince
-      : Math.min(latestMemberActivity || now, now);
+  const storedEmptySince = Number(room.emptySince) || 0;
+  const lastActivityAt = Number(room.lastActivityAt) || 0;
+  const emptySince = Math.min(
+    Math.max(storedEmptySince, lastActivityAt) || latestMemberActivity || now,
+    now,
+  );
   if (now - emptySince < EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS) {
-    return storedEmptySince > 0 ? undefined : { ...room, emptySince };
+    return emptySince === storedEmptySince
+      ? undefined
+      : { ...room, emptySince };
   }
 
   return { ...room, queue: null, currentSong: null, emptySince: null };

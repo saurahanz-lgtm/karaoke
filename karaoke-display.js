@@ -57,6 +57,8 @@ let roomTimeExpired = false;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
 let activeRoomDeviceCount = 0;
+let roomPlaybackActivityTimer = null;
+const ROOM_PLAYBACK_ACTIVITY_INTERVAL_MS = 15000;
 const roomSongCleanupTimers = new Map();
 const roomSongCleanupListeners = new Map();
 const roomSongCleanupRequests = new Set();
@@ -370,6 +372,28 @@ function renderKaraokeRoomDeviceCount(roomId) {
   memberCount.textContent = `${activeRoomDeviceCount} / ${KaraokeSessions.getRoomDeviceLimit(room)} phones`;
 }
 
+function startRoomPlaybackActivityHeartbeat(roomId) {
+  if (roomPlaybackActivityTimer !== null) {
+    clearInterval(roomPlaybackActivityTimer);
+  }
+  roomPlaybackActivityTimer = setInterval(() => {
+    const activePlayer = window.tvPlayer || player;
+    if (
+      activeKaraokeRoomId !== roomId ||
+      !karaokeDisplayEnabled ||
+      !currentSong?.videoId ||
+      isPlayingBootUpVideo ||
+      typeof YT === "undefined" ||
+      activePlayer?.getPlayerState?.() !== YT.PlayerState.PLAYING
+    ) {
+      return;
+    }
+    KaraokeSessions.touchRoomActivity(roomId).catch((error) => {
+      console.warn("Could not refresh room playback activity:", error.message);
+    });
+  }, ROOM_PLAYBACK_ACTIVITY_INTERVAL_MS);
+}
+
 function activateKaraokeRoom(roomId) {
   if (!roomId || (roomId === activeKaraokeRoomId && stopListeningToRoom))
     return;
@@ -383,6 +407,7 @@ function activateKaraokeRoom(roomId) {
   stopListeningToRoomUsage?.();
   stopListeningToRoomUsage = null;
   activeKaraokeRoomId = roomId;
+  startRoomPlaybackActivityHeartbeat(roomId);
   activeRoomDeviceCount = 0;
   roomDisplayEnabled = true;
   roomUsageSettings = null;
@@ -566,14 +591,7 @@ function clearEmptyRoomSongCleanupTimer(roomId) {
   roomSongCleanupTimers.delete(roomId);
 }
 
-async function scheduleEmptyRoomSongCleanup(roomId, memberCount) {
-  if (memberCount > 0) {
-    clearEmptyRoomSongCleanupTimer(roomId);
-    KaraokeSessions.clearRoomEmptySince(roomId).catch((error) => {
-      console.warn("Could not reset empty-room timer:", error.message);
-    });
-    return;
-  }
+async function scheduleEmptyRoomSongCleanup(roomId) {
   if (
     roomSongCleanupTimers.has(roomId) ||
     roomSongCleanupRequests.has(roomId)
@@ -905,9 +923,8 @@ function initializeKaraokeRooms() {
         });
         rooms.forEach((room) => {
           if (!roomSongCleanupListeners.has(room.id)) {
-            const stopListening = KaraokeSessions.listenMembers(
-              room.id,
-              (count) => scheduleEmptyRoomSongCleanup(room.id, count),
+            const stopListening = KaraokeSessions.listenMembers(room.id, () =>
+              scheduleEmptyRoomSongCleanup(room.id),
             );
             roomSongCleanupListeners.set(room.id, stopListening);
           }
@@ -1523,7 +1540,15 @@ function setCurrentFromQueue(song) {
     singer: song.requestedBy,
   };
 
-  KaraokeSessions.roomRef(activeKaraokeRoomId, "currentSong").set(currentSong);
+  KaraokeSessions.roomRef(activeKaraokeRoomId)
+    .update({
+      currentSong,
+      lastActivityAt: Date.now(),
+      emptySince: null,
+    })
+    .catch((error) =>
+      console.warn("Could not save current song activity:", error.message),
+    );
 
   isPlaying = true;
   checkAndPlayCurrentSong();
@@ -2354,6 +2379,8 @@ function playNextSong() {
   updates[`karaokeSessions/${activeKaraokeRoomId}/currentSong`] = currentSong;
   updates[`karaokeSessions/${activeKaraokeRoomId}/queue`] =
     tvQueue.length > 0 ? tvQueue : null;
+  updates[`karaokeSessions/${activeKaraokeRoomId}/lastActivityAt`] = Date.now();
+  updates[`karaokeSessions/${activeKaraokeRoomId}/emptySince`] = null;
   firebase.database().ref().update(updates);
 
   displayQueue();
@@ -2498,6 +2525,9 @@ async function deleteQueue() {
     const updates = {};
     updates[`karaokeSessions/${activeKaraokeRoomId}/queue`] = null;
     updates[`karaokeSessions/${activeKaraokeRoomId}/currentSong`] = null;
+    updates[`karaokeSessions/${activeKaraokeRoomId}/lastActivityAt`] =
+      Date.now();
+    updates[`karaokeSessions/${activeKaraokeRoomId}/emptySince`] = null;
     firebase.database().ref().update(updates);
     showAppToast("Queue cleared successfully!", "success");
   }
