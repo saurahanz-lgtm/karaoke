@@ -590,19 +590,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   passwordResetPasswordForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const enteredPassword = document.getElementById(
+    const newPassword = document.getElementById(
       "passwordResetNewPassword",
     ).value;
-    const enteredConfirmation = document.getElementById(
+    const confirmation = document.getElementById(
       "passwordResetConfirmPassword",
     ).value;
-    const addPasswordPrefix = (value) =>
-      `sd${value.slice(0, 2).toLowerCase() === "sd" ? value.slice(2) : value}`;
-    const newPassword = addPasswordPrefix(enteredPassword);
-    const confirmation = addPasswordPrefix(enteredConfirmation);
-    if (newPassword.length < 8) {
+    if (newPassword.length < 6) {
       setPasswordResetFeedback(
-        "Enter at least 6 characters after the sd prefix.",
+        "Use at least 6 characters for your new password.",
         "error",
       );
       return;
@@ -638,7 +634,7 @@ document.addEventListener("DOMContentLoaded", () => {
         error.message === "PASSWORD_RESET_NOT_APPROVED"
           ? "This request is not approved or its reset link is no longer valid."
           : error.message === "PASSWORD_TOO_SHORT"
-            ? "Enter at least 6 characters after the sd prefix."
+            ? "Use at least 6 characters for your new password."
             : error.message === "ACCOUNT_NOT_FOUND"
               ? "This reset request no longer matches an active account. Contact the administrator."
               : error.code === "PERMISSION_DENIED" ||

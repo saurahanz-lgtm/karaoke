@@ -303,7 +303,7 @@
 
   async function completePasswordReset(id, token, newPassword) {
     if (!id || !token) throw new Error("PASSWORD_RESET_INVALID");
-    if (typeof newPassword !== "string" || newPassword.length < 8) {
+    if (typeof newPassword !== "string" || newPassword.length < 6) {
       throw new Error("PASSWORD_TOO_SHORT");
     }
     if (newPassword.length > 128) throw new Error("PASSWORD_TOO_LONG");

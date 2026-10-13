@@ -451,6 +451,14 @@
               required
             />
           </div>
+          <button
+            class="account-request-link password-reset-link"
+            type="button"
+            data-password-reset-role="user"
+            hidden
+          >
+            Forgot password?
+          </button>
           <div class="login-buttons">
             <button
               type="submit"
@@ -469,14 +477,6 @@
             </button>
           </div>
         </form>
-        <button
-          class="account-request-link password-reset-link"
-          type="button"
-          data-password-reset-role="user"
-          hidden
-        >
-          Forgot password?
-        </button>
       </div>
       <button
         id="showAccountRequestButton"
@@ -587,15 +587,10 @@
             id="passwordResetNewPassword"
             type="password"
             autocomplete="new-password"
-            value="sd"
             minlength="6"
             maxlength="128"
             required
           />
-          <small class="password-reset-prefix-hint"
-            >The password starts with <strong>sd</strong>. Enter at least 6 more
-            characters.</small
-          >
         </div>
         <div class="login-form-group">
           <label for="passwordResetConfirmPassword">Confirm new password</label>
@@ -603,7 +598,6 @@
             id="passwordResetConfirmPassword"
             type="password"
             autocomplete="new-password"
-            value="sd"
             minlength="6"
             maxlength="128"
             required
