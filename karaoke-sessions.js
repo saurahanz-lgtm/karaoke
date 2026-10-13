@@ -72,6 +72,28 @@
     throw error;
   }
 
+  function getRoomIdleState(room, now = Date.now()) {
+    const members = Object.values(room?.members || {});
+    const activeMemberCount = members.filter(
+      (member) => member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
+    ).length;
+    const queue = normalizeQueue(room?.queue);
+    const hasSongs = queue.some(Boolean) || Boolean(room?.currentSong?.videoId);
+    const inUse = activeMemberCount > 0 || room?.control?.playing === true;
+    const emptySince = Number(room?.emptySince) || 0;
+
+    return {
+      hasSongs,
+      inUse,
+      emptySince: emptySince || null,
+      expiresAt:
+        hasSongs && !inUse && emptySince
+          ? emptySince + EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS
+          : null,
+      shouldStartTimer: hasSongs && !inUse && !emptySince,
+    };
+  }
+
   function normalizeRoomTimeLimit(minutes) {
     const duration = Number(minutes);
     if (
@@ -835,6 +857,21 @@
     };
   }
 
+  function listenRoomIdleState(roomId, callback, onError) {
+    const ref = database().ref(`${ROOM_DATA_PATH}/${roomId}`);
+    const handler = (snapshot) => {
+      const state = getRoomIdleState(snapshot.val());
+      callback(state);
+      if (state.shouldStartTimer) {
+        markRoomEmptySince(roomId).catch((error) => {
+          console.warn("Could not start room idle timer:", error.message);
+        });
+      }
+    };
+    ref.on("value", handler, onError);
+    return () => ref.off("value", handler);
+  }
+
   function listenMembers(roomId, callback) {
     const ref = database().ref(`${ROOM_DATA_PATH}/${roomId}/members`);
     let members = {};
@@ -899,25 +936,22 @@
     const now = Date.now();
     const result = await roomRef(roomId).transaction((room) => {
       if (!room) return undefined;
+      const hasActiveMembers = Object.values(room.members || {}).some(
+        (member) =>
+          member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
+      );
+      if (hasActiveMembers || room.control?.playing === true) {
+        return Number(room.emptySince) > 0
+          ? { ...room, emptySince: null }
+          : undefined;
+      }
       if (!room.queue && !room.currentSong) {
         return Number(room.emptySince) > 0
           ? { ...room, emptySince: null }
           : undefined;
       }
-      const latestMemberActivity = Math.max(
-        0,
-        ...Object.values(room.members || {}).map(
-          (member) => Number(member?.lastSeen) || 0,
-        ),
-      );
       const existingEmptySince = Number(room.emptySince) || 0;
-      const lastActivityAt = Number(room.lastActivityAt) || 0;
-      const baseline = Math.max(existingEmptySince, lastActivityAt);
-      const fallbackTimestamp = baseline || latestMemberActivity || now;
-      const timestamp = Math.min(
-        Math.max(suppliedTimestamp || 0, fallbackTimestamp),
-        now,
-      );
+      const timestamp = existingEmptySince || suppliedTimestamp || now;
       return timestamp === existingEmptySince
         ? undefined
         : { ...room, emptySince: timestamp };
@@ -943,21 +977,20 @@
     );
     const result = await sessionRef.transaction((room) => {
       if (!room) return undefined;
+      const hasActiveMembers = Object.values(room.members || {}).some(
+        (member) =>
+          member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
+      );
+      if (hasActiveMembers || room.control?.playing === true) {
+        return Number(room.emptySince) > 0
+          ? { ...room, emptySince: null }
+          : undefined;
+      }
       if (!room.queue && !room.currentSong) {
         return { ...room, emptySince: null };
       }
       const emptySince = Number(room.emptySince) || 0;
-      const lastActivityAt = Number(room.lastActivityAt) || 0;
-      const latestMemberActivity = Math.max(
-        0,
-        ...Object.values(room.members || {}).map(
-          (member) => Number(member?.lastSeen) || 0,
-        ),
-      );
-      const idleSince = Math.min(
-        Math.max(emptySince, lastActivityAt) || latestMemberActivity || now,
-        now,
-      );
+      const idleSince = emptySince || now;
       if (now - idleSince < EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS) {
         return idleSince === emptySince
           ? undefined
@@ -1316,6 +1349,7 @@
     listenMuted,
     listenPlaybackState,
     listenRoom,
+    listenRoomIdleState,
     listenRoomRequest,
     listenRooms,
     listenRoomUsage,

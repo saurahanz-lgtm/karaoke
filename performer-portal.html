@@ -77,6 +77,12 @@
         font-size: 0.9rem;
       }
 
+      .room-idle-notice {
+        margin: -6px 0 14px;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 0.82rem;
+      }
+
       .room-capacity-notice {
         padding: 14px;
         margin-bottom: 16px;
@@ -1000,6 +1006,12 @@
         </div>
         <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
         <div
+          id="roomIdleNotice"
+          class="room-idle-notice"
+          role="status"
+          hidden
+        ></div>
+        <div
           id="roomCapacityNotice"
           class="room-capacity-notice"
           role="status"
@@ -1214,6 +1226,9 @@
       let stopListeningToExtensionRequest = null;
       let performerRoomUsage = null;
       let performerRoomTimeInterval = null;
+      let performerRoomIdleState = null;
+      let performerRoomIdleInterval = null;
+      let stopListeningToRoomIdleState = null;
       let stopListeningToRoomMembers = null;
       let stopListeningToRoomData = null;
       let stopListeningToPlaybackState = null;
@@ -1613,6 +1628,22 @@
               updateRoomCapacityNotice();
             },
           );
+          stopListeningToRoomIdleState?.();
+          stopListeningToRoomIdleState = KaraokeSessions.listenRoomIdleState(
+            connectedRoomId,
+            (state) => {
+              performerRoomIdleState = state;
+              renderPerformerRoomIdleState();
+            },
+            (error) =>
+              console.warn("Could not follow room idle timer:", error.message),
+          );
+          if (performerRoomIdleInterval === null) {
+            performerRoomIdleInterval = setInterval(
+              renderPerformerRoomIdleState,
+              1000,
+            );
+          }
           stopListeningToRoomVolume?.();
           stopListeningToRoomVolume = KaraokeSessions.listenVolume(
             connectedRoomId,
@@ -1918,6 +1949,34 @@
         renderPerformerRoomTime();
       }
 
+      function renderPerformerRoomIdleState() {
+        const notice = document.getElementById("roomIdleNotice");
+        const state = performerRoomIdleState;
+        if (!notice || !state?.hasSongs) {
+          if (notice) notice.hidden = true;
+          return;
+        }
+
+        notice.hidden = false;
+        if (state.inUse) {
+          notice.textContent =
+            "Room in use. Reserved songs are protected from idle cleanup.";
+        } else if (!state.expiresAt) {
+          notice.textContent = "Idle cleanup countdown starting...";
+        } else {
+          const remainingMs = state.expiresAt - Date.now();
+          if (remainingMs <= 0) {
+            notice.textContent =
+              "Room idle limit reached. Clearing reserved songs...";
+          } else {
+            const totalSeconds = Math.ceil(remainingMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            notice.textContent = `Reserved songs clear in ${minutes}:${String(seconds).padStart(2, "0")} if the room stays idle.`;
+          }
+        }
+      }
+
       function renderPerformerRoomTime() {
         const notice = document.getElementById("roomTimeNotice");
         const timeLimit = Number(performerRoomUsage?.timeLimitMinutes);
@@ -2081,6 +2140,12 @@
         const username = loggedInUser?.username;
         let clearSessionPromise = Promise.resolve();
         try {
+          stopListeningToRoomIdleState?.();
+          stopListeningToRoomIdleState = null;
+          if (performerRoomIdleInterval !== null) {
+            clearInterval(performerRoomIdleInterval);
+            performerRoomIdleInterval = null;
+          }
           stopListeningToRoomMembers?.();
           stopListeningToRoomMembers = null;
           stopListeningToRoomData?.();

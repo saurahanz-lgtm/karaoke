@@ -48,7 +48,9 @@ const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
 let karaokeRooms = [];
 const roomDeviceCounts = new Map();
 const roomDeviceIds = new Map();
+const roomIdleStates = new Map();
 const roomMemberListeners = new Map();
+const roomIdleListeners = new Map();
 const roomRequestListeners = new Map();
 const roomRequestsByRoom = new Map();
 let stopListeningToSelectedRoomDisplay = null;
@@ -435,6 +437,13 @@ function initializeRoomManagement() {
             roomDeviceIds.delete(roomId);
           }
         });
+        roomIdleListeners.forEach((stopListening, roomId) => {
+          if (!roomIds.has(roomId)) {
+            stopListening();
+            roomIdleListeners.delete(roomId);
+            roomIdleStates.delete(roomId);
+          }
+        });
         roomRequestListeners.forEach((stopListening, roomId) => {
           if (!roomIds.has(roomId)) {
             stopListening();
@@ -455,6 +464,22 @@ function initializeRoomManagement() {
               },
             );
             roomMemberListeners.set(room.id, stopListening);
+          }
+
+          if (!roomIdleListeners.has(room.id)) {
+            const stopListening = KaraokeSessions.listenRoomIdleState(
+              room.id,
+              (state) => {
+                roomIdleStates.set(room.id, state);
+                updateRoomIdleCountdowns();
+              },
+              (error) =>
+                console.warn(
+                  "Could not follow room idle timer:",
+                  error.message,
+                ),
+            );
+            roomIdleListeners.set(room.id, stopListening);
           }
 
           if (!roomRequestListeners.has(room.id)) {
@@ -1593,7 +1618,7 @@ function renderKaraokeRooms() {
     currentKaraokeRoomPage = 1;
     pagination.hidden = true;
     tableBody.innerHTML =
-      '<tr><td colspan="5" class="text-center text-white-50">No rooms created yet.</td></tr>';
+      '<tr><td colspan="6" class="text-center text-white-50">No rooms created yet.</td></tr>';
     return;
   }
 
@@ -1621,6 +1646,7 @@ function renderKaraokeRooms() {
         const codeCell = document.createElement("td");
         const devicesCell = document.createElement("td");
         const statusCell = document.createElement("td");
+        const cleanupCell = document.createElement("td");
         const actionCell = document.createElement("td");
         const roomActions = document.createElement("div");
         roomActions.className = "account-actions karaoke-room-actions";
@@ -1650,6 +1676,10 @@ function renderKaraokeRooms() {
           limitLabel.textContent = `${room.timeLimitMinutes} min limit`;
           statusCell.appendChild(limitLabel);
         }
+        const cleanupLabel = document.createElement("span");
+        cleanupLabel.className = "room-idle-countdown";
+        cleanupLabel.dataset.roomId = room.id;
+        cleanupCell.appendChild(cleanupLabel);
         const renameButton = document.createElement("button");
         renameButton.type = "button";
         renameButton.className = "table-action";
@@ -1712,11 +1742,44 @@ function renderKaraokeRooms() {
           roomActions.appendChild(deleteButton);
         }
         actionCell.appendChild(roomActions);
-        row.append(nameCell, codeCell, devicesCell, statusCell, actionCell);
+        row.append(
+          nameCell,
+          codeCell,
+          devicesCell,
+          statusCell,
+          cleanupCell,
+          actionCell,
+        );
         return row;
       }),
   );
+  updateRoomIdleCountdowns();
 }
+
+function updateRoomIdleCountdowns() {
+  document.querySelectorAll(".room-idle-countdown").forEach((label) => {
+    const state = roomIdleStates.get(label.dataset.roomId);
+    if (!state || !state.hasSongs) {
+      label.textContent = "No reserved songs";
+    } else if (state.inUse) {
+      label.textContent = "Paused · room in use";
+    } else if (!state.expiresAt) {
+      label.textContent = "Starting countdown...";
+    } else {
+      const remainingMs = state.expiresAt - Date.now();
+      if (remainingMs <= 0) {
+        label.textContent = "Clearing queue...";
+      } else {
+        const totalSeconds = Math.ceil(remainingMs / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        label.textContent = `Clears in ${minutes}:${String(seconds).padStart(2, "0")}`;
+      }
+    }
+  });
+}
+
+setInterval(updateRoomIdleCountdowns, 1000);
 
 async function handleRenameRoom(room, button) {
   const name = await showAppPrompt("Enter the new room name:", room.name, {

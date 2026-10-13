@@ -3,14 +3,15 @@ const { cert, getApps, initializeApp } = require("firebase-admin/app");
 const { getDatabase: getAdminDatabase } = require("firebase-admin/database");
 
 const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 3 * 60 * 1000;
+const MEMBER_TIMEOUT_MS = 60000;
 
 function updateIdleRoomSession(room, now) {
   if (!room) return undefined;
 
-  const memberLastSeen = Object.values(room.members || {}).map(
-    (member) => Number(member?.lastSeen) || 0,
+  const hasActiveMembers = Object.values(room.members || {}).some(
+    (member) => member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
   );
-  const latestMemberActivity = Math.max(0, ...memberLastSeen);
+  const isPlaying = room.control?.playing === true;
   const queue = Array.isArray(room.queue)
     ? room.queue
     : Object.values(room.queue || {});
@@ -21,12 +22,14 @@ function updateIdleRoomSession(room, now) {
       : undefined;
   }
 
+  if (hasActiveMembers || isPlaying) {
+    return Number(room.emptySince) > 0
+      ? { ...room, emptySince: null }
+      : undefined;
+  }
+
   const storedEmptySince = Number(room.emptySince) || 0;
-  const lastActivityAt = Number(room.lastActivityAt) || 0;
-  const emptySince = Math.min(
-    Math.max(storedEmptySince, lastActivityAt) || latestMemberActivity || now,
-    now,
-  );
+  const emptySince = storedEmptySince || now;
   if (now - emptySince < EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS) {
     return emptySince === storedEmptySince
       ? undefined
