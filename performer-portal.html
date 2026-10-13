@@ -987,19 +987,16 @@
 
       <!-- PLAYER -->
       <div class="card-ui">
-        <div style="margin-bottom: 15px; font-size: 18px; font-weight: 600">
-          Welcome
-        </div>
         <div
           id="userDisplayName"
           style="
-            margin-bottom: 12px;
+            margin-bottom: 15px;
             font-size: 1.3rem;
             font-weight: 700;
             color: #f093fb;
           "
         >
-          🎤 Welcome, mel!
+          Welcome
         </div>
         <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
         <div
@@ -1876,7 +1873,7 @@
         if (loggedInUser) {
           const userDisplayName = document.getElementById("userDisplayName");
           if (userDisplayName) {
-            userDisplayName.textContent = `🎤 Welcome, ${loggedInUser.username}!`;
+            userDisplayName.textContent = `Welcome, ${loggedInUser.username}!`;
             userDisplayName.style.color = "#f093fb";
           }
           localStorage.setItem("karaoke_user_name", loggedInUser.username);
@@ -2688,7 +2685,7 @@
         const userDisplayName = document.getElementById("userDisplayName");
 
         if (userDisplayName && loggedInUser) {
-          userDisplayName.textContent = `🎤 Welcome, ${loggedInUser.username}!`;
+          userDisplayName.textContent = `Welcome, ${loggedInUser.username}!`;
           userDisplayName.style.color = "#f093fb";
           localStorage.setItem("karaoke_user_name", loggedInUser.username);
         }
