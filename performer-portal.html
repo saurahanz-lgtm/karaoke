@@ -1225,7 +1225,8 @@
       let stopListeningToRoomUsage = null;
       let stopListeningToExtensionRequest = null;
       let stopListeningToPerformerAccount = null;
-      let disabledAccountLogoutStarted = false;
+      let stopListeningToActiveLogin = null;
+      let automaticLogoutStarted = false;
       let performerRoomUsage = null;
       let performerRoomTimeExpired = false;
       let performerRoomTimeInterval = null;
@@ -1477,53 +1478,57 @@
 
         if (!username || !deviceSessionId) {
           console.warn("❌ Missing session data");
-          redirectToRoomLogin();
+          forcePerformerLogout(
+            "Your session is no longer active. Returning to the access portal.",
+          );
           return;
         }
 
         console.log("🔍 Validating singer session...");
 
-        // Check Firebase to see if logged in user matches current device
         if (typeof firebase !== "undefined" && firebase.database) {
+          if (stopListeningToActiveLogin) return;
+          const activeLoginRef = firebase
+            .database()
+            .ref("activeLogin/" + username);
+          const handler = (snapshot) => {
+            const data = snapshot.val();
+            if (!data || !data.sessionId) {
+              forcePerformerLogout(
+                "Your session has been logged out. Returning to the access portal.",
+              );
+              return;
+            }
+
+            if (data.sessionId !== deviceSessionId) {
+              forcePerformerLogout(
+                "Your session was disconnected because this account was used on another device.",
+              );
+              return;
+            }
+
+            console.log("✅ Session validated successfully");
+          };
           try {
-            firebase
-              .database()
-              .ref("activeLogin/" + username)
-              .once("value", (snapshot) => {
-                const data = snapshot.val();
-
-                if (!data || !data.sessionId) {
-                  console.warn("❌ No active session found in Firebase");
-                  redirectToRoomLogin();
-                  return;
-                }
-
-                if (data.sessionId !== deviceSessionId) {
-                  console.warn(
-                    "❌ Session mismatch! You were logged in from another device.",
-                  );
-                  showAppToast(
-                    "Your session has been disconnected. You were logged in from another device.",
-                  );
-                  redirectToRoomLogin();
-                  return;
-                }
-
-                console.log("✅ Session validated successfully");
-              })
-              .catch((err) => {
-                console.warn(
-                  "Firebase validation error (continuing anyway):",
-                  err.message,
-                );
-              });
-          } catch (e) {
+            activeLoginRef.on("value", handler, (error) =>
+              console.warn("Firebase session monitoring error:", error.message),
+            );
+            stopListeningToActiveLogin = () =>
+              activeLoginRef.off("value", handler);
+          } catch (error) {
             console.warn(
-              "Firebase validation exception (continuing anyway):",
-              e.message,
+              "Firebase session monitoring exception:",
+              error.message,
             );
           }
         }
+      }
+
+      function forcePerformerLogout(message, type = "warning") {
+        if (automaticLogoutStarted) return;
+        automaticLogoutStarted = true;
+        showAppToast(message, type);
+        window.setTimeout(() => logoutFromPerformerSession(), 2000);
       }
 
       function listenToPerformerAccountStatus() {
@@ -1556,15 +1561,12 @@
       }
 
       function handlePerformerAccountDisabled() {
-        if (disabledAccountLogoutStarted) return;
-        disabledAccountLogoutStarted = true;
         stopListeningToPerformerAccount?.();
         stopListeningToPerformerAccount = null;
-        showAppToast(
+        forcePerformerLogout(
           "Your account has been disabled. Returning to the access portal.",
           "danger",
         );
-        window.setTimeout(() => logoutFromPerformerSession(), 1200);
       }
 
       // Check if Firebase is properly configured
@@ -1592,13 +1594,6 @@
           console.log("🔄 Device session ID initialized from sessionStorage");
         } else {
           console.warn("⚠️ No device session ID found in sessionStorage");
-          // If not found, redirect to login
-          setTimeout(() => {
-            if (!window.deviceSessionId) {
-              console.log("❌ Redirecting to login - no session ID");
-              redirectToRoomLogin();
-            }
-          }, 1000);
         }
       }
 
@@ -1623,7 +1618,9 @@
               event.data?.username === loggedInUser.username
             ) {
               console.log("🚪 Received forced logout for current singer");
-              logoutFromPerformerSession();
+              forcePerformerLogout(
+                "Your session has been logged out. Returning to the access portal.",
+              );
             }
           });
         } catch (error) {
@@ -2236,6 +2233,8 @@
         const username = loggedInUser?.username;
         let clearSessionPromise = Promise.resolve();
         try {
+          stopListeningToActiveLogin?.();
+          stopListeningToActiveLogin = null;
           stopListeningToPerformerAccount?.();
           stopListeningToPerformerAccount = null;
           stopListeningToRoomIdleState?.();
