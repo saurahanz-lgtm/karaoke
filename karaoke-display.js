@@ -543,7 +543,7 @@ function renderKaraokeDisplayRoomTime() {
   ) {
     notice.hidden = true;
     notice.classList.remove("is-expired");
-    if (roomTimeExpired) window.location.reload();
+    if (roomTimeExpired) resumeKaraokeDisplayAfterRoomExtension();
     return;
   }
 
@@ -568,7 +568,7 @@ function renderKaraokeDisplayRoomTime() {
   }
 
   if (roomTimeExpired) {
-    window.location.reload();
+    resumeKaraokeDisplayAfterRoomExtension();
     return;
   }
 
@@ -585,6 +585,12 @@ function renderKaraokeDisplayRoomTime() {
       : `${minutes}m ${seconds}s`;
     notice.textContent = `Room time is almost up. ${remaining} remaining.`;
   }
+}
+
+function resumeKaraokeDisplayAfterRoomExtension() {
+  if (!activeKaraokeRoomId) return;
+  karaokeDisplayEnabled = true;
+  activateKaraokeRoom(activeKaraokeRoomId);
 }
 
 function clearEmptyRoomSongCleanupTimer(roomId) {
@@ -670,6 +676,10 @@ async function chooseInitialKaraokeDisplayRoomId(rooms) {
     emptyRooms.some((room) => room.id === requestedRoomId)
   ) {
     return requestedRoomId;
+  }
+  const rememberedRoomId = sessionStorage.getItem("karaokeTvRoomId");
+  if (rooms.some((room) => room.id === rememberedRoomId)) {
+    return rememberedRoomId;
   }
   return emptyRooms[0]?.id || null;
 }
