@@ -3,7 +3,7 @@ const { cert, getApps, initializeApp } = require("firebase-admin/app");
 const { getDatabase: getAdminDatabase } = require("firebase-admin/database");
 
 const MEMBER_TIMEOUT_MS = 60 * 1000;
-const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 5 * 60 * 1000;
+const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 3 * 60 * 1000;
 
 function updateIdleRoomSession(room, now) {
   if (!room) return undefined;
