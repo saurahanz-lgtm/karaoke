@@ -902,11 +902,22 @@
   function listenMembers(roomId, callback) {
     const ref = database().ref(`${ROOM_DATA_PATH}/${roomId}/members`);
     let members = {};
+    let roomWasOccupied = false;
     const updateCount = () => {
       const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
       const activeMemberIds = Object.entries(members)
         .filter(([, member]) => member && Number(member.lastSeen) >= cutoff)
         .map(([id]) => id);
+      const roomIsOccupied = activeMemberIds.length > 0;
+      if (roomIsOccupied && !roomWasOccupied) {
+        roomWasOccupied = true;
+        startRoomUsage(roomId).catch((error) => {
+          roomWasOccupied = false;
+          console.warn("Could not start room time limit:", error.message);
+        });
+      } else if (!roomIsOccupied) {
+        roomWasOccupied = false;
+      }
       callback(activeMemberIds.length, activeMemberIds);
     };
     const handler = (snapshot) => {
