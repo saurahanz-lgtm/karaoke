@@ -823,9 +823,15 @@
     const queueRef = roomRef.child("queue");
     const songRef = roomRef.child("currentSong");
     const controlRef = roomRef.child("control");
+    const roomHandler = (snapshot) => {
+      handlers.onRoom?.({
+        queue: normalizeQueue(snapshot.child("queue").val()),
+        currentSong: snapshot.child("currentSong").val(),
+      });
+    };
     const queueHandler = (snapshot) =>
-      handlers.onQueue(normalizeQueue(snapshot.val()));
-    const songHandler = (snapshot) => handlers.onCurrentSong(snapshot.val());
+      handlers.onQueue?.(normalizeQueue(snapshot.val()));
+    const songHandler = (snapshot) => handlers.onCurrentSong?.(snapshot.val());
     let isInitialControlSnapshot = true;
     let lastControlEventId = null;
     const controlHandler = (snapshot) => {
@@ -846,11 +852,13 @@
       }
     };
 
+    roomRef.on("value", roomHandler, onError);
     queueRef.on("value", queueHandler, onError);
     songRef.on("value", songHandler, onError);
     controlRef.on("value", controlHandler, onError);
 
     return () => {
+      roomRef.off("value", roomHandler);
       queueRef.off("value", queueHandler);
       songRef.off("value", songHandler);
       controlRef.off("value", controlHandler);
@@ -874,10 +882,7 @@
       updateState();
     };
     ref.on("value", handler, onError);
-    const refreshTimer = global.setInterval(
-      updateState,
-      HEARTBEAT_INTERVAL_MS,
-    );
+    const refreshTimer = global.setInterval(updateState, HEARTBEAT_INTERVAL_MS);
     return () => {
       ref.off("value", handler);
       global.clearInterval(refreshTimer);

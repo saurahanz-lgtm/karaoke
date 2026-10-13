@@ -1663,16 +1663,13 @@
           stopListeningToRoomData = KaraokeSessions.listenRoom(
             connectedRoomId,
             {
-              onQueue: (queue) => {
+              onRoom: ({ queue, currentSong }) => {
                 roomQueue = queue;
+                roomCurrentSong = currentSong;
                 localStorage.setItem(
                   `karaoke_queue_${connectedRoomId}`,
                   JSON.stringify(queue),
                 );
-                updateReservedSongsFromRoom();
-              },
-              onCurrentSong: (song) => {
-                roomCurrentSong = song;
                 updateReservedSongsFromRoom();
               },
               onControl: (control) => {
