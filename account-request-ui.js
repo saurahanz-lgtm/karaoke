@@ -625,13 +625,22 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       passwordResetPasswordForm.reset();
     } catch (error) {
+      console.error("Could not save password reset:", {
+        code: error.code || "UNKNOWN",
+        message: error.message,
+      });
       passwordResetSaveButton.disabled = false;
       const message =
         error.message === "PASSWORD_RESET_NOT_APPROVED"
           ? "This request is not approved or its reset link is no longer valid."
           : error.message === "PASSWORD_TOO_SHORT"
             ? "Use at least 8 characters for your new password."
-            : "Could not save your password. Please try again.";
+            : error.message === "ACCOUNT_NOT_FOUND"
+              ? "This reset request no longer matches an active account. Contact the administrator."
+              : error.code === "PERMISSION_DENIED" ||
+                  error.code === "database/permission-denied"
+                ? "Firebase blocked this password update. Ask the administrator to check the database permissions."
+                : "Could not save your password. Please try again.";
       setPasswordResetFeedback(message, "error");
     }
   });

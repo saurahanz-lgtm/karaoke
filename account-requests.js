@@ -321,51 +321,36 @@
     if (!claim.committed) throw new Error("PASSWORD_RESET_NOT_APPROVED");
 
     const request = claim.snapshot.val();
-    let accountFound = false;
     try {
-      const usersResult = await db.ref(USERS_PATH).transaction((current) => {
-        if (Array.isArray(current)) {
-          const index = current.findIndex(
-            (user) =>
-              user &&
-              String(user.username).trim().toLowerCase() ===
-                request.normalizedUsername &&
-              user.role === request.role &&
-              (request.accountId === null ||
-                request.accountId === undefined ||
-                String(user.id) === String(request.accountId)),
-          );
-          if (index < 0) return undefined;
-          accountFound = true;
-          const users = [...current];
-          users[index] = { ...users[index], password: newPassword };
-          return users;
+      const usersSnapshot = await db.ref(USERS_PATH).once("value");
+      let accountKey = null;
+      usersSnapshot.forEach((userSnapshot) => {
+        const user = userSnapshot.val();
+        if (
+          user &&
+          String(user.username).trim().toLowerCase() ===
+            request.normalizedUsername &&
+          user.role === request.role
+        ) {
+          accountKey = userSnapshot.key;
+          return true;
         }
-
-        const users = current || {};
-        const userKey = Object.keys(users).find((key) => {
-          const user = users[key];
-          return (
-            user &&
-            String(user.username).trim().toLowerCase() ===
-              request.normalizedUsername &&
-            user.role === request.role &&
-            (request.accountId === null ||
-              request.accountId === undefined ||
-              String(user.id) === String(request.accountId))
-          );
-        });
-        if (!userKey) return undefined;
-        accountFound = true;
-        return {
-          ...users,
-          [userKey]: { ...users[userKey], password: newPassword },
-        };
+        return false;
       });
+      if (accountKey === null) throw new Error("ACCOUNT_NOT_FOUND");
 
-      if (!usersResult.committed || !accountFound) {
+      const userRef = db.ref(`${USERS_PATH}/${accountKey}`);
+      const currentUserSnapshot = await userRef.once("value");
+      const currentUser = currentUserSnapshot.val();
+      if (
+        !currentUser ||
+        String(currentUser.username).trim().toLowerCase() !==
+          request.normalizedUsername ||
+        currentUser.role !== request.role
+      ) {
         throw new Error("ACCOUNT_NOT_FOUND");
       }
+      await userRef.child("password").set(newPassword);
       await requestRef.update({
         status: "completed",
         resetTokenHash: null,
