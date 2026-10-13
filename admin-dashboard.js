@@ -3735,8 +3735,61 @@ async function toggleUserDisabled(userId) {
       },
     )
   ) {
-    user.disabled = newStatus;
-    saveUsers();
+    try {
+      if (typeof firebase !== "undefined" && firebase.database) {
+        const usersRef = firebase.database().ref("users");
+        const result = await usersRef.transaction((currentUsers) => {
+          const accounts = Array.isArray(currentUsers)
+            ? currentUsers
+            : Object.values(currentUsers || {});
+          let foundUser = false;
+          const updatedAccounts = accounts.map((account) => {
+            if (account?.username !== user.username) return account;
+            foundUser = true;
+            return { ...account, disabled: newStatus };
+          });
+          return foundUser ? updatedAccounts : undefined;
+        });
+        if (!result.committed) throw new Error("USER_NOT_FOUND");
+        users = (Array.isArray(result.snapshot.val())
+          ? result.snapshot.val()
+          : Object.values(result.snapshot.val() || {})
+        ).map(normalizeAccountRecord);
+      } else {
+        user.disabled = newStatus;
+        users = users.map(normalizeAccountRecord);
+      }
+      localStorage.setItem("karaoke_users", JSON.stringify(users));
+    } catch (error) {
+      console.error("Could not save user disabled status:", error.message);
+      showNotification(
+        "Could not update this account. Check the Firebase connection and try again.",
+        "danger",
+      );
+      return;
+    }
+
+    if (typeof firebase !== "undefined" && firebase.database) {
+      const activeLoginRef = firebase
+        .database()
+        .ref(`activeLogin/${user.username}`);
+      try {
+        await activeLoginRef.transaction((session) => {
+          if (!session?.sessionId) return undefined;
+          if (newStatus) {
+            return { ...session, disabled: true, disabledAt: Date.now() };
+          }
+          if (session.disabled !== true) return undefined;
+          const enabledSession = { ...session };
+          delete enabledSession.disabled;
+          delete enabledSession.disabledAt;
+          return enabledSession;
+        });
+      } catch (error) {
+        console.warn("Could not update active login status:", error.message);
+      }
+    }
+
     displayUsers();
     updateStats();
 

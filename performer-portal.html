@@ -1493,6 +1493,10 @@
             .ref("activeLogin/" + username);
           const handler = (snapshot) => {
             const data = snapshot.val();
+            if (data?.disabled === true) {
+              handlePerformerAccountDisabled();
+              return;
+            }
             if (!data || !data.sessionId) {
               forcePerformerLogout(
                 "Your session has been logged out. Returning to the access portal.",
