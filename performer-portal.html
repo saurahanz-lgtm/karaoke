@@ -1225,6 +1225,7 @@
       let stopListeningToRoomUsage = null;
       let stopListeningToExtensionRequest = null;
       let performerRoomUsage = null;
+      let performerRoomTimeExpired = false;
       let performerRoomTimeInterval = null;
       let performerRoomIdleState = null;
       let performerRoomIdleInterval = null;
@@ -1697,6 +1698,7 @@
 
           if (error.message === "ROOM_TIME_EXPIRED") {
             roomRequestRoomId = requestedRoomId;
+            performerRoomTimeExpired = true;
             document.getElementById("roomUnavailableTitle").textContent =
               "Room time expired";
             document.getElementById("roomFullMessage").textContent =
@@ -1986,7 +1988,9 @@
           expiresAt <= 0
         ) {
           if (notice) notice.hidden = true;
-          if (
+          if (performerRoomTimeExpired && activeKaraokeRoomId) {
+            resumePerformerAfterRoomExtension();
+          } else if (
             performerRoomUsage &&
             document.getElementById("roomUnavailablePage").hidden === false
           ) {
@@ -1997,6 +2001,7 @@
 
         const remainingMs = expiresAt - Date.now();
         if (remainingMs <= 0) {
+          performerRoomTimeExpired = true;
           roomRequestRoomId = activeKaraokeRoomId;
           notice.hidden = true;
           document.getElementById("roomUnavailableTitle").textContent =
@@ -2010,7 +2015,11 @@
           return;
         }
 
-        if (document.getElementById("roomUnavailablePage").hidden === false) {
+        if (performerRoomTimeExpired && activeKaraokeRoomId) {
+          resumePerformerAfterRoomExtension();
+        } else if (
+          document.getElementById("roomUnavailablePage").hidden === false
+        ) {
           window.location.reload();
           return;
         }
@@ -2021,6 +2030,17 @@
           const remainingMinutes = Math.ceil(remainingMs / 60000);
           notice.textContent = `Room time is almost up. ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} remaining. Ask the administrator to approve more time.`;
         }
+      }
+
+      function resumePerformerAfterRoomExtension() {
+        performerRoomTimeExpired = false;
+        document.getElementById("roomUnavailablePage").hidden = true;
+        document.getElementById("singerApp").hidden = false;
+        document.getElementById("roomTimeExtensionPanel").hidden = true;
+        document.getElementById("requestAnotherRoomButton").hidden = false;
+        document.getElementById("roomExtensionButton").disabled = false;
+        document.getElementById("roomExtensionStatus").textContent =
+          "Extension approved. You are still connected to your room.";
       }
 
       async function submitRoomExtensionRequest() {
@@ -2062,9 +2082,14 @@
             request.id,
             (updatedRequest) => {
               if (updatedRequest?.status === "approved") {
-                status.textContent =
-                  "Extension approved. Reconnecting to your room...";
-                setTimeout(() => window.location.reload(), 1000);
+                status.textContent = activeKaraokeRoomId
+                  ? "Extension approved. Resuming your room..."
+                  : "Extension approved. Reconnecting to your room...";
+                if (activeKaraokeRoomId) {
+                  renderPerformerRoomTime();
+                } else {
+                  setTimeout(() => window.location.reload(), 1000);
+                }
               } else if (updatedRequest?.status === "rejected") {
                 status.textContent =
                   "Extension request declined. You can request a different duration.";
