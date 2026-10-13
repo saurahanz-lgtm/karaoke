@@ -905,10 +905,13 @@
     let roomWasOccupied = false;
     const updateCount = () => {
       const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
-      const activeMemberIds = Object.entries(members)
+      const activeMembers = Object.entries(members)
         .filter(([, member]) => member && Number(member.lastSeen) >= cutoff)
-        .map(([id]) => id);
-      const roomIsOccupied = activeMemberIds.length > 0;
+        .map(([id, member]) => ({
+          id,
+          username: String(member.username || "Performer"),
+        }));
+      const roomIsOccupied = activeMembers.length > 0;
       if (roomIsOccupied && !roomWasOccupied) {
         roomWasOccupied = true;
         startRoomUsage(roomId).catch((error) => {
@@ -918,7 +921,11 @@
       } else if (!roomIsOccupied) {
         roomWasOccupied = false;
       }
-      callback(activeMemberIds.length, activeMemberIds);
+      callback(
+        activeMembers.length,
+        activeMembers.map((member) => member.id),
+        activeMembers,
+      );
     };
     const handler = (snapshot) => {
       members = snapshot.val() || {};

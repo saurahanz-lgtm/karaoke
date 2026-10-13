@@ -1585,11 +1585,27 @@
         let requestedRoomId = null;
         try {
           const roomId = KaraokeSessions.getRoomIdFromUrl();
-          requestedRoomId = roomId || (await KaraokeSessions.getActiveRoomId());
-          const membership = await KaraokeSessions.joinRoomWithFallback(
-            roomId,
-            loggedInUser.username,
-          );
+          const savedRoomId = sessionStorage.getItem("karaokeRoomId");
+          const preferredRoomId = roomId || savedRoomId;
+          requestedRoomId =
+            preferredRoomId || (await KaraokeSessions.getActiveRoomId());
+          let membership;
+          try {
+            membership = await KaraokeSessions.joinRoomWithFallback(
+              preferredRoomId,
+              loggedInUser.username,
+            );
+          } catch (error) {
+            if (roomId || !savedRoomId || error.message !== "ROOM_NOT_FOUND") {
+              throw error;
+            }
+            sessionStorage.removeItem("karaokeRoomId");
+            requestedRoomId = await KaraokeSessions.getActiveRoomId();
+            membership = await KaraokeSessions.joinRoomWithFallback(
+              null,
+              loggedInUser.username,
+            );
+          }
           const connectedRoomId = membership.room.id;
           activeKaraokeRoomId = connectedRoomId;
           let roomDeviceLimit = membership.maxDevices;

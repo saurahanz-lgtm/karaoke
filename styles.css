@@ -2115,6 +2115,16 @@ body.admin-page {
   color: #ffe4e8;
   background: rgba(120, 25, 42, 0.3);
 }
+.room-connected-users {
+  display: block;
+  max-width: clamp(7rem, 18vw, 11rem);
+  margin-top: 3px;
+  color: #9aaccd;
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .account-disabled {
   opacity: 0.66;
 }

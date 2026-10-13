@@ -48,6 +48,7 @@ const ACTIVE_SESSION_TIMEOUT = 2 * 60 * 1000;
 let karaokeRooms = [];
 const roomDeviceCounts = new Map();
 const roomDeviceIds = new Map();
+const roomDeviceNames = new Map();
 const roomIdleStates = new Map();
 const roomIdleCleanupRequests = new Set();
 const roomIdleCleanupRetryTimers = new Map();
@@ -438,6 +439,7 @@ function initializeRoomManagement() {
             roomMemberListeners.delete(roomId);
             roomDeviceCounts.delete(roomId);
             roomDeviceIds.delete(roomId);
+            roomDeviceNames.delete(roomId);
           }
         });
         roomIdleListeners.forEach((stopListening, roomId) => {
@@ -458,11 +460,15 @@ function initializeRoomManagement() {
         rooms.forEach((room) => {
           if (!roomMemberListeners.has(room.id)) {
             roomDeviceCounts.set(room.id, 0);
+            roomDeviceNames.set(room.id, []);
             const stopListening = KaraokeSessions.listenMembers(
               room.id,
-              (count, deviceIds) => {
+              (count, deviceIds, activeMembers) => {
                 roomDeviceCounts.set(room.id, count);
                 roomDeviceIds.set(room.id, deviceIds);
+                roomDeviceNames.set(room.id, [
+                  ...new Set(activeMembers.map((member) => member.username)),
+                ]);
                 renderKaraokeRooms();
               },
             );
@@ -1659,6 +1665,13 @@ function renderKaraokeRooms() {
         const deviceCount = roomDeviceCounts.get(room.id) || 0;
         const deviceLimit = KaraokeSessions.getRoomDeviceLimit(room);
         devicesCell.textContent = `${deviceCount} / ${deviceLimit}`;
+        const connectedUsers = roomDeviceNames.get(room.id) || [];
+        if (connectedUsers.length) {
+          const userNames = document.createElement("small");
+          userNames.className = "room-connected-users";
+          userNames.textContent = connectedUsers.join(", ");
+          devicesCell.appendChild(userNames);
+        }
         const statusBadge = document.createElement("span");
         const timeExpired =
           Number(room.timeLimitMinutes) > 0 &&
