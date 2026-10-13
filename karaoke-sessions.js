@@ -9,7 +9,7 @@
   const DEFAULT_ROOM_VOLUME = 70;
   const MAX_ROOM_TIME_LIMIT_MINUTES = 10080;
   const MEMBER_TIMEOUT_MS = 60000;
-  const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 10 * 60 * 1000;
+  const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 5 * 60 * 1000;
   const HEARTBEAT_INTERVAL_MS = 15000;
   const DEVICE_ID_STORAGE_KEY = "karaoke_room_tab_device_id";
   const TAB_INSTANCE_ID = global.crypto?.randomUUID
