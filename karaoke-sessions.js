@@ -339,19 +339,34 @@
     return snapshot.val();
   }
 
+  function getNextRoomNameNumber(rooms) {
+    const usedNumbers = new Set(
+      Object.values(rooms || {}).flatMap((room) => {
+        const match = /^SDR(\d+)$/i.exec(String(room?.name || "").trim());
+        return match ? [Number(match[1])] : [];
+      }),
+    );
+    let number = 1;
+    while (usedNumbers.has(number)) number += 1;
+    return number;
+  }
+
   async function getNextRoomName(db) {
     const roomsSnapshot = await db.ref(ROOM_LIST_PATH).once("value");
-    const highestExistingNumber = Object.values(
-      roomsSnapshot.val() || {},
-    ).reduce((highest, room) => {
-      const match = /^SDR(\d+)$/i.exec(String(room?.name || "").trim());
-      return match ? Math.max(highest, Number(match[1])) : highest;
-    }, 0);
-    const counterRef = db.ref(ROOM_NAME_COUNTER_PATH);
-    const result = await counterRef.transaction(
-      (current) =>
-        Math.max(Number(current) || 1, highestExistingNumber + 1) + 1,
+    const rooms = roomsSnapshot.val() || {};
+    const usedNumbers = new Set(
+      Object.values(rooms).flatMap((room) => {
+        const match = /^SDR(\d+)$/i.exec(String(room?.name || "").trim());
+        return match ? [Number(match[1])] : [];
+      }),
     );
+    const firstAvailableNumber = getNextRoomNameNumber(rooms);
+    const counterRef = db.ref(ROOM_NAME_COUNTER_PATH);
+    const result = await counterRef.transaction((current) => {
+      let number = Math.max(Number(current) || 1, firstAvailableNumber);
+      while (usedNumbers.has(number)) number += 1;
+      return number + 1;
+    });
     const allocatedNumber = Number(result.snapshot.val()) - 1;
     if (!result.committed || !Number.isInteger(allocatedNumber)) {
       throw new Error("ROOM_NAME_SEQUENCE_FAILED");
@@ -489,6 +504,7 @@
     if (activeSnapshot.val() === roomId) {
       updates[ACTIVE_ROOM_PATH] = nextRoomId;
     }
+    updates[ROOM_NAME_COUNTER_PATH] = getNextRoomNameNumber(remainingRooms);
 
     await db.ref().update(updates);
     return roomId;
