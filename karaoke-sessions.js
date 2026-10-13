@@ -1098,53 +1098,36 @@
   }
 
   async function joinRoomWithFallback(roomId, username) {
-    const deviceId = await getDeviceId();
     const roomsSnapshot = await database().ref(ROOM_LIST_PATH).once("value");
     const rooms = Object.entries(roomsSnapshot.val() || {}).map(
       ([id, room]) => ({ ...room, id }),
     );
     const requestedRoom = rooms.find((room) => room.id === roomId);
+    if (roomId && !requestedRoom) throw new Error("ROOM_NOT_FOUND");
     throwIfRoomTimeExpired(requestedRoom);
-    const getActiveMembers = async (candidateRoomId) => {
-      const snapshot = await database()
-        .ref(`${ROOM_DATA_PATH}/${candidateRoomId}/members`)
-        .once("value");
-      const activeCutoff = Date.now() - MEMBER_TIMEOUT_MS;
-      return Object.entries(snapshot.val() || {}).filter(
-        ([, member]) => member && Number(member.lastSeen) >= activeCutoff,
-      );
-    };
-
-    const requestedMembers = await getActiveMembers(roomId);
-    if (requestedMembers.some(([id]) => id === deviceId)) {
-      return joinRoom(roomId, username);
-    }
-
-    const candidates = await Promise.all(
-      rooms
-        .filter((room) => room.id !== roomId && !isRoomTimeExpired(room))
-        .map(async (room) => ({
-          ...room,
-          activeCount: (await getActiveMembers(room.id)).length,
-        })),
-    );
-    const availableCandidates = candidates
-      .filter((room) => room.activeCount === 0)
+    const orderedRooms = rooms
+      .filter((room) => !isRoomTimeExpired(room))
       .sort(
         (first, second) => (first.createdAt || 0) - (second.createdAt || 0),
       );
-    const requestedCount = requestedMembers.length;
-    const orderedRooms =
-      requestedCount > 0
-        ? availableCandidates
-        : [{ id: roomId }, ...availableCandidates];
+    if (requestedRoom) {
+      orderedRooms.sort((first, second) => {
+        if (first.id === roomId) return -1;
+        if (second.id === roomId) return 1;
+        return (first.createdAt || 0) - (second.createdAt || 0);
+      });
+    }
 
     for (const room of orderedRooms) {
       try {
         const membership = await joinRoom(room.id, username);
         return room.id === roomId
           ? membership
-          : { ...membership, requestedRoomId: roomId, autoAssigned: true };
+          : {
+              ...membership,
+              requestedRoomId: roomId || null,
+              autoAssigned: Boolean(roomId),
+            };
       } catch (error) {
         if (error.message !== "ROOM_FULL") throw error;
       }

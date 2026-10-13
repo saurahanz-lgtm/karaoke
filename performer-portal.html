@@ -1568,12 +1568,8 @@
 
         let requestedRoomId = null;
         try {
-          const roomId =
-            KaraokeSessions.getRoomIdFromUrl() ||
-            sessionStorage.getItem("karaokeRoomId") ||
-            (await KaraokeSessions.getActiveRoomId());
-          requestedRoomId = roomId;
-          if (!roomId) throw new Error("NO_ACTIVE_ROOM");
+          const roomId = KaraokeSessions.getRoomIdFromUrl();
+          requestedRoomId = roomId || (await KaraokeSessions.getActiveRoomId());
           const membership = await KaraokeSessions.joinRoomWithFallback(
             roomId,
             loggedInUser.username,
