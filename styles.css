@@ -3249,6 +3249,18 @@ body.karaoke-display-page {
   text-align: center;
 }
 
+.password-reset-prefix-hint {
+  display: block;
+  margin: -6px 0 10px;
+  color: var(--karaoke-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.password-reset-prefix-hint strong {
+  color: #83efd1;
+}
+
 .password-reset-modal > form[hidden] {
   display: none;
 }

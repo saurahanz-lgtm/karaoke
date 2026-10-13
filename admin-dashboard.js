@@ -1536,21 +1536,21 @@ async function handleRoomRequestDecision(request, decision, buttons) {
     button.disabled = true;
   });
   try {
+    let approvedRoom = null;
     if (decision === "approve") {
       if (request.type === "extension") {
         await KaraokeSessions.approveRoomExtension(request.roomId, request.id);
       } else {
-        await KaraokeSessions.approveRoomRequest(
+        approvedRoom = await KaraokeSessions.approveRoomRequest(
           request.roomId,
           request.id,
-          `${request.username || "Performer"}'s Room`,
         );
       }
       playRequestNotificationSound();
       showNotification(
         request.type === "extension"
           ? `Added ${request.requestedMinutes} minutes to ${request.roomId}.`
-          : `Room approved for ${request.username || "singer"}.`,
+          : `${approvedRoom.name} approved for ${request.username || "singer"}.`,
         "success",
       );
     } else {
@@ -1951,15 +1951,10 @@ async function handleCreateRoom(event) {
     return;
   }
 
-  const input = document.getElementById("newRoomName");
-  const name = input.value.trim();
-  if (!name) return;
-
   const button = document.getElementById("createRoomButton");
   button.disabled = true;
   try {
-    await KaraokeSessions.createRoom(name);
-    input.value = "";
+    await KaraokeSessions.createRoom();
   } catch (error) {
     console.error("Could not create karaoke room:", error.message);
     showAppToast("Could not create room. Check the Firebase connection.");

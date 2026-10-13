@@ -3,6 +3,7 @@
   const ROOM_DATA_PATH = "karaokeSessions";
   const ROOM_REQUESTS_PATH = "roomRequests";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
+  const ROOM_NAME_COUNTER_PATH = "karaokeControl/nextRoomNameNumber";
   const MAX_DEVICES = 3;
   const MAX_ROOM_DEVICES = 100;
   const DEFAULT_ROOM_VOLUME = 70;
@@ -338,9 +339,29 @@
     return snapshot.val();
   }
 
-  async function createRoom(name) {
+  async function getNextRoomName(db) {
+    const roomsSnapshot = await db.ref(ROOM_LIST_PATH).once("value");
+    const highestExistingNumber = Object.values(
+      roomsSnapshot.val() || {},
+    ).reduce((highest, room) => {
+      const match = /^SDR(\d+)$/i.exec(String(room?.name || "").trim());
+      return match ? Math.max(highest, Number(match[1])) : highest;
+    }, 0);
+    const counterRef = db.ref(ROOM_NAME_COUNTER_PATH);
+    const result = await counterRef.transaction(
+      (current) =>
+        Math.max(Number(current) || 1, highestExistingNumber + 1) + 1,
+    );
+    const allocatedNumber = Number(result.snapshot.val()) - 1;
+    if (!result.committed || !Number.isInteger(allocatedNumber)) {
+      throw new Error("ROOM_NAME_SEQUENCE_FAILED");
+    }
+    return `SDR${allocatedNumber}`;
+  }
+
+  async function createRoom() {
     const db = database();
-    const roomName = name.trim().slice(0, 40);
+    const roomName = await getNextRoomName(db);
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const room = {
@@ -579,7 +600,7 @@
     });
   }
 
-  async function approveRoomRequest(roomId, requestId, roomName) {
+  async function approveRoomRequest(roomId, requestId) {
     const db = database();
     const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
     const globalRequestRef = db.ref(`${ROOM_REQUESTS_PATH}/${requestId}`);
@@ -592,7 +613,7 @@
 
     let room = null;
     try {
-      room = await createRoom(roomName);
+      room = await createRoom();
       const handledAt = Date.now();
       const nextStatus = {
         status: "approved",
