@@ -339,70 +339,59 @@
     return snapshot.val();
   }
 
-  function getNextRoomNameNumber(rooms) {
-    const usedNumbers = new Set(
-      Object.values(rooms || {}).flatMap((room) => {
-        const match = /^SDR(\d+)$/i.exec(String(room?.name || "").trim());
-        return match ? [Number(match[1])] : [];
-      }),
-    );
-    let number = 1;
-    while (usedNumbers.has(number)) number += 1;
-    return number;
-  }
-
-  async function getNextRoomName(db) {
-    const roomsSnapshot = await db.ref(ROOM_LIST_PATH).once("value");
-    const rooms = roomsSnapshot.val() || {};
-    const usedNumbers = new Set(
-      Object.values(rooms).flatMap((room) => {
-        const match = /^SDR(\d+)$/i.exec(String(room?.name || "").trim());
-        return match ? [Number(match[1])] : [];
-      }),
-    );
-    const firstAvailableNumber = getNextRoomNameNumber(rooms);
-    const counterRef = db.ref(ROOM_NAME_COUNTER_PATH);
-    const result = await counterRef.transaction((current) => {
-      let number = Math.max(Number(current) || 1, firstAvailableNumber);
-      while (usedNumbers.has(number)) number += 1;
-      return number + 1;
-    });
-    const allocatedNumber = Number(result.snapshot.val()) - 1;
-    if (!result.committed || !Number.isInteger(allocatedNumber)) {
-      throw new Error("ROOM_NAME_SEQUENCE_FAILED");
-    }
-    return `SDR${allocatedNumber}`;
+  function getNumberedRooms(rooms) {
+    return Object.entries(rooms || {})
+      .filter(([, room]) => /^SDR\d+$/i.test(String(room?.name || "").trim()))
+      .sort(
+        ([firstId, first], [secondId, second]) =>
+          (Number(first.createdAt) || 0) - (Number(second.createdAt) || 0) ||
+          firstId.localeCompare(secondId),
+      );
   }
 
   async function createRoom() {
     const db = database();
-    const roomName = await getNextRoomName(db);
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
-      const room = {
-        id: generateRoomId(),
-        name: roomName,
-        createdAt: Date.now(),
-        maxDevices: MAX_DEVICES,
-        timeLimitMinutes: 0,
-        usageStartedAt: null,
-        expiresAt: null,
-      };
-      const roomRef = db.ref(`${ROOM_LIST_PATH}/${room.id}`);
-      const reservation = await roomRef.transaction((current) =>
-        current ? undefined : room,
-      );
+      const roomId = generateRoomId();
+      let room = null;
+      const reservation = await db
+        .ref(ROOM_LIST_PATH)
+        .transaction((current) => {
+          const rooms = current || {};
+          if (rooms[roomId]) return undefined;
+
+          const numberedRooms = getNumberedRooms(rooms);
+          const nextRooms = { ...rooms };
+          numberedRooms.forEach(([existingId, existingRoom], index) => {
+            nextRooms[existingId] = {
+              ...existingRoom,
+              name: `SDR${index + 1}`,
+            };
+          });
+
+          room = {
+            id: roomId,
+            name: `SDR${numberedRooms.length + 1}`,
+            createdAt: Date.now(),
+            maxDevices: MAX_DEVICES,
+            timeLimitMinutes: 0,
+            usageStartedAt: null,
+            expiresAt: null,
+          };
+          return { ...nextRooms, [roomId]: room };
+        });
       if (!reservation.committed) continue;
 
       try {
-        await db.ref(`${ROOM_DATA_PATH}/${room.id}`).set({
+        await db.ref(`${ROOM_DATA_PATH}/${roomId}`).set({
           queue: null,
           currentSong: null,
           members: null,
         });
         return room;
       } catch (error) {
-        await roomRef.remove();
+        await db.ref(`${ROOM_LIST_PATH}/${roomId}`).remove();
         throw error;
       }
     }
@@ -500,11 +489,17 @@
     const updates = {
       [`${ROOM_LIST_PATH}/${roomId}`]: null,
       [`${ROOM_DATA_PATH}/${roomId}`]: null,
+      [ROOM_NAME_COUNTER_PATH]: null,
     };
+    getNumberedRooms(remainingRooms).forEach(
+      ([remainingRoomId, room], index) => {
+        updates[`${ROOM_LIST_PATH}/${remainingRoomId}/name`] =
+          `SDR${index + 1}`;
+      },
+    );
     if (activeSnapshot.val() === roomId) {
       updates[ACTIVE_ROOM_PATH] = nextRoomId;
     }
-    updates[ROOM_NAME_COUNTER_PATH] = getNextRoomNameNumber(remainingRooms);
 
     await db.ref().update(updates);
     return roomId;
