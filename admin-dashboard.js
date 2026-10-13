@@ -3717,6 +3717,24 @@ async function deleteUser(userId) {
 }
 
 // Toggle user disabled status (disable/enable user)
+async function persistUserDisabledStatus(username, disabled) {
+  const usersRef = firebase.database().ref("users");
+  const snapshot = await usersRef.once("value");
+  const accounts = snapshot.val() || {};
+  const matchingEntry = Object.entries(accounts).find(
+    ([, account]) => account?.username === username,
+  );
+  if (!matchingEntry) throw new Error("USER_NOT_FOUND");
+
+  const [accountKey, account] = matchingEntry;
+  await usersRef.child(accountKey).child("disabled").set(Boolean(disabled));
+  return Object.entries(accounts).map(([key, currentAccount]) =>
+    key === accountKey
+      ? { ...currentAccount, disabled: Boolean(disabled) }
+      : currentAccount,
+  );
+}
+
 async function toggleUserDisabled(userId, button) {
   const user = users.find((u) => u.id === userId);
   if (!user) return;
@@ -3741,9 +3759,12 @@ async function toggleUserDisabled(userId, button) {
     );
     try {
       if (typeof firebase !== "undefined" && firebase.database) {
-        await firebase.database().ref("users").set(updatedUsers);
+        users = (await persistUserDisabledStatus(user.username, newStatus)).map(
+          normalizeAccountRecord,
+        );
+      } else {
+        users = updatedUsers.map(normalizeAccountRecord);
       }
-      users = updatedUsers.map(normalizeAccountRecord);
       localStorage.setItem("karaoke_users", JSON.stringify(users));
     } catch (error) {
       console.error("Could not save user disabled status:", error.message);
@@ -3756,7 +3777,21 @@ async function toggleUserDisabled(userId, button) {
     }
 
     if (typeof firebase !== "undefined" && firebase.database) {
+      const activeLoginRef = firebase
+        .database()
+        .ref(`activeLogin/${user.username}`);
       if (newStatus) {
+        try {
+          await activeLoginRef.update({
+            disabled: true,
+            disabledAt: Date.now(),
+          });
+        } catch (error) {
+          console.warn(
+            "Could not mark active session disabled:",
+            error.message,
+          );
+        }
         try {
           const userUpdateChannel = new BroadcastChannel(
             "karaoke_user_updates",
@@ -3773,9 +3808,7 @@ async function toggleUserDisabled(userId, button) {
             error.message,
           );
         }
-        await firebase
-          .database()
-          .ref(`activeLogin/${user.username}`)
+        await activeLoginRef
           .remove()
           .catch((error) =>
             console.warn(
@@ -3783,6 +3816,10 @@ async function toggleUserDisabled(userId, button) {
               error.message,
             ),
           );
+      } else {
+        await activeLoginRef.transaction((session) =>
+          session?.disabled === true ? null : undefined,
+        );
       }
     }
 
