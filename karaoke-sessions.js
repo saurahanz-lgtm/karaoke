@@ -1162,6 +1162,17 @@
     return result.snapshot.val();
   }
 
+  function setCurrentSongFromQueue(roomId, song) {
+    return roomRef(roomId).transaction((room) => {
+      if (!room || room.currentSong?.videoId) return undefined;
+      const queuedSong = normalizeQueue(room.queue).find(
+        (item) => item.videoId === song.videoId,
+      );
+      if (!queuedSong) return undefined;
+      return { ...room, currentSong: queuedSong };
+    });
+  }
+
   async function claimNextSong(roomId) {
     await assertKaraokeDisplayEnabled(roomId);
     return roomRef(roomId).transaction((current) => {
@@ -1262,5 +1273,6 @@
     setRoomDeviceLimit,
     getRoomDeviceLimit,
     sendControl,
+    setCurrentSongFromQueue,
   };
 })(window);

@@ -435,9 +435,7 @@ function activateKaraokeRoom(roomId) {
             requestedBy: firstSong.requestedBy,
             singer: firstSong.requestedBy,
           };
-          KaraokeSessions.roomRef(roomId, "currentSong").transaction(
-            (current) => (current?.videoId ? undefined : firstCurrentSong),
-          );
+          KaraokeSessions.setCurrentSongFromQueue(roomId, firstCurrentSong);
         }
         displayQueue();
         updateNextSongDisplay();
