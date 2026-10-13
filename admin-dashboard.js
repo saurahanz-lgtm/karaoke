@@ -1621,7 +1621,7 @@ function renderKaraokeRooms() {
     currentKaraokeRoomPage = 1;
     pagination.hidden = true;
     tableBody.innerHTML =
-      '<tr><td colspan="6" class="text-center text-white-50">No rooms created yet.</td></tr>';
+      '<tr><td colspan="7" class="text-center text-white-50">No rooms created yet.</td></tr>';
     return;
   }
 
@@ -1649,6 +1649,7 @@ function renderKaraokeRooms() {
         const codeCell = document.createElement("td");
         const devicesCell = document.createElement("td");
         const statusCell = document.createElement("td");
+        const roomTimeCell = document.createElement("td");
         const cleanupCell = document.createElement("td");
         const actionCell = document.createElement("td");
         const roomActions = document.createElement("div");
@@ -1679,6 +1680,10 @@ function renderKaraokeRooms() {
           limitLabel.textContent = `${room.timeLimitMinutes} min limit`;
           statusCell.appendChild(limitLabel);
         }
+        const roomTimeLabel = document.createElement("span");
+        roomTimeLabel.className = "room-time-countdown";
+        roomTimeLabel.dataset.roomId = room.id;
+        roomTimeCell.appendChild(roomTimeLabel);
         const cleanupLabel = document.createElement("span");
         cleanupLabel.className = "room-idle-countdown";
         cleanupLabel.dataset.roomId = room.id;
@@ -1750,6 +1755,7 @@ function renderKaraokeRooms() {
           codeCell,
           devicesCell,
           statusCell,
+          roomTimeCell,
           cleanupCell,
           actionCell,
         );
@@ -1757,6 +1763,7 @@ function renderKaraokeRooms() {
       }),
   );
   updateRoomIdleCountdowns();
+  updateRoomTimeLimitCountdowns();
 }
 
 function updateRoomIdleCountdowns() {
@@ -1827,6 +1834,48 @@ async function clearExpiredRoomSongs(roomId, label) {
 }
 
 setInterval(updateRoomIdleCountdowns, 1000);
+
+function updateRoomTimeLimitCountdowns() {
+  document.querySelectorAll(".room-time-countdown").forEach((label) => {
+    const room = karaokeRooms.find((item) => item.id === label.dataset.roomId);
+    const timeLimitMinutes = Number(room?.timeLimitMinutes);
+    const expiresAt = Number(room?.expiresAt);
+    label.classList.remove("text-warning", "text-danger");
+
+    if (!Number.isFinite(timeLimitMinutes) || timeLimitMinutes <= 0) {
+      label.textContent = "No time limit";
+      return;
+    }
+    if (!Number.isFinite(expiresAt) || expiresAt <= 0) {
+      label.textContent = "Starts on first device";
+      return;
+    }
+
+    const remainingMs = expiresAt - Date.now();
+    if (remainingMs <= 0) {
+      label.textContent = "Expired · extension request";
+      label.classList.add("text-danger");
+      return;
+    }
+
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const remaining = hours
+      ? `${hours}h ${minutes}m ${seconds}s`
+      : `${minutes}m ${seconds}s`;
+    const warningWindow = Math.min(5 * 60000, timeLimitMinutes * 60000 * 0.2);
+    if (remainingMs <= warningWindow) {
+      label.textContent = `Warning · ${remaining} left`;
+      label.classList.add("text-warning");
+    } else {
+      label.textContent = `${remaining} left`;
+    }
+  });
+}
+
+setInterval(updateRoomTimeLimitCountdowns, 1000);
 
 async function handleRenameRoom(room, button) {
   const name = await showAppPrompt("Enter the new room name:", room.name, {
