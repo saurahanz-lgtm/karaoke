@@ -295,8 +295,10 @@
 
       .active-room-display {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
+        align-items: center;
         justify-content: center;
+        gap: 5px;
         min-width: 0;
         width: clamp(104px, 15vw, 164px);
         min-height: 38px;
@@ -309,9 +311,19 @@
       }
 
       .active-room-display strong {
+        flex: 1 1 auto;
+        min-width: 0;
         overflow: hidden;
         font-size: 0.8rem;
         text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .display-clock {
+        flex: 0 0 auto;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.62rem;
+        font-variant-numeric: tabular-nums;
         white-space: nowrap;
       }
 
@@ -1017,6 +1029,12 @@
       <div class="button-group">
         <div class="active-room-display" aria-live="polite">
           <strong id="activeRoomName">Loading room...</strong>
+          <time
+            id="displayClock"
+            class="display-clock"
+            aria-label="Current local time"
+            hidden
+          ></time>
         </div>
         <button id="fullscreenBtn" onclick="toggleFullscreen()">
           ⛶ Full Screen

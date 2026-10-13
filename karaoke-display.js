@@ -364,6 +364,20 @@ function renderKaraokeRooms() {
   if (name) name.textContent = activeRoom?.name || "Room unavailable";
 }
 
+function updateKaraokeDisplayClock() {
+  const clock = document.getElementById("displayClock");
+  if (!clock) return;
+  const now = new Date();
+  clock.dateTime = now.toISOString();
+  clock.textContent = new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).format(now);
+  clock.hidden = false;
+}
+
 function renderKaraokeRoomDeviceCount(roomId) {
   if (activeKaraokeRoomId !== roomId) return;
   const memberCount = document.getElementById("roomMemberCount");
@@ -1026,6 +1040,8 @@ function handleRoomControl(control) {
 // Initialize karaoke display
 document.addEventListener("DOMContentLoaded", function () {
   console.log("📺 [1/7] Karaoke Display DOMContentLoaded");
+  updateKaraokeDisplayClock();
+  setInterval(updateKaraokeDisplayClock, 1000);
   console.log("🔍 DEBUG: window.YT =", typeof window.YT);
   console.log("🔍 DEBUG: window.firebase =", typeof window.firebase);
 
