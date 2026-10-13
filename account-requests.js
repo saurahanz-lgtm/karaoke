@@ -24,6 +24,25 @@
     return `sd${String(randomValue[0] % 10000).padStart(4, "0")}`;
   }
 
+  function generateResetToken() {
+    if (!global.crypto?.getRandomValues || !global.crypto.subtle) {
+      throw new Error("PASSWORD_RESET_UNAVAILABLE");
+    }
+    const randomValues = new Uint8Array(32);
+    global.crypto.getRandomValues(randomValues);
+    return Array.from(randomValues, (value) =>
+      value.toString(16).padStart(2, "0"),
+    ).join("");
+  }
+
+  async function hashResetToken(token) {
+    const data = new TextEncoder().encode(token);
+    const digest = await global.crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(digest), (value) =>
+      value.toString(16).padStart(2, "0"),
+    ).join("");
+  }
+
   async function create(username) {
     const requestedUsername = String(username || "").trim();
     const normalizedUsername = requestedUsername.toLowerCase();
@@ -51,6 +70,7 @@
       pendingDuplicate = Object.values(requests).some(
         (item) =>
           item &&
+          item.type !== "password-reset" &&
           ["pending", "approving"].includes(item.status) &&
           item.normalizedUsername === normalizedUsername,
       );
@@ -66,6 +86,62 @@
       );
     }
     return { id: requestRef.key, ...request };
+  }
+
+  async function createPasswordReset(username, role) {
+    const requestedUsername = String(username || "").trim();
+    const normalizedUsername = requestedUsername.toLowerCase();
+    if (!requestedUsername) throw new Error("USERNAME_REQUIRED");
+    if (!/^(admin|user)$/.test(role)) throw new Error("ACCOUNT_NOT_FOUND");
+
+    const db = database();
+    const usersSnapshot = await db.ref(USERS_PATH).once("value");
+    const account = asUserList(usersSnapshot.val()).find(
+      (user) =>
+        String(user.username).trim().toLowerCase() === normalizedUsername &&
+        user.role === role &&
+        user.disabled !== true,
+    );
+    if (!account) throw new Error("ACCOUNT_NOT_FOUND");
+
+    const token = generateResetToken();
+    const tokenHash = await hashResetToken(token);
+    const requestsRef = db.ref(REQUESTS_PATH);
+    const requestRef = requestsRef.push();
+    const request = {
+      type: "password-reset",
+      username: account.username,
+      normalizedUsername,
+      role,
+      accountId: account.id ?? null,
+      resetTokenHash: tokenHash,
+      status: "pending",
+      createdAt: Date.now(),
+    };
+    let pendingDuplicate = false;
+    const result = await requestsRef.transaction((current) => {
+      const requests = current || {};
+      pendingDuplicate = Object.values(requests).some(
+        (item) =>
+          item?.type === "password-reset" &&
+          item.role === role &&
+          item.normalizedUsername === normalizedUsername &&
+          ["pending", "approving", "approved", "resetting"].includes(
+            item.status,
+          ),
+      );
+      if (pendingDuplicate) return undefined;
+      return { ...requests, [requestRef.key]: request };
+    });
+
+    if (!result.committed) {
+      throw new Error(
+        pendingDuplicate
+          ? "PASSWORD_RESET_ALREADY_PENDING"
+          : "REQUEST_SAVE_FAILED",
+      );
+    }
+    return { id: requestRef.key, token, ...request };
   }
 
   function listen(id, callback, onError) {
@@ -96,7 +172,12 @@
     const ref = database().ref(`${REQUESTS_PATH}/${id}`);
     const result = await ref.transaction((request) =>
       request?.status === "pending"
-        ? { ...request, status: "rejected", resolvedAt: Date.now() }
+        ? {
+            ...request,
+            status: "rejected",
+            resetTokenHash: null,
+            resolvedAt: Date.now(),
+          }
         : undefined,
     );
     if (!result.committed) throw new Error("REQUEST_ALREADY_RESOLVED");
@@ -107,7 +188,8 @@
     if (!id) throw new Error("REQUEST_ID_REQUIRED");
     const ref = database().ref(`${REQUESTS_PATH}/${id}`);
     const result = await ref.transaction((request) =>
-      request && ["pending", "approved", "rejected"].includes(request.status)
+      request &&
+      ["pending", "approved", "rejected", "completed"].includes(request.status)
         ? null
         : undefined,
     );
@@ -117,6 +199,25 @@
   async function approve(id) {
     const db = database();
     const requestRef = db.ref(`${REQUESTS_PATH}/${id}`);
+    const requestSnapshot = await requestRef.once("value");
+    if (requestSnapshot.val()?.type === "password-reset") {
+      const result = await requestRef.transaction((request) =>
+        request?.type === "password-reset" && request.status === "pending"
+          ? {
+              ...request,
+              status: "approved",
+              approvedAt: Date.now(),
+              resolvedAt: Date.now(),
+            }
+          : undefined,
+      );
+      if (!result.committed) throw new Error("REQUEST_ALREADY_RESOLVED");
+      return {
+        username: result.snapshot.val().username,
+        type: "password-reset",
+      };
+    }
+
     const generatedPassword = generatePassword();
     const claim = await requestRef.transaction((request) =>
       request?.status === "pending"
@@ -200,9 +301,91 @@
     }
   }
 
+  async function completePasswordReset(id, token, newPassword) {
+    if (!id || !token) throw new Error("PASSWORD_RESET_INVALID");
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      throw new Error("PASSWORD_TOO_SHORT");
+    }
+    if (newPassword.length > 128) throw new Error("PASSWORD_TOO_LONG");
+
+    const db = database();
+    const requestRef = db.ref(`${REQUESTS_PATH}/${id}`);
+    const tokenHash = await hashResetToken(token);
+    const claim = await requestRef.transaction((request) =>
+      request?.type === "password-reset" &&
+      request.status === "approved" &&
+      request.resetTokenHash === tokenHash
+        ? { ...request, status: "resetting" }
+        : undefined,
+    );
+    if (!claim.committed) throw new Error("PASSWORD_RESET_NOT_APPROVED");
+
+    const request = claim.snapshot.val();
+    let accountFound = false;
+    try {
+      const usersResult = await db.ref(USERS_PATH).transaction((current) => {
+        if (Array.isArray(current)) {
+          const index = current.findIndex(
+            (user) =>
+              user &&
+              String(user.username).trim().toLowerCase() ===
+                request.normalizedUsername &&
+              user.role === request.role &&
+              (request.accountId === null ||
+                request.accountId === undefined ||
+                String(user.id) === String(request.accountId)),
+          );
+          if (index < 0) return undefined;
+          accountFound = true;
+          const users = [...current];
+          users[index] = { ...users[index], password: newPassword };
+          return users;
+        }
+
+        const users = current || {};
+        const userKey = Object.keys(users).find((key) => {
+          const user = users[key];
+          return (
+            user &&
+            String(user.username).trim().toLowerCase() ===
+              request.normalizedUsername &&
+            user.role === request.role &&
+            (request.accountId === null ||
+              request.accountId === undefined ||
+              String(user.id) === String(request.accountId))
+          );
+        });
+        if (!userKey) return undefined;
+        accountFound = true;
+        return {
+          ...users,
+          [userKey]: { ...users[userKey], password: newPassword },
+        };
+      });
+
+      if (!usersResult.committed || !accountFound) {
+        throw new Error("ACCOUNT_NOT_FOUND");
+      }
+      await requestRef.update({
+        status: "completed",
+        resetTokenHash: null,
+        completedAt: Date.now(),
+      });
+    } catch (error) {
+      await requestRef.transaction((current) =>
+        current?.status === "resetting"
+          ? { ...current, status: "approved" }
+          : undefined,
+      );
+      throw error;
+    }
+  }
+
   global.KaraokeAccountRequests = {
     approve,
     create,
+    createPasswordReset,
+    completePasswordReset,
     listen,
     listenAll,
     remove,

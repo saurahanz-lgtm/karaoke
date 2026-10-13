@@ -358,6 +358,13 @@
             required
           />
         </div>
+        <button
+          class="account-request-link password-reset-link"
+          type="button"
+          data-password-reset-role="admin"
+        >
+          Forgot password?
+        </button>
         <div class="login-buttons">
           <button type="submit" class="login-btn login-btn-submit">
             Sign In
@@ -462,6 +469,13 @@
             </button>
           </div>
         </form>
+        <button
+          class="account-request-link password-reset-link"
+          type="button"
+          data-password-reset-role="user"
+        >
+          Forgot password?
+        </button>
       </div>
       <button
         id="showAccountRequestButton"
@@ -534,6 +548,92 @@
         </button>
       </form>
     </div>
+
+    <section
+      id="passwordResetModal"
+      class="login-modal-custom password-reset-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="passwordResetTitle"
+    >
+      <div class="login-title" id="passwordResetTitle">Reset password</div>
+      <p class="password-reset-intro" id="passwordResetIntro">
+        Send a request to the administrator for approval.
+      </p>
+      <form id="passwordResetRequestForm">
+        <div class="login-form-group">
+          <label for="passwordResetUsername">Username</label>
+          <input
+            id="passwordResetUsername"
+            type="text"
+            autocomplete="username"
+            maxlength="30"
+            required
+          />
+        </div>
+        <button
+          id="passwordResetRequestButton"
+          class="login-btn login-btn-submit"
+          type="submit"
+        >
+          Request approval
+        </button>
+      </form>
+      <form id="passwordResetNewPasswordForm" hidden>
+        <div class="login-form-group">
+          <label for="passwordResetNewPassword">New password</label>
+          <input
+            id="passwordResetNewPassword"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            maxlength="128"
+            required
+          />
+        </div>
+        <div class="login-form-group">
+          <label for="passwordResetConfirmPassword">Confirm new password</label>
+          <input
+            id="passwordResetConfirmPassword"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            maxlength="128"
+            required
+          />
+        </div>
+        <button
+          id="passwordResetSaveButton"
+          class="login-btn login-btn-submit"
+          type="submit"
+        >
+          Save new password
+        </button>
+      </form>
+      <p
+        id="passwordResetFeedback"
+        class="account-request-feedback"
+        role="status"
+        aria-live="polite"
+      ></p>
+      <div class="password-reset-modal-actions">
+        <button
+          id="passwordResetRetryButton"
+          class="login-btn login-btn-cancel"
+          type="button"
+          hidden
+        >
+          Request again
+        </button>
+        <button
+          class="login-btn login-btn-cancel"
+          type="button"
+          onclick="closeLoginModal()"
+        >
+          Back to sign in
+        </button>
+      </div>
+    </section>
 
     <!-- Performer portal is served from performer-portal.html. -->
     <script>
@@ -1215,6 +1315,7 @@
         document.getElementById("loginOverlay").classList.remove("show");
         document.getElementById("adminLoginModal").classList.remove("show");
         document.getElementById("singerLoginModal").classList.remove("show");
+        document.getElementById("passwordResetModal").classList.remove("show");
       }
 
       function verifyLoginCredentials(user, password) {

@@ -357,4 +357,270 @@ document.addEventListener("DOMContentLoaded", () => {
     setDefaultRequestButtonText();
     usernameInput.focus();
   });
+
+  const passwordResetModal = document.getElementById("passwordResetModal");
+  const passwordResetRequestForm = document.getElementById(
+    "passwordResetRequestForm",
+  );
+  const passwordResetPasswordForm = document.getElementById(
+    "passwordResetNewPasswordForm",
+  );
+  const passwordResetUsername = document.getElementById(
+    "passwordResetUsername",
+  );
+  const passwordResetFeedback = document.getElementById(
+    "passwordResetFeedback",
+  );
+  const passwordResetRequestButton = document.getElementById(
+    "passwordResetRequestButton",
+  );
+  const passwordResetSaveButton = document.getElementById(
+    "passwordResetSaveButton",
+  );
+  const passwordResetRetryButton = document.getElementById(
+    "passwordResetRetryButton",
+  );
+  const passwordResetStorageKey = "karaoke_password_reset_v1";
+  let passwordResetState = null;
+  let stopWatchingPasswordReset = null;
+  let passwordResetRole = null;
+
+  function readPasswordResetState() {
+    try {
+      return JSON.parse(
+        localStorage.getItem(passwordResetStorageKey) || "null",
+      );
+    } catch (error) {
+      console.warn("Could not read password reset state:", error.message);
+      return null;
+    }
+  }
+
+  function savePasswordResetState(state) {
+    passwordResetState = state;
+    try {
+      if (state) {
+        localStorage.setItem(passwordResetStorageKey, JSON.stringify(state));
+      } else {
+        localStorage.removeItem(passwordResetStorageKey);
+      }
+    } catch (error) {
+      console.warn("Could not save password reset state:", error.message);
+    }
+  }
+
+  function setPasswordResetFeedback(message, state = "info") {
+    passwordResetFeedback.textContent = message;
+    passwordResetFeedback.dataset.state = state;
+  }
+
+  function showPasswordResetRequestAgain() {
+    stopWatchingPasswordReset?.();
+    stopWatchingPasswordReset = null;
+    savePasswordResetState(null);
+    passwordResetRequestForm.hidden = false;
+    passwordResetPasswordForm.hidden = true;
+    passwordResetUsername.disabled = false;
+    passwordResetRequestButton.disabled = false;
+    passwordResetRetryButton.hidden = true;
+    setPasswordResetFeedback("", "info");
+    passwordResetUsername.focus();
+  }
+
+  function watchPasswordReset(requestId) {
+    stopWatchingPasswordReset?.();
+    stopWatchingPasswordReset = KaraokeAccountRequests.listen(
+      requestId,
+      (request) => {
+        if (!request) {
+          showPasswordResetRequestAgain();
+          setPasswordResetFeedback(
+            "This password reset request could not be found. Submit another request.",
+            "error",
+          );
+          return;
+        }
+
+        if (request.status === "pending") {
+          passwordResetRequestForm.hidden = false;
+          passwordResetPasswordForm.hidden = true;
+          passwordResetUsername.disabled = true;
+          passwordResetRequestButton.disabled = true;
+          passwordResetRetryButton.hidden = true;
+          setPasswordResetFeedback(
+            "Request sent. Waiting for administrator approval.",
+            "pending",
+          );
+        } else if (request.status === "approved") {
+          passwordResetRequestForm.hidden = true;
+          passwordResetPasswordForm.hidden = false;
+          passwordResetRetryButton.hidden = true;
+          setPasswordResetFeedback(
+            "Approved. Enter a new password to finish resetting your account.",
+            "success",
+          );
+          document.getElementById("passwordResetNewPassword").focus();
+        } else if (request.status === "resetting") {
+          setPasswordResetFeedback("Saving your new password...", "pending");
+          passwordResetSaveButton.disabled = true;
+        } else if (request.status === "completed") {
+          savePasswordResetState(null);
+          stopWatchingPasswordReset?.();
+          stopWatchingPasswordReset = null;
+          passwordResetRequestForm.hidden = true;
+          passwordResetPasswordForm.hidden = true;
+          passwordResetRetryButton.hidden = true;
+          setPasswordResetFeedback(
+            "Password updated. Sign in using your new password.",
+            "success",
+          );
+        } else if (request.status === "rejected") {
+          passwordResetRequestForm.hidden = false;
+          passwordResetPasswordForm.hidden = true;
+          passwordResetUsername.disabled = true;
+          passwordResetRequestButton.disabled = true;
+          passwordResetRetryButton.hidden = false;
+          setPasswordResetFeedback(
+            "The administrator declined this request.",
+            "error",
+          );
+        }
+      },
+      (error) => {
+        console.error(
+          "Could not follow password reset request:",
+          error.message,
+        );
+        setPasswordResetFeedback(
+          "Could not check approval. Check your connection and try again.",
+          "error",
+        );
+      },
+    );
+  }
+
+  document.querySelectorAll("[data-password-reset-role]").forEach((button) => {
+    button.addEventListener("click", () => {
+      stopRoomQrScanner();
+      document.getElementById("adminLoginModal").classList.remove("show");
+      document.getElementById("singerLoginModal").classList.remove("show");
+      passwordResetRole = button.dataset.passwordResetRole;
+      document.getElementById("passwordResetTitle").textContent =
+        passwordResetRole === "admin"
+          ? "Reset administrator password"
+          : "Reset performer password";
+      document.getElementById("passwordResetIntro").textContent =
+        "Send a request to the administrator for approval.";
+      document.getElementById("loginOverlay").classList.add("show");
+      passwordResetModal.classList.add("show");
+
+      const savedState = readPasswordResetState();
+      if (
+        savedState?.role === passwordResetRole &&
+        savedState.id &&
+        savedState.token
+      ) {
+        passwordResetState = savedState;
+        passwordResetUsername.value = savedState.username || "";
+        passwordResetUsername.disabled = true;
+        watchPasswordReset(savedState.id);
+      } else {
+        showPasswordResetRequestAgain();
+        passwordResetUsername.value = "";
+      }
+    });
+  });
+
+  passwordResetRequestForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const username = passwordResetUsername.value.trim();
+    if (!/^[A-Za-z0-9_.-]{3,30}$/.test(username)) {
+      setPasswordResetFeedback("Enter a valid username.", "error");
+      return;
+    }
+
+    passwordResetRequestButton.disabled = true;
+    setPasswordResetFeedback("Submitting request...", "pending");
+    try {
+      const request = await KaraokeAccountRequests.createPasswordReset(
+        username,
+        passwordResetRole,
+      );
+      savePasswordResetState({
+        id: request.id,
+        token: request.token,
+        username: request.username,
+        role: passwordResetRole,
+      });
+      watchPasswordReset(request.id);
+    } catch (error) {
+      passwordResetRequestButton.disabled = false;
+      const messages = {
+        ACCOUNT_NOT_FOUND:
+          "No active account was found for that username and sign-in type.",
+        PASSWORD_RESET_ALREADY_PENDING:
+          "A password reset request is already waiting for this account.",
+        PASSWORD_RESET_UNAVAILABLE:
+          "Secure password reset is unavailable in this browser.",
+      };
+      setPasswordResetFeedback(
+        messages[error.message] ||
+          "Could not submit the request. Check your connection and try again.",
+        "error",
+      );
+    }
+  });
+
+  passwordResetPasswordForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const newPassword = document.getElementById(
+      "passwordResetNewPassword",
+    ).value;
+    const confirmation = document.getElementById(
+      "passwordResetConfirmPassword",
+    ).value;
+    if (newPassword.length < 8) {
+      setPasswordResetFeedback(
+        "Use at least 8 characters for your new password.",
+        "error",
+      );
+      return;
+    }
+    if (newPassword !== confirmation) {
+      setPasswordResetFeedback("The passwords do not match.", "error");
+      return;
+    }
+    if (!passwordResetState?.id || !passwordResetState.token) {
+      setPasswordResetFeedback(
+        "This reset session has expired. Submit a new request.",
+        "error",
+      );
+      return;
+    }
+
+    passwordResetSaveButton.disabled = true;
+    setPasswordResetFeedback("Saving your new password...", "pending");
+    try {
+      await KaraokeAccountRequests.completePasswordReset(
+        passwordResetState.id,
+        passwordResetState.token,
+        newPassword,
+      );
+      passwordResetPasswordForm.reset();
+    } catch (error) {
+      passwordResetSaveButton.disabled = false;
+      const message =
+        error.message === "PASSWORD_RESET_NOT_APPROVED"
+          ? "This request is not approved or its reset link is no longer valid."
+          : error.message === "PASSWORD_TOO_SHORT"
+            ? "Use at least 8 characters for your new password."
+            : "Could not save your password. Please try again.";
+      setPasswordResetFeedback(message, "error");
+    }
+  });
+
+  passwordResetRetryButton.addEventListener("click", () => {
+    showPasswordResetRequestAgain();
+    passwordResetUsername.value = "";
+  });
 });

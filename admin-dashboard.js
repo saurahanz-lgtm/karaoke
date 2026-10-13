@@ -568,14 +568,16 @@ function renderAccountRequests() {
   const visibleRequests =
     currentAccountRequestView === "history"
       ? accountRequests.filter((request) =>
-          ["approved", "rejected"].includes(request.status),
+          ["approved", "rejected", "completed"].includes(request.status),
         )
       : accountRequests.filter((request) =>
-          ["pending", "approving"].includes(request.status),
+          ["pending", "approving", "resetting"].includes(request.status),
         );
   const historyRequestIds = new Set(
     accountRequests
-      .filter((request) => ["approved", "rejected"].includes(request.status))
+      .filter((request) =>
+        ["approved", "rejected", "completed"].includes(request.status),
+      )
       .map((request) => request.id),
   );
   for (const id of selectedAccountHistoryIds) {
@@ -597,7 +599,7 @@ function renderAccountRequests() {
     });
     tableBody.innerHTML =
       currentAccountRequestView === "history"
-        ? '<tr><td colspan="5" class="text-center text-white-50">No approved or rejected requests yet.</td></tr>'
+        ? '<tr><td colspan="5" class="text-center text-white-50">No completed requests yet.</td></tr>'
         : '<tr><td colspan="4" class="text-center text-white-50">No pending account requests.</td></tr>';
     return;
   }
@@ -676,6 +678,12 @@ function renderAccountRequests() {
         selectCell.appendChild(checkbox);
       }
       usernameCell.textContent = request.username || "Unknown username";
+      if (request.type === "password-reset") {
+        const requestKind = document.createElement("small");
+        requestKind.className = "account-request-kind";
+        requestKind.textContent = `${request.role === "admin" ? "Admin" : "Performer"} password reset`;
+        usernameCell.append(document.createElement("br"), requestKind);
+      }
       dateCell.textContent = request.createdAt
         ? new Date(request.createdAt).toLocaleString()
         : "-";
@@ -688,23 +696,28 @@ function renderAccountRequests() {
       statusCell.appendChild(statusBadge);
 
       if (request.status === "pending") {
+        const isPasswordReset = request.type === "password-reset";
         const approveButton = document.createElement("button");
         const rejectButton = document.createElement("button");
         approveButton.type = "button";
         approveButton.className = "table-action";
-        approveButton.title = "Approve request";
+        approveButton.title = isPasswordReset
+          ? "Approve password reset"
+          : "Approve account request";
         approveButton.setAttribute(
           "aria-label",
-          `Approve account request from ${request.username || "unknown user"}`,
+          `${isPasswordReset ? "Approve password reset for" : "Approve account request from"} ${request.username || "unknown user"}`,
         );
         approveButton.innerHTML =
           '<i class="bi bi-check2-circle" aria-hidden="true"></i>';
         rejectButton.type = "button";
         rejectButton.className = "table-action table-action-danger";
-        rejectButton.title = "Reject request";
+        rejectButton.title = isPasswordReset
+          ? "Reject password reset"
+          : "Reject account request";
         rejectButton.setAttribute(
           "aria-label",
-          `Reject account request from ${request.username || "unknown user"}`,
+          `${isPasswordReset ? "Reject password reset for" : "Reject account request from"} ${request.username || "unknown user"}`,
         );
         rejectButton.innerHTML =
           '<i class="bi bi-x-circle" aria-hidden="true"></i>';
@@ -724,7 +737,15 @@ function renderAccountRequests() {
       } else if (request.status === "approved") {
         const resolution = document.createElement("span");
         resolution.className = "account-request-resolution";
-        resolution.textContent = "Account created";
+        resolution.textContent =
+          request.type === "password-reset"
+            ? "Reset approved"
+            : "Account created";
+        actionGroup.appendChild(resolution);
+      } else if (request.status === "completed") {
+        const resolution = document.createElement("span");
+        resolution.className = "account-request-resolution";
+        resolution.textContent = "Password updated";
         actionGroup.appendChild(resolution);
       } else if (request.status === "rejected") {
         const resolution = document.createElement("span");
@@ -811,7 +832,9 @@ function toggleAccountHistoryPageSelection(event) {
   updateHistorySelectionControls({
     selectedIds: selectedAccountHistoryIds,
     pageRequests: accountRequests
-      .filter((request) => ["approved", "rejected"].includes(request.status))
+      .filter((request) =>
+        ["approved", "rejected", "completed"].includes(request.status),
+      )
       .slice(
         (currentAccountRequestPage - 1) * ACCOUNT_REQUESTS_PER_PAGE,
         currentAccountRequestPage * ACCOUNT_REQUESTS_PER_PAGE,
@@ -830,7 +853,7 @@ async function deleteSelectedAccountHistory() {
   const selectedRequests = accountRequests.filter(
     (request) =>
       selectedAccountHistoryIds.has(request.id) &&
-      ["approved", "rejected"].includes(request.status),
+      ["approved", "rejected", "completed"].includes(request.status),
   );
   if (selectedRequests.length === 0) return;
   if (
@@ -1005,7 +1028,10 @@ function updateAdminRequestNotifications() {
     ...accountRequests
       .filter((request) => request.status === "pending")
       .map((request) => ({
-        label: `Account request from ${request.username || "unknown user"}`,
+        label:
+          request.type === "password-reset"
+            ? `Password reset from ${request.username || "unknown user"}`
+            : `Account request from ${request.username || "unknown user"}`,
         view: "users",
         createdAt: request.createdAt || 0,
       })),
@@ -1055,9 +1081,12 @@ async function handleAccountRequestDecision(request, decision, buttons) {
   if (
     decision === "reject" &&
     !(await showAppConfirm(
-      `Reject the account request for "${request.username}"?`,
+      `${request.type === "password-reset" ? "Reject the password reset" : "Reject the account request"} for "${request.username}"?`,
       {
-        title: "Reject account request",
+        title:
+          request.type === "password-reset"
+            ? "Reject password reset"
+            : "Reject account request",
         confirmLabel: "Reject",
         danger: true,
       },
@@ -1074,7 +1103,9 @@ async function handleAccountRequestDecision(request, decision, buttons) {
       await KaraokeAccountRequests.approve(request.id);
       playRequestNotificationSound();
       showNotification(
-        "Account approved. The requester can now view their temporary password.",
+        request.type === "password-reset"
+          ? "Password reset approved. The user can now choose a new password."
+          : "Account approved. The requester can now view their temporary password.",
         "success",
       );
     } else {
