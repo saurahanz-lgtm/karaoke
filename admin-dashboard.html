@@ -661,7 +661,10 @@
                   <label class="form-label" for="displayAnnouncementTemplate">
                     Message shown while the display is unavailable
                   </label>
-                  <select class="form-select" id="displayAnnouncementTemplate">
+                  <select
+                    class="form-select display-control-select"
+                    id="displayAnnouncementTemplate"
+                  >
                     <option value="" selected disabled>
                       Choose an announcement
                     </option>
@@ -711,12 +714,17 @@
               <div class="display-control-info">
                 <h3>ROOM-SPECIFIC DISPLAY CONTROL</h3>
                 <p>Change availability for one room without affecting other rooms.</p>
-                <label class="form-label mt-3" for="roomDisplayControlSelect">
-                  Select room
-                </label>
-                <select class="form-select" id="roomDisplayControlSelect">
-                  <option value="">Loading rooms...</option>
-                </select>
+                <div class="display-room-control">
+                  <label class="form-label" for="roomDisplayControlSelect">
+                    Select room
+                  </label>
+                  <select
+                    class="form-select display-control-select"
+                    id="roomDisplayControlSelect"
+                  >
+                    <option value="">Loading rooms...</option>
+                  </select>
+                </div>
                 <div style="margin-top: 12px">
                   <span
                     class="display-status display-status-enabled"

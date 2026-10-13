@@ -2321,15 +2321,38 @@ body.admin-page {
   width: min(100%, 480px);
   margin-top: 16px;
 }
-.admin-page .display-announcement-control .form-label {
+.admin-page .display-room-control {
+  width: min(100%, 480px);
+  margin-top: 16px;
+}
+.admin-page .display-announcement-control .form-label,
+.admin-page .display-room-control .form-label {
   margin-bottom: 6px;
   color: #d9e3fb;
   font-size: 11px;
   font-weight: 600;
 }
-.admin-page .display-announcement-control .form-select,
+.admin-page .display-control-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid rgba(110, 137, 232, 0.38);
+  border-radius: 8px;
+  color: #edf2ff;
+  color-scheme: dark;
+  background-color: #081533;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23edf2ff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  font-size: 12px;
+}
+.admin-page .display-control-select option {
+  color: #edf2ff;
+  background: #081533;
+}
+.admin-page .display-control-select:focus {
+  border-color: #8e78ff;
+  box-shadow: 0 0 0 3px rgba(142, 120, 255, 0.2);
+}
 .admin-page .display-announcement-control .form-control {
-  border-color: rgba(110, 137, 232, 0.38);
   color: #edf2ff;
   background-color: #081533;
   font-size: 11px;
