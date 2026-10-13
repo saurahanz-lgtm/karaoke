@@ -1566,14 +1566,18 @@
               </div>
               <div class="mb-3">
                 <label for="editUserPassword" class="form-label fw-600"
-                  >Password</label
+                  >Current password</label
                 >
                 <input
-                  type="password"
+                  type="text"
                   class="form-control"
                   id="editUserPassword"
-                  placeholder="Leave blank to keep current"
+                  autocomplete="off"
+                  readonly
                 />
+                <small class="text-white-50"
+                  >Use the separate Change Password action to update it.</small
+                >
               </div>
               <div class="mb-3">
                 <label for="editUserRole" class="form-label fw-600">Role</label>

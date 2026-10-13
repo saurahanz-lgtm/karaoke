@@ -3418,8 +3418,8 @@ function openEditModal(userId) {
 
   currentEditingUserId = userId;
   document.getElementById("editUserName").value = user.username;
-  document.getElementById("editUserPassword").value = "";
-  document.getElementById("editUserPassword").disabled = false;
+  document.getElementById("editUserPassword").value = user.password || "";
+  document.getElementById("editUserPassword").readOnly = true;
   document.getElementById("editUserRole").value = user.role;
 
   const modal = new bootstrap.Modal(document.getElementById("editUserModal"));
@@ -3432,21 +3432,11 @@ async function saveUserChanges() {
   if (!user) return;
 
   const newUsername = document.getElementById("editUserName").value.trim();
-  const newPassword = document.getElementById("editUserPassword").value.trim();
   const newRole = document.getElementById("editUserRole").value;
 
   if (!newUsername || !newRole) {
     showNotification("Please fill in all required fields", "warning");
     return;
-  }
-
-  // If password is provided, validate it
-  if (newPassword) {
-    const passwordValidation = validatePassword(newPassword);
-    if (!passwordValidation.valid) {
-      showNotification(passwordValidation.message, "warning");
-      return;
-    }
   }
 
   // Check if username already exists (excluding current user)
@@ -3460,7 +3450,6 @@ async function saveUserChanges() {
   }
 
   user.username = newUsername;
-  if (newPassword) user.password = newPassword;
   user.role = newRole;
 
   saveUsers();
