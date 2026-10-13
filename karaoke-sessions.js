@@ -1166,7 +1166,8 @@
     const rooms = Object.entries(roomsSnapshot.val() || {}).map(
       ([id, room]) => ({ ...room, id }),
     );
-    const requestedRoom = rooms.find((room) => room.id === roomId);
+    const requestedRoomId = roomId || (await getActiveRoomId());
+    const requestedRoom = rooms.find((room) => room.id === requestedRoomId);
     if (roomId && !requestedRoom) throw new Error("ROOM_NOT_FOUND");
     throwIfRoomTimeExpired(requestedRoom);
     const orderedRooms = rooms
@@ -1176,8 +1177,8 @@
       );
     if (requestedRoom) {
       orderedRooms.sort((first, second) => {
-        if (first.id === roomId) return -1;
-        if (second.id === roomId) return 1;
+        if (first.id === requestedRoomId) return -1;
+        if (second.id === requestedRoomId) return 1;
         return (first.createdAt || 0) - (second.createdAt || 0);
       });
     }
@@ -1185,12 +1186,12 @@
     for (const room of orderedRooms) {
       try {
         const membership = await joinRoom(room.id, username);
-        return room.id === roomId
+        return room.id === requestedRoomId
           ? membership
           : {
               ...membership,
-              requestedRoomId: roomId || null,
-              autoAssigned: Boolean(roomId),
+              requestedRoomId: requestedRoomId || null,
+              autoAssigned: Boolean(requestedRoomId),
             };
       } catch (error) {
         if (error.message !== "ROOM_FULL") throw error;
