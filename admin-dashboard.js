@@ -3741,6 +3741,17 @@ async function toggleUserDisabled(userId) {
     updateStats();
 
     if (newStatus) {
+      try {
+        const userUpdateChannel = new BroadcastChannel("karaoke_user_updates");
+        userUpdateChannel.postMessage({
+          type: "user_disabled",
+          username: user.username,
+          timestamp: Date.now(),
+        });
+        userUpdateChannel.close();
+      } catch (error) {
+        console.warn("Could not notify the user's active page:", error.message);
+      }
       showNotification(`User "${user.username}" has been disabled!`, "warning");
       console.log(`🔒 User ${user.username} disabled`);
     } else {

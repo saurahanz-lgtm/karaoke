@@ -1224,6 +1224,8 @@
       let roomRequestRoomId = null;
       let stopListeningToRoomUsage = null;
       let stopListeningToExtensionRequest = null;
+      let stopListeningToPerformerAccount = null;
+      let disabledAccountLogoutStarted = false;
       let performerRoomUsage = null;
       let performerRoomTimeExpired = false;
       let performerRoomTimeInterval = null;
@@ -1524,6 +1526,47 @@
         }
       }
 
+      function listenToPerformerAccountStatus() {
+        if (
+          !loggedInUser?.username ||
+          typeof firebase === "undefined" ||
+          !firebase.database
+        ) {
+          return;
+        }
+
+        const usersRef = firebase.database().ref("users");
+        const handler = (snapshot) => {
+          const data = snapshot.val();
+          const accounts = Array.isArray(data)
+            ? data
+            : Object.values(data || {});
+          const account = accounts.find(
+            (item) => item?.username === loggedInUser.username,
+          );
+          if (account?.disabled === true) handlePerformerAccountDisabled();
+        };
+        usersRef.on("value", handler, (error) =>
+          console.warn(
+            "Could not monitor performer account status:",
+            error.message,
+          ),
+        );
+        stopListeningToPerformerAccount = () => usersRef.off("value", handler);
+      }
+
+      function handlePerformerAccountDisabled() {
+        if (disabledAccountLogoutStarted) return;
+        disabledAccountLogoutStarted = true;
+        stopListeningToPerformerAccount?.();
+        stopListeningToPerformerAccount = null;
+        showAppToast(
+          "Your account has been disabled. Returning to the access portal.",
+          "danger",
+        );
+        window.setTimeout(() => logoutFromPerformerSession(), 1200);
+      }
+
       // Check if Firebase is properly configured
       function isPerformerFirebaseConfigured() {
         try {
@@ -1571,6 +1614,11 @@
           const logoutChannel = new BroadcastChannel("karaoke_user_updates");
           logoutChannel.addEventListener("message", (event) => {
             if (
+              event.data?.username === loggedInUser.username &&
+              event.data?.type === "user_disabled"
+            ) {
+              handlePerformerAccountDisabled();
+            } else if (
               event.data?.type === "user_logout" &&
               event.data?.username === loggedInUser.username
             ) {
@@ -1584,6 +1632,7 @@
 
         let requestedRoomId = null;
         try {
+          listenToPerformerAccountStatus();
           const roomId = KaraokeSessions.getRoomIdFromUrl();
           const savedRoomId = sessionStorage.getItem("karaokeRoomId");
           const preferredRoomId = roomId || savedRoomId;
@@ -1715,7 +1764,7 @@
             document.getElementById("roomFullMessage").textContent =
               error.message === "NO_AVAILABLE_ROOMS"
                 ? "No room is available right now. Send a request to User Management to open another room."
-                : "This room is full. Send a request to User Management to open another room.";
+                : "This room is full. You cannot join until a device disconnects or an administrator assigns another room.";
             document.getElementById("singerApp").hidden = true;
             document.getElementById("roomUnavailablePage").hidden = false;
             return;
@@ -2187,6 +2236,8 @@
         const username = loggedInUser?.username;
         let clearSessionPromise = Promise.resolve();
         try {
+          stopListeningToPerformerAccount?.();
+          stopListeningToPerformerAccount = null;
           stopListeningToRoomIdleState?.();
           stopListeningToRoomIdleState = null;
           if (performerRoomIdleInterval !== null) {

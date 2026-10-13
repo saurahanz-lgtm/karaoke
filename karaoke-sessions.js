@@ -1212,7 +1212,7 @@
               autoAssigned: Boolean(requestedRoomId),
             };
       } catch (error) {
-        if (error.message !== "ROOM_FULL") throw error;
+        if (error.message !== "ROOM_FULL" || roomId) throw error;
       }
     }
 

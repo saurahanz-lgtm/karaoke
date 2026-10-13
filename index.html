@@ -1809,7 +1809,7 @@
           }
           const singerUser = users.find((u) => u.username === singerUsername);
           let credentialsValid = false;
-          if (singerUser && !singerUser.disabled) {
+          if (singerUser) {
             credentialsValid = verifyLoginCredentials(
               singerUser,
               singerPassword,
