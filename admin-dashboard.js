@@ -60,6 +60,7 @@ let selectedRoomDisplayId = null;
 let roomBeingEditedTimeLimit = null;
 let roomTimeLimitTriggerButton = null;
 let roomTimeLimitModal = null;
+let roomTimeLimitFallbackOpen = false;
 let roomBeingEditedDeviceLimit = null;
 let roomDeviceLimitTriggerButton = null;
 let roomDeviceLimitModal = null;
@@ -1871,14 +1872,76 @@ async function handleSetRoomTimeLimit(room, button) {
     currentLimit === 0;
   updateRoomTimeLimitPreview();
   const modalElement = document.getElementById("roomTimeLimitModal");
-  if (!roomTimeLimitModal) {
-    roomTimeLimitModal = new bootstrap.Modal(modalElement);
-    modalElement.addEventListener("hidden.bs.modal", () => {
-      roomTimeLimitTriggerButton?.focus();
-      roomTimeLimitTriggerButton = null;
-    });
+  if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+    if (!roomTimeLimitModal) {
+      roomTimeLimitModal = new bootstrap.Modal(modalElement);
+      modalElement.addEventListener("hidden.bs.modal", () => {
+        roomTimeLimitTriggerButton?.focus();
+        roomTimeLimitTriggerButton = null;
+      });
+    }
+    roomTimeLimitModal.show();
+    return;
   }
-  roomTimeLimitModal.show();
+
+  showRoomTimeLimitModalFallback(modalElement);
+}
+
+function showRoomTimeLimitModalFallback(modalElement) {
+  if (!modalElement.dataset.fallbackDismissalAttached) {
+    modalElement.addEventListener("click", (event) => {
+      if (
+        event.target === modalElement ||
+        event.target.closest('[data-bs-dismiss="modal"]')
+      ) {
+        closeRoomTimeLimitModal();
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && roomTimeLimitFallbackOpen) {
+        closeRoomTimeLimitModal();
+      }
+    });
+    modalElement.dataset.fallbackDismissalAttached = "true";
+  }
+
+  modalElement.style.position = "fixed";
+  modalElement.style.inset = "0";
+  modalElement.style.zIndex = "1055";
+  modalElement.style.display = "flex";
+  modalElement.style.alignItems = "center";
+  modalElement.style.justifyContent = "center";
+  modalElement.style.padding = "16px";
+  modalElement.style.background = "rgba(0, 0, 0, 0.65)";
+  modalElement.style.overflowY = "auto";
+  modalElement.style.opacity = "1";
+  modalElement.classList.add("show");
+  modalElement.setAttribute("aria-hidden", "false");
+  modalElement.setAttribute("aria-modal", "true");
+  modalElement.setAttribute("role", "dialog");
+  const dialog = modalElement.querySelector(".modal-dialog");
+  dialog.style.width = "min(100%, 32rem)";
+  dialog.style.margin = "auto";
+  document.body.classList.add("modal-open");
+  roomTimeLimitFallbackOpen = true;
+}
+
+function closeRoomTimeLimitModal() {
+  if (roomTimeLimitModal) {
+    roomTimeLimitModal.hide();
+    return;
+  }
+  if (!roomTimeLimitFallbackOpen) return;
+
+  const modalElement = document.getElementById("roomTimeLimitModal");
+  modalElement.style.display = "none";
+  modalElement.classList.remove("show");
+  modalElement.setAttribute("aria-hidden", "true");
+  modalElement.removeAttribute("aria-modal");
+  document.body.classList.remove("modal-open");
+  roomTimeLimitFallbackOpen = false;
+  roomTimeLimitTriggerButton?.focus();
+  roomTimeLimitTriggerButton = null;
 }
 
 function updateRoomTimeLimitPreview() {
@@ -1949,7 +2012,7 @@ async function saveRoomTimeLimit() {
       roomBeingEditedTimeLimit.id,
       minutes,
     );
-    roomTimeLimitModal.hide();
+    closeRoomTimeLimitModal();
     showNotification(
       minutes > 0
         ? `Room limit set to ${hours}h ${additionalMinutes}m.`
