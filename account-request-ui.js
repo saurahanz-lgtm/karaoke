@@ -1,5 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   const performerOptions = document.getElementById("performerSignInOptions");
+  const performerResetLink = document.querySelector(
+    '[data-password-reset-role="user"]',
+  );
+  const performerUsernameField = document.getElementById("singerUsername");
+  const performerPasswordField = document.getElementById("singerPassword");
   const openRequestButton = document.getElementById("showAccountRequestButton");
   const requestForm = document.getElementById("accountRequestPanel");
   const usernameInput = document.getElementById("requestedAccountUsername");
@@ -17,6 +22,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const requestLimitStorageKey = "karaoke_account_request_limit_v1";
   const maxAccountRequestsPerDevice = 3;
   const accountRequestCooldownMs = 24 * 60 * 60 * 1000;
+
+  function updatePerformerResetLinkVisibility() {
+    performerResetLink.hidden = !(
+      performerUsernameField.value.trim() && performerPasswordField.value
+    );
+  }
+
+  [performerUsernameField, performerPasswordField].forEach((field) => {
+    field.addEventListener("input", updatePerformerResetLinkVisibility);
+    field.addEventListener("change", updatePerformerResetLinkVisibility);
+  });
+  updatePerformerResetLinkVisibility();
 
   function getAccountRequestLimit() {
     const now = Date.now();

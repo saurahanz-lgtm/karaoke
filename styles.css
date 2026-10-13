@@ -3232,6 +3232,10 @@ body.karaoke-display-page {
   font-size: 11px;
 }
 
+.password-reset-link[hidden] {
+  display: none;
+}
+
 .password-reset-modal .login-title {
   margin-bottom: 10px;
   font-size: 18px;
