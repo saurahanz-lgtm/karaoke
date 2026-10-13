@@ -130,6 +130,25 @@ vercel status
 - **APIs:** YouTube Data API v3, Firebase Realtime Database
 - **Browser Support:** All modern browsers
 
+### Idle Room Queue Cleanup
+
+The `/api/cleanup-idle-rooms` endpoint clears a room's queued and current songs
+after ten minutes without active members. It runs independently of the karaoke
+display, but requires an external cron service to call it every minute.
+
+Configure these Vercel environment variables:
+
+- `FIREBASE_DATABASE_URL`: the Realtime Database URL for this Firebase project.
+- `FIREBASE_SERVICE_ACCOUNT`: the JSON contents of a Firebase service account
+  with permission to read and update the Realtime Database.
+- `CRON_SECRET`: a long, random secret used to authorize the cron request.
+
+In an external cron service, schedule a `GET` request to
+`https://sdkaraoke.vercel.app/api/cleanup-idle-rooms` every minute and set the
+`Authorization` header to `Bearer <CRON_SECRET>`. The endpoint starts the idle
+timer if needed and clears songs once ten minutes have elapsed since the last
+member heartbeat. Never commit the service account JSON or cron secret.
+
 ---
 
 ## 🔧 Configuration Files
