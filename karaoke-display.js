@@ -617,7 +617,7 @@ async function scheduleEmptyRoomSongCleanup(roomId, memberCount) {
   }
 }
 
-async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
+async function chooseInitialKaraokeDisplayRoomId(rooms) {
   const requestState = readKaraokeDisplayRoomRequestState();
   if (
     ["creating", "pending", "rejected", "missing"].includes(
@@ -642,23 +642,16 @@ async function chooseInitialKaraokeDisplayRoomId(rooms, globalActiveRoomId) {
       ]),
     ),
   );
-  const savedRoomId = sessionStorage.getItem("karaokeTvRoomId");
-  const retainedOccupiedRoomId = [requestedRoomId, savedRoomId].find(
-    (roomId) =>
-      rooms.some((room) => room.id === roomId) &&
-      (roomCounts.get(roomId) || 0) > 0,
-  );
-  if (retainedOccupiedRoomId) return retainedOccupiedRoomId;
-
   const emptyRooms = rooms
     .filter((room) => (roomCounts.get(room.id) || 0) === 0)
     .sort((first, second) => (first.createdAt || 0) - (second.createdAt || 0));
-  const preferredEmptyRoomId = [
-    requestedRoomId,
-    savedRoomId,
-    globalActiveRoomId,
-  ].find((roomId) => emptyRooms.some((room) => room.id === roomId));
-  return preferredEmptyRoomId || emptyRooms[0]?.id || null;
+  if (
+    requestedRoomId &&
+    emptyRooms.some((room) => room.id === requestedRoomId)
+  ) {
+    return requestedRoomId;
+  }
+  return emptyRooms[0]?.id || null;
 }
 
 function readKaraokeDisplayRoomRequestState() {
@@ -923,7 +916,7 @@ function initializeKaraokeRooms() {
         if (!rooms.some((room) => room.id === activeKaraokeRoomId)) {
           if (!initialRoomSelectionInProgress) {
             initialRoomSelectionInProgress = true;
-            chooseInitialKaraokeDisplayRoomId(rooms, activeRoomId)
+            chooseInitialKaraokeDisplayRoomId(rooms)
               .then((roomId) => {
                 if (
                   roomId &&
