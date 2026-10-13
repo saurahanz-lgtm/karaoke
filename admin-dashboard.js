@@ -49,6 +49,8 @@ let karaokeRooms = [];
 const roomDeviceCounts = new Map();
 const roomDeviceIds = new Map();
 const roomIdleStates = new Map();
+const roomIdleCleanupRequests = new Set();
+const roomIdleCleanupRetryTimers = new Map();
 const roomMemberListeners = new Map();
 const roomIdleListeners = new Map();
 const roomRequestListeners = new Map();
@@ -1758,18 +1760,24 @@ function renderKaraokeRooms() {
 
 function updateRoomIdleCountdowns() {
   document.querySelectorAll(".room-idle-countdown").forEach((label) => {
-    const state = roomIdleStates.get(label.dataset.roomId);
+    const roomId = label.dataset.roomId;
+    const state = roomIdleStates.get(roomId);
     if (!state || !state.hasSongs) {
+      clearRoomIdleCleanupRetry(roomId);
       label.textContent = "No reserved songs";
     } else if (state.inUse) {
+      clearRoomIdleCleanupRetry(roomId);
       label.textContent = "Paused · room in use";
     } else if (!state.expiresAt) {
+      clearRoomIdleCleanupRetry(roomId);
       label.textContent = "Starting countdown...";
     } else {
       const remainingMs = state.expiresAt - Date.now();
       if (remainingMs <= 0) {
         label.textContent = "Clearing queue...";
+        clearExpiredRoomSongs(roomId, label);
       } else {
+        clearRoomIdleCleanupRetry(roomId);
         const totalSeconds = Math.ceil(remainingMs / 1000);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
@@ -1777,6 +1785,44 @@ function updateRoomIdleCountdowns() {
       }
     }
   });
+}
+
+function clearRoomIdleCleanupRetry(roomId) {
+  const timer = roomIdleCleanupRetryTimers.get(roomId);
+  if (timer !== undefined) clearTimeout(timer);
+  roomIdleCleanupRetryTimers.delete(roomId);
+}
+
+function scheduleRoomIdleCleanupRetry(roomId) {
+  if (roomIdleCleanupRetryTimers.has(roomId)) return;
+  const timer = setTimeout(() => {
+    roomIdleCleanupRetryTimers.delete(roomId);
+    updateRoomIdleCountdowns();
+  }, 5000);
+  roomIdleCleanupRetryTimers.set(roomId, timer);
+}
+
+async function clearExpiredRoomSongs(roomId, label) {
+  if (roomIdleCleanupRequests.has(roomId)) return;
+  roomIdleCleanupRequests.add(roomId);
+  try {
+    const cleared = await KaraokeSessions.clearRoomSongsIfUnoccupied(roomId);
+    const state = roomIdleStates.get(roomId);
+    if (
+      !cleared &&
+      state?.hasSongs &&
+      !state.inUse &&
+      Number(state.expiresAt) <= Date.now()
+    ) {
+      scheduleRoomIdleCleanupRetry(roomId);
+    }
+  } catch (error) {
+    console.warn(`Could not clear idle room ${roomId}:`, error.message);
+    label.textContent = "Queue clear failed; retrying...";
+    scheduleRoomIdleCleanupRetry(roomId);
+  } finally {
+    roomIdleCleanupRequests.delete(roomId);
+  }
 }
 
 setInterval(updateRoomIdleCountdowns, 1000);
