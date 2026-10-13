@@ -65,6 +65,20 @@
     );
   }
 
+  function hasActiveRoomMembers(room, now = Date.now()) {
+    const cutoff = now - MEMBER_TIMEOUT_MS;
+    return Object.values(room?.members || {}).some(
+      (member) => member && Number(member.lastSeen) >= cutoff,
+    );
+  }
+
+  function getRoomActivityFields(room, timestamp = Date.now()) {
+    return {
+      lastActivityAt: timestamp,
+      ...(hasActiveRoomMembers(room, timestamp) ? { emptySince: null } : {}),
+    };
+  }
+
   function throwIfRoomTimeExpired(room) {
     if (!isRoomTimeExpired(room)) return;
     const error = new Error("ROOM_TIME_EXPIRED");
@@ -73,13 +87,9 @@
   }
 
   function getRoomIdleState(room, now = Date.now()) {
-    const members = Object.values(room?.members || {});
-    const activeMemberCount = members.filter(
-      (member) => member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
-    ).length;
     const queue = normalizeQueue(room?.queue);
     const hasSongs = queue.some(Boolean) || Boolean(room?.currentSong?.videoId);
-    const inUse = activeMemberCount > 0;
+    const inUse = hasActiveRoomMembers(room, now);
     const emptySince = Number(room?.emptySince) || 0;
 
     return {
@@ -953,11 +963,7 @@
     const now = Date.now();
     const result = await roomRef(roomId).transaction((room) => {
       if (!room) return undefined;
-      const hasActiveMembers = Object.values(room.members || {}).some(
-        (member) =>
-          member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
-      );
-      if (hasActiveMembers) {
+      if (hasActiveRoomMembers(room, now)) {
         return Number(room.emptySince) > 0
           ? { ...room, emptySince: null }
           : undefined;
@@ -994,11 +1000,7 @@
     );
     const result = await sessionRef.transaction((room) => {
       if (!room) return undefined;
-      const hasActiveMembers = Object.values(room.members || {}).some(
-        (member) =>
-          member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
-      );
-      if (hasActiveMembers) {
+      if (hasActiveRoomMembers(room, now)) {
         return Number(room.emptySince) > 0
           ? { ...room, emptySince: null }
           : undefined;
@@ -1052,9 +1054,10 @@
 
   function touchRoomActivity(roomId) {
     if (!roomId) throw new Error("ROOM_REQUIRED");
-    return roomRef(roomId).update({
-      lastActivityAt: Date.now(),
-      emptySince: null,
+    const timestamp = Date.now();
+    return roomRef(roomId).transaction((room) => {
+      if (!room || !hasActiveRoomMembers(room, timestamp)) return undefined;
+      return { ...room, ...getRoomActivityFields(room, timestamp) };
     });
   }
 
@@ -1238,8 +1241,7 @@
           ...room,
           currentSong: song,
           queue,
-          lastActivityAt: Date.now(),
-          emptySince: null,
+          ...getRoomActivityFields(room),
         };
       }
 
@@ -1247,8 +1249,7 @@
       return {
         ...room,
         queue,
-        lastActivityAt: Date.now(),
-        emptySince: null,
+        ...getRoomActivityFields(room),
       };
     });
     return result.snapshot.val();
@@ -1264,8 +1265,7 @@
       return {
         ...room,
         currentSong: queuedSong,
-        lastActivityAt: Date.now(),
-        emptySince: null,
+        ...getRoomActivityFields(room),
       };
     });
   }
@@ -1282,8 +1282,7 @@
         ...room,
         currentSong,
         queue: queue.length > 0 ? queue : null,
-        lastActivityAt: Date.now(),
-        emptySince: null,
+        ...getRoomActivityFields(room),
       };
     });
   }
@@ -1298,8 +1297,7 @@
           ...room,
           currentSong: null,
           queue: null,
-          lastActivityAt: Date.now(),
-          emptySince: null,
+          ...getRoomActivityFields(room),
         };
       }
       const currentSong = queue.shift();
@@ -1307,8 +1305,7 @@
         ...room,
         currentSong,
         queue: queue.length > 0 ? queue : null,
-        lastActivityAt: Date.now(),
-        emptySince: null,
+        ...getRoomActivityFields(room),
       };
     });
   }
@@ -1316,9 +1313,9 @@
   async function sendControl(roomId, command, payload = {}) {
     await assertKaraokeDisplayEnabled(roomId);
     const timestamp = Date.now();
-    await roomRef(roomId).update({
-      lastActivityAt: timestamp,
-      emptySince: null,
+    await roomRef(roomId).transaction((room) => {
+      if (!room) return undefined;
+      return { ...room, ...getRoomActivityFields(room, timestamp) };
     });
     return roomRef(roomId, "control").update({
       ...payload,

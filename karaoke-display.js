@@ -1546,7 +1546,6 @@ function setCurrentFromQueue(song) {
     .update({
       currentSong,
       lastActivityAt: Date.now(),
-      emptySince: null,
     })
     .catch((error) =>
       console.warn("Could not save current song activity:", error.message),
@@ -2382,7 +2381,6 @@ function playNextSong() {
   updates[`karaokeSessions/${activeKaraokeRoomId}/queue`] =
     tvQueue.length > 0 ? tvQueue : null;
   updates[`karaokeSessions/${activeKaraokeRoomId}/lastActivityAt`] = Date.now();
-  updates[`karaokeSessions/${activeKaraokeRoomId}/emptySince`] = null;
   firebase.database().ref().update(updates);
 
   displayQueue();
