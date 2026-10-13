@@ -11,7 +11,6 @@ function updateIdleRoomSession(room, now) {
   const hasActiveMembers = Object.values(room.members || {}).some(
     (member) => member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
   );
-  const isPlaying = room.control?.playing === true;
   const queue = Array.isArray(room.queue)
     ? room.queue
     : Object.values(room.queue || {});
@@ -22,7 +21,7 @@ function updateIdleRoomSession(room, now) {
       : undefined;
   }
 
-  if (hasActiveMembers || isPlaying) {
+  if (hasActiveMembers) {
     return Number(room.emptySince) > 0
       ? { ...room, emptySince: null }
       : undefined;

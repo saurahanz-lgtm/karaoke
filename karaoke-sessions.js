@@ -79,7 +79,7 @@
     ).length;
     const queue = normalizeQueue(room?.queue);
     const hasSongs = queue.some(Boolean) || Boolean(room?.currentSong?.videoId);
-    const inUse = activeMemberCount > 0 || room?.control?.playing === true;
+    const inUse = activeMemberCount > 0;
     const emptySince = Number(room?.emptySince) || 0;
 
     return {
@@ -859,8 +859,9 @@
 
   function listenRoomIdleState(roomId, callback, onError) {
     const ref = database().ref(`${ROOM_DATA_PATH}/${roomId}`);
-    const handler = (snapshot) => {
-      const state = getRoomIdleState(snapshot.val());
+    let room = null;
+    const updateState = () => {
+      const state = getRoomIdleState(room);
       callback(state);
       if (state.shouldStartTimer) {
         markRoomEmptySince(roomId).catch((error) => {
@@ -868,8 +869,19 @@
         });
       }
     };
+    const handler = (snapshot) => {
+      room = snapshot.val();
+      updateState();
+    };
     ref.on("value", handler, onError);
-    return () => ref.off("value", handler);
+    const refreshTimer = global.setInterval(
+      updateState,
+      HEARTBEAT_INTERVAL_MS,
+    );
+    return () => {
+      ref.off("value", handler);
+      global.clearInterval(refreshTimer);
+    };
   }
 
   function listenMembers(roomId, callback) {
@@ -940,7 +952,7 @@
         (member) =>
           member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
       );
-      if (hasActiveMembers || room.control?.playing === true) {
+      if (hasActiveMembers) {
         return Number(room.emptySince) > 0
           ? { ...room, emptySince: null }
           : undefined;
@@ -981,7 +993,7 @@
         (member) =>
           member && Number(member.lastSeen) >= now - MEMBER_TIMEOUT_MS,
       );
-      if (hasActiveMembers || room.control?.playing === true) {
+      if (hasActiveMembers) {
         return Number(room.emptySince) > 0
           ? { ...room, emptySince: null }
           : undefined;
