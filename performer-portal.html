@@ -1853,6 +1853,9 @@
       }
 
       window.addEventListener("pagehide", () => {
+        if (performerPhoneDisplayActive) {
+          setRoomPerformerScreenActive(false);
+        }
         performerPhoneDisplayActive = false;
         clearInterval(performerPhonePlaybackSyncTimer);
         performerPhonePlaybackSyncTimer = null;
@@ -1873,6 +1876,7 @@
         if (shouldOpen === performerPhoneDisplayActive) return;
 
         performerPhoneDisplayActive = shouldOpen;
+        setRoomPerformerScreenActive(shouldOpen);
         const display = document.getElementById("performerPhoneDisplay");
         const toggle = document.getElementById("performerPhoneDisplayToggle");
         display.hidden = !shouldOpen;
@@ -1913,6 +1917,19 @@
           }
           toggle?.focus();
         }
+      }
+
+      function setRoomPerformerScreenActive(active) {
+        if (!activeKaraokeRoomId || !usePerformerFirebase) return;
+        KaraokeSessions.setRoomPerformerScreenActive(
+          activeKaraokeRoomId,
+          active,
+        ).catch((error) =>
+          console.warn(
+            "Could not update performer screen status:",
+            error.message,
+          ),
+        );
       }
 
       function initializePerformerPhonePlayer() {

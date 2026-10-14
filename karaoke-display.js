@@ -531,6 +531,13 @@ function activateKaraokeRoom(roomId) {
   stopListeningToRoomDisplayStatus = KaraokeSessions.listenRoomDisplayStatus(
     roomId,
     (settings) => {
+      const performerScreenNotice = document.getElementById(
+        "performerScreenNotice",
+      );
+      if (performerScreenNotice) {
+        performerScreenNotice.hidden =
+          settings.enabled === false || !settings.performerScreenActive;
+      }
       const wasRoomDisabled = !roomDisplayEnabled;
       roomDisplayEnabled = settings.enabled !== false;
       if (!roomDisplayEnabled) {

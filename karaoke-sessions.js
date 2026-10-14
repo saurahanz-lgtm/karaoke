@@ -643,6 +643,13 @@
     });
   }
 
+  function setRoomPerformerScreenActive(roomId, active) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    return roomRef(roomId, "displayControl").update({
+      performerScreenActive: Boolean(active),
+    });
+  }
+
   async function approveRoomRequest(roomId, requestId) {
     const db = database();
     const requestRef = roomRef(roomId, `roomRequests/${requestId}`);
@@ -1431,6 +1438,7 @@
     setRoomVolume,
     setRoomMuted,
     setRoomDisplayAvailability,
+    setRoomPerformerScreenActive,
     setPlaybackState,
     setPlaybackPosition,
     touchRoomActivity,

@@ -209,6 +209,30 @@
         font-size: clamp(0.95rem, 2vw, 1.25rem);
       }
 
+      #performerScreenNotice:not([hidden]) {
+        position: absolute;
+        inset: 0;
+        z-index: 25;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 24px;
+        background: rgba(8, 8, 8, 0.96);
+        color: #fff;
+        text-align: center;
+      }
+
+      #performerScreenNotice strong {
+        font-size: clamp(1.5rem, 4vw, 3rem);
+      }
+
+      #performerScreenNotice span {
+        color: rgba(255, 255, 255, 0.76);
+        font-size: clamp(0.95rem, 2vw, 1.25rem);
+      }
+
       /* Next Song Display (Top Left) */
       #nextSongDisplay {
         position: fixed;
@@ -1015,6 +1039,15 @@
           <div id="noSongMessage" role="status" aria-live="polite">
             <strong>No song playing</strong>
             <span>Scan the QR code to request a song.</span>
+          </div>
+          <div
+            id="performerScreenNotice"
+            role="status"
+            aria-live="polite"
+            hidden
+          >
+            <strong>Karaoke screen moved to the Performer Portal</strong>
+            <span>Close the performer screen to return the display here.</span>
           </div>
           <div id="centerPerformerName" class="center-singer-name"></div>
         </div>
