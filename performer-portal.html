@@ -2071,6 +2071,8 @@
       function initializePerformerPhonePlayer() {
         if (
           !performerPhoneDisplayActive ||
+          !performerScreenEnabled ||
+          !karaokeDisplayEnabled ||
           performerPhoneDisplayPlayer ||
           !window.YT?.Player ||
           !roomCurrentSong?.videoId
@@ -2165,6 +2167,18 @@
         if (!performerPhoneDisplayActive) return;
 
         const message = document.getElementById("performerPhoneDisplayMessage");
+        if (!performerScreenEnabled || !karaokeDisplayEnabled) {
+          performerPhoneDisplayPlayer?.stopVideo?.();
+          performerPhoneDisplayedSongKey = null;
+          if (message) {
+            message.textContent = !karaokeDisplayEnabled
+              ? tvDisabledAnnouncement
+              : performerScreenAnnouncement;
+            message.hidden = false;
+          }
+          return;
+        }
+
         const videoId = roomCurrentSong?.videoId;
         const songKey = getPerformerPhoneSongKey();
         if (songKey && performerPhoneScoreSongKey !== songKey) {
@@ -2420,15 +2434,16 @@
       }
 
       function updateKaraokeDisplayAvailability(settings = {}) {
+        const wasAvailable = karaokeDisplayEnabled;
         globalKaraokeDisplayEnabled = settings.enabled !== false;
         globalKaraokeDisplayAnnouncement =
           settings.announcement ||
           "The karaoke display is temporarily unavailable. Please check back soon.";
-        refreshPerformerDisplayAvailability();
+        refreshPerformerDisplayAvailability(wasAvailable);
       }
 
       function updatePerformerRoomDisplayAvailability(settings = {}) {
-        const wasPerformerScreenEnabled = performerScreenEnabled;
+        const wasAvailable = karaokeDisplayEnabled;
         roomKaraokeDisplayEnabled = settings.enabled !== false;
         roomKaraokeDisplayAnnouncement =
           settings.announcement ||
@@ -2437,11 +2452,11 @@
         performerScreenAnnouncement =
           settings.performerAnnouncement ||
           "The performer screen is unavailable in this room.";
-        refreshPerformerDisplayAvailability(wasPerformerScreenEnabled);
+        refreshPerformerDisplayAvailability(wasAvailable);
       }
 
       function refreshPerformerDisplayAvailability(
-        wasPerformerScreenEnabled = performerScreenEnabled,
+        wasAvailable = karaokeDisplayEnabled,
       ) {
         karaokeDisplayEnabled =
           globalKaraokeDisplayEnabled && roomKaraokeDisplayEnabled;
@@ -2469,6 +2484,7 @@
         if (!performerPhoneDisplayActive) return;
         const message = document.getElementById("performerPhoneDisplayMessage");
         if (!karaokeDisplayEnabled || !performerScreenEnabled) {
+          setRoomPerformerScreenActive(false);
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
           stopPerformerPhoneMicScoring();
@@ -2482,7 +2498,7 @@
           return;
         }
 
-        if (!wasPerformerScreenEnabled) {
+        if (!wasAvailable) {
           setRoomPerformerScreenActive(true);
         }
         if (message) message.hidden = true;
@@ -2830,6 +2846,13 @@
               },
               onControl: (control) => {
                 if (control.command === "restart") {
+                  if (
+                    performerPhoneDisplayActive &&
+                    (!karaokeDisplayEnabled || !performerScreenEnabled)
+                  ) {
+                    performerPhoneDisplayPlayer?.stopVideo?.();
+                    return;
+                  }
                   animateRefreshButton();
                   if (
                     performerPhoneDisplayActive &&
@@ -3946,6 +3969,18 @@
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
+        if (
+          performerPhoneDisplayActive &&
+          (!karaokeDisplayEnabled || !performerScreenEnabled)
+        ) {
+          showAlert(
+            !performerScreenEnabled
+              ? performerScreenAnnouncement
+              : tvDisabledAnnouncement,
+            "danger",
+          );
+          return;
+        }
         animateRefreshButton();
 
         if (performerPhoneDisplayActive) {
@@ -3998,6 +4033,12 @@
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
+        if (
+          performerPhoneDisplayActive &&
+          (!karaokeDisplayEnabled || !performerScreenEnabled)
+        ) {
+          return;
+        }
         console.log("⏯️ Play/Pause toggled");
 
         if (performerPhoneDisplayActive) {
@@ -4046,6 +4087,12 @@
       function stopPlayer() {
         if (performerRoomTimeExpired) {
           showAlert(tvDisabledAnnouncement, "danger");
+          return;
+        }
+        if (
+          performerPhoneDisplayActive &&
+          (!karaokeDisplayEnabled || !performerScreenEnabled)
+        ) {
           return;
         }
         console.log("⏭️ Stop (skip) requested");
