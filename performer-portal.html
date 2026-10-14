@@ -1509,6 +1509,7 @@
       let roomPlaybackPositionSeconds = 0;
       let roomPlaybackPositionUpdatedAt = 0;
       let roomVolume = 70;
+      let roomVolumeUpdateTimer = null;
       let performerPhoneDisplayActive = false;
       let performerPhoneDisplayPlayer = null;
       let performerPhoneDisplayPlayerReady = false;
@@ -3901,9 +3902,23 @@
         if (performerPhoneDisplayActive && !karaokeDisplayEnabled) return;
         if (!activeKaraokeRoomId || !usePerformerFirebase) return;
 
-        KaraokeSessions.setRoomVolume(activeKaraokeRoomId, volume).catch(
-          (error) => console.warn("Room volume update failed:", error.message),
-        );
+        const roomId = activeKaraokeRoomId;
+        clearTimeout(roomVolumeUpdateTimer);
+        roomVolumeUpdateTimer = setTimeout(() => {
+          roomVolumeUpdateTimer = null;
+          if (
+            roomId !== activeKaraokeRoomId ||
+            performerRoomTimeExpired ||
+            !usePerformerFirebase ||
+            (performerPhoneDisplayActive && !karaokeDisplayEnabled)
+          ) {
+            return;
+          }
+
+          KaraokeSessions.setRoomVolume(roomId, volume).catch((error) =>
+            console.warn("Room volume update failed:", error.message),
+          );
+        }, 150);
       }
 
       function updateVolumeDisplay(value) {
