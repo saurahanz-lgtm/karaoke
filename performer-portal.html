@@ -1534,11 +1534,17 @@
       window.initializePerformerPhonePlayer = initializePerformerPhonePlayer;
 
       function applyTVControlAvailability() {
-        const disabled = !karaokeDisplayEnabled;
+        const disabled = !karaokeDisplayEnabled || performerRoomTimeExpired;
         ["muteBtn", "playPauseBtn", "volumeSlider"].forEach((id) => {
           const control = document.getElementById(id);
           if (control) control.disabled = disabled;
         });
+        const phoneDisplayToggle = document.getElementById(
+          "performerPhoneDisplayToggle",
+        );
+        if (phoneDisplayToggle) {
+          phoneDisplayToggle.disabled = performerRoomTimeExpired;
+        }
         const skipButton = document.querySelector(".controls .stop");
         if (skipButton) skipButton.disabled = disabled;
         const refreshButton = document.querySelector(".refresh");
@@ -1549,7 +1555,9 @@
         document.querySelectorAll(".song-item-btn").forEach((button) => {
           button.disabled = disabled;
           button.title = disabled
-            ? "Song reservations are unavailable while the the display is unavailable"
+            ? performerRoomTimeExpired
+              ? "Room time expired. Request an extension to reserve songs."
+              : "Song reservations are unavailable while the display is unavailable"
             : "Reserve this song";
         });
       }
@@ -2061,15 +2069,7 @@
 
           if (error.message === "ROOM_TIME_EXPIRED") {
             roomRequestRoomId = requestedRoomId;
-            performerRoomTimeExpired = true;
-            document.getElementById("roomUnavailableTitle").textContent =
-              "Room time expired";
-            document.getElementById("roomFullMessage").textContent =
-              "This room's time limit has expired.";
-            document.getElementById("requestAnotherRoomButton").hidden = true;
-            document.getElementById("roomTimeExtensionPanel").hidden = false;
-            document.getElementById("singerApp").hidden = true;
-            document.getElementById("roomUnavailablePage").hidden = false;
+            showPerformerRoomTimeExpired();
             return;
           }
 
@@ -2311,6 +2311,28 @@
         renderPerformerRoomTime();
       }
 
+      function showPerformerRoomTimeExpired() {
+        if (performerRoomTimeExpired) return;
+
+        performerRoomTimeExpired = true;
+        roomRequestRoomId = activeKaraokeRoomId || roomRequestRoomId;
+        if (performerPhoneDisplayActive) {
+          togglePerformerPhoneDisplay(false);
+        } else {
+          performerPhoneDisplayPlayer?.stopVideo?.();
+        }
+        performerPhoneDisplayedSongKey = null;
+        applyTVControlAvailability();
+        document.getElementById("roomUnavailableTitle").textContent =
+          "Room time expired";
+        document.getElementById("roomFullMessage").textContent =
+          "This room's time limit has expired.";
+        document.getElementById("requestAnotherRoomButton").hidden = true;
+        document.getElementById("roomTimeExtensionPanel").hidden = false;
+        document.getElementById("singerApp").hidden = true;
+        document.getElementById("roomUnavailablePage").hidden = false;
+      }
+
       function renderPerformerRoomIdleState() {
         const notice = document.getElementById("roomIdleNotice");
         const state = performerRoomIdleState;
@@ -2364,17 +2386,8 @@
 
         const remainingMs = expiresAt - Date.now();
         if (remainingMs <= 0) {
-          performerRoomTimeExpired = true;
-          roomRequestRoomId = activeKaraokeRoomId;
           notice.hidden = true;
-          document.getElementById("roomUnavailableTitle").textContent =
-            "Room time expired";
-          document.getElementById("roomFullMessage").textContent =
-            "This room's time limit has expired.";
-          document.getElementById("requestAnotherRoomButton").hidden = true;
-          document.getElementById("roomTimeExtensionPanel").hidden = false;
-          document.getElementById("singerApp").hidden = true;
-          document.getElementById("roomUnavailablePage").hidden = false;
+          showPerformerRoomTimeExpired();
           return;
         }
 
@@ -2397,6 +2410,7 @@
 
       function resumePerformerAfterRoomExtension() {
         performerRoomTimeExpired = false;
+        applyTVControlAvailability();
         document.getElementById("roomUnavailablePage").hidden = true;
         document.getElementById("singerApp").hidden = false;
         document.getElementById("roomTimeExtensionPanel").hidden = true;
@@ -2803,7 +2817,7 @@
 
       // Request song
       async function requestSong(title, artist, videoId, userName, btn) {
-        if (!karaokeDisplayEnabled) {
+        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
           showAlert(
             `${tvDisabledAnnouncement} Song reservations are temporarily disabled.`,
             "danger",
@@ -2835,15 +2849,7 @@
         } catch (error) {
           console.error("Error requesting song:", error);
           if (error.message === "ROOM_TIME_EXPIRED") {
-            roomRequestRoomId = activeKaraokeRoomId;
-            document.getElementById("roomUnavailableTitle").textContent =
-              "Room time expired";
-            document.getElementById("roomFullMessage").textContent =
-              "This room's time limit has expired.";
-            document.getElementById("requestAnotherRoomButton").hidden = true;
-            document.getElementById("roomTimeExtensionPanel").hidden = false;
-            document.getElementById("singerApp").hidden = true;
-            document.getElementById("roomUnavailablePage").hidden = false;
+            showPerformerRoomTimeExpired();
             btn.disabled = false;
             btn.textContent = "Reserve";
             return;
@@ -3143,7 +3149,7 @@
 
       // Reload player - restart current song on karaoke display
       function reloadPlayer() {
-        if (!karaokeDisplayEnabled) {
+        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
@@ -3185,7 +3191,7 @@
 
       // Toggle play/pause on karaoke display
       function togglePlayPause() {
-        if (!karaokeDisplayEnabled) {
+        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
@@ -3217,7 +3223,7 @@
 
       // Stop player - skip to next song on karaoke display
       function stopPlayer() {
-        if (!karaokeDisplayEnabled) {
+        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
@@ -3249,7 +3255,7 @@
 
       // Toggle mute on karaoke display
       function toggleMute() {
-        if (!karaokeDisplayEnabled) {
+        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
