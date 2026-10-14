@@ -44,7 +44,7 @@
       <style>
         .home-container {
           width: 100%;
-          max-width: 600px;
+          max-width: 980px;
           padding: clamp(20px, 5vw, 40px);
           text-align: center;
           color: white;
@@ -68,7 +68,7 @@
 
         .role-container {
           display: flex;
-          gap: clamp(1.5rem, 4vw, 3rem);
+          gap: clamp(1rem, 3vw, 2rem);
           justify-content: center;
           flex-wrap: wrap;
         }
@@ -78,7 +78,9 @@
           border-radius: 20px;
           transition: all 0.3s ease;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-          min-width: 160px;
+          flex: 1 1 180px;
+          min-width: 0;
+          max-width: 240px;
           font-size: clamp(0.9rem, 2.5vw, 1.1rem);
           border: none;
           font-weight: 600;
@@ -175,6 +177,38 @@
 
           .role-btn {
             width: 100% !important;
+          }
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+          .home-container {
+            padding: 12px 24px;
+          }
+
+          .title-glow {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+          }
+
+          .subtitle {
+            margin-bottom: 12px;
+          }
+
+          .role-container {
+            gap: 12px;
+          }
+
+          .role-btn {
+            padding: 12px 14px !important;
+          }
+
+          .role-icon {
+            font-size: 2rem;
+            margin-bottom: 4px;
+          }
+
+          .role-label {
+            margin-bottom: 4px;
           }
         }
 
@@ -311,6 +345,15 @@
               >Search songs and manage your room queue</span
             >
           </button>
+          <button class="role-btn" onclick="openAdminLogin()">
+            <span class="role-icon" aria-hidden="true"
+              ><i class="bi bi-grid-1x2"></i
+            ></span>
+            <span class="role-label">Room &amp; Account Manager</span>
+            <span class="role-desc"
+              >Manage karaoke rooms, room requests, and new accounts</span
+            >
+          </button>
         </div>
       </div>
     </div>
@@ -338,7 +381,7 @@
 
     <!-- Admin Login Modal -->
     <div id="adminLoginModal" class="login-modal-custom">
-      <div class="login-title">Administrator Sign In</div>
+      <div class="login-title">System Administration Sign In</div>
       <form onsubmit="validateAdminLogin(event)">
         <div class="login-form-group">
           <label for="adminName">Username</label>
@@ -1707,7 +1750,9 @@
             return;
           }
           const adminUser = users.find(
-            (u) => u.username === adminName && u.role === "admin",
+            (u) =>
+              u.username === adminName &&
+              ["admin", "room_manager"].includes(u.role),
           );
           let credentialsValid = false;
           if (adminUser && !adminUser.disabled) {
@@ -1807,7 +1852,9 @@
             );
             return;
           }
-          const singerUser = users.find((u) => u.username === singerUsername);
+          const singerUser = users.find(
+            (u) => u.username === singerUsername && u.role !== "room_manager",
+          );
           let credentialsValid = false;
           if (singerUser) {
             credentialsValid = verifyLoginCredentials(

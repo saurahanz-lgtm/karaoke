@@ -74,6 +74,17 @@ let knownPendingAccountRequestIds = null;
 let requestNotificationAudioContext = null;
 let pendingRequestNotificationSounds = 0;
 
+function isRoomManager() {
+  return loggedInUser?.role === "room_manager";
+}
+
+function canAccessAdminView(viewName) {
+  return (
+    loggedInUser?.role === "admin" ||
+    (isRoomManager() && ["users", "rooms", "requests"].includes(viewName))
+  );
+}
+
 function normalizeAccountRecord(account, index = 0) {
   return {
     id: account?.id || index + 1,
@@ -192,7 +203,27 @@ document.addEventListener("DOMContentLoaded", function () {
       day: "numeric",
       year: "numeric",
     });
-  setAdminView("dashboard");
+  if (isRoomManager()) {
+    document.querySelector(".profile-copy small").textContent =
+      "Room & Account Manager";
+    document
+      .querySelectorAll(
+        '[data-admin-view-target="dashboard"], [data-admin-view-target="display"]',
+      )
+      .forEach((button) => {
+        button.hidden = true;
+      });
+    document.getElementById("adminRequestNotificationsButton").hidden = true;
+    document.getElementById("accountRequestsPanel").hidden = true;
+    const roleSelect = document.getElementById("userRole");
+    Array.from(roleSelect.options).forEach((option) => {
+      if (option.value && option.value !== "user") option.hidden = true;
+    });
+    document.querySelector(
+      "#userManagementSection table thead th:last-child",
+    ).hidden = true;
+  }
+  setAdminView(isRoomManager() ? "rooms" : "dashboard");
 
   // Load users from localStorage
   loadUsers();
@@ -310,7 +341,9 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("createRoomForm")
     .addEventListener("submit", handleCreateRoom);
   if (loggedInUser?.role !== "admin") {
-    document.getElementById("createRoomForm").hidden = true;
+    const createRoomForm = document.getElementById("createRoomForm");
+    createRoomForm.hidden = true;
+    createRoomForm.classList.add("d-none");
   }
 
   // Display initial users
@@ -361,6 +394,11 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function setAdminView(viewName) {
+  if (!canAccessAdminView(viewName)) {
+    if (isRoomManager()) setAdminView("rooms");
+    return;
+  }
+
   const selectedView = document.querySelector(
     `[data-admin-view="${viewName}"]`,
   );
@@ -891,6 +929,8 @@ function toggleAccountHistoryPageSelection(event) {
 }
 
 async function deleteSelectedAccountHistory() {
+  if (loggedInUser?.role !== "admin") return;
+
   const selectedRequests = getAccountRequestsForType().filter(
     (request) =>
       selectedAccountHistoryIds.has(request.id) &&
@@ -1041,6 +1081,8 @@ function selectAccountRequestType(type) {
 }
 
 async function deleteAccountRequest(request, button) {
+  if (loggedInUser?.role !== "admin") return;
+
   if (
     !(await showAppConfirm(
       `Delete the account request from "${request.username || "unknown user"}"? This cannot be undone.`,
@@ -2215,7 +2257,7 @@ function checkAuthentication() {
   const stored = localStorage.getItem("karaoke_logged_in_user");
   if (stored) {
     loggedInUser = JSON.parse(stored);
-    if (loggedInUser.role !== "admin") {
+    if (!["admin", "room_manager"].includes(loggedInUser.role)) {
       const isRoomRequestConfirmation =
         new URLSearchParams(window.location.search).get("roomRequestSent") ===
         "1";
@@ -3198,6 +3240,17 @@ function reloadUsersFromFirebase(callback) {
 
 // Continue with adding user after reloading from Firebase
 function continueAddUser(username, password, role) {
+  if (
+    !["admin", "room_manager"].includes(loggedInUser?.role) ||
+    (isRoomManager() && role !== "user")
+  ) {
+    showNotification(
+      "You do not have permission to create this account.",
+      "danger",
+    );
+    return;
+  }
+
   const passwordValidation = validatePassword(password);
   if (!passwordValidation.valid) {
     showNotification(passwordValidation.message, "warning");
@@ -3274,8 +3327,11 @@ function validatePassword(password) {
 async function handleAddUser(e) {
   e.preventDefault();
 
-  if (loggedInUser?.role !== "admin") {
-    showNotification("Only administrators can create accounts.", "danger");
+  if (!["admin", "room_manager"].includes(loggedInUser?.role)) {
+    showNotification(
+      "You do not have permission to create accounts.",
+      "danger",
+    );
     return;
   }
 
@@ -3294,6 +3350,11 @@ async function handleAddUser(e) {
     )
   ) {
     showNotification("Username already exists", "danger");
+    return;
+  }
+
+  if (isRoomManager() && role !== "user") {
+    showNotification("Room managers can only create user accounts.", "danger");
     return;
   }
 
@@ -3392,7 +3453,9 @@ function displayUsers() {
     const roleBadge =
       user.role === "admin"
         ? '<span class="role-badge role-badge-admin">Admin</span>'
-        : '<span class="role-badge role-badge-user">User</span>';
+        : user.role === "room_manager"
+          ? '<span class="role-badge role-badge-admin">Room Manager</span>'
+          : '<span class="role-badge role-badge-user">User</span>';
     const safeUsername = escapeHtml(user.username);
 
     html += `
@@ -3406,7 +3469,7 @@ function displayUsers() {
           <td><span class="account-state ${isOnline ? "account-state-online" : "account-state-offline"}">${statusLabel}</span>${disabledBadge}</td>
           <td>${lastActivityText}</td>
           <td>${escapeHtml(user.joined || "-")}</td>
-          <td class="account-actions">
+          <td class="account-actions" ${isRoomManager() ? "hidden" : ""}>
                     <button class="table-action" type="button" data-account-action="edit" data-user-id="${escapeHtml(user.id)}" aria-label="Edit ${safeUsername}" title="Edit account"><i class="bi bi-pencil-square"></i></button>
                     <button class="table-action" type="button" data-account-action="password" data-user-id="${escapeHtml(user.id)}" aria-label="Change password for ${safeUsername}" title="Change password"><i class="bi bi-key"></i></button>
                     <button class="table-action" type="button" data-account-action="toggle" data-user-id="${escapeHtml(user.id)}" aria-label="${isDisabled ? "Enable" : "Disable"} ${safeUsername}" title="${isDisabled ? "Enable" : "Disable"} account"><i class="bi ${isDisabled ? "bi-unlock" : "bi-lock"}"></i></button>
@@ -3642,6 +3705,8 @@ function updateUserActivity() {
 
 // Open edit modal
 function openEditModal(userId) {
+  if (loggedInUser?.role !== "admin") return;
+
   const user = users.find((u) => u.id === userId);
   if (!user) return;
 
@@ -3657,6 +3722,8 @@ function openEditModal(userId) {
 
 // Save user changes
 async function saveUserChanges() {
+  if (loggedInUser?.role !== "admin") return;
+
   const user = users.find((u) => u.id === currentEditingUserId);
   if (!user) return;
 
@@ -3695,6 +3762,8 @@ async function saveUserChanges() {
 
 // Delete user
 async function deleteUser(userId) {
+  if (loggedInUser?.role !== "admin") return;
+
   const user = users.find((u) => u.id === userId);
   if (!user) return;
 
@@ -3736,6 +3805,8 @@ async function persistUserDisabledStatus(username, disabled) {
 }
 
 async function toggleUserDisabled(userId, button) {
+  if (loggedInUser?.role !== "admin") return;
+
   const user = users.find((u) => u.id === userId);
   if (!user) return;
 
@@ -3838,6 +3909,8 @@ async function toggleUserDisabled(userId, button) {
 
 // Log out a specific user session
 async function logoutUser(userId) {
+  if (loggedInUser?.role !== "admin") return;
+
   const user = users.find((u) => u.id === userId);
   if (!user) return;
   if (loggedInUser?.username === user.username) {
@@ -3891,6 +3964,8 @@ async function logoutUser(userId) {
 
 // Open change password modal for a specific user
 function openChangePasswordModal(userId, username) {
+  if (loggedInUser?.role !== "admin") return;
+
   currentEditingUserId = userId;
   const user = users.find((account) => account.id === userId);
   document.getElementById("editUserPasswordUsername").textContent = username;
@@ -3910,6 +3985,8 @@ function openChangePasswordModal(userId, username) {
 
 // Change password for a specific user
 function handleChangeUserPassword() {
+  if (loggedInUser?.role !== "admin") return;
+
   if (!currentEditingUserId) return;
 
   const user = users.find((account) => account.id === currentEditingUserId);
