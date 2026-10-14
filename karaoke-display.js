@@ -51,6 +51,8 @@ let stopListeningToRoomMuted = null;
 let stopListeningToRoomDisplayStatus = null;
 let stopListeningToRoomUsage = null;
 let roomDisplayEnabled = true;
+let performerScreenModeActive = false;
+let pendingTVPerformerResume = null;
 let roomUsageSettings = null;
 let roomUsageTimer = null;
 let roomTimeExpired = false;
@@ -400,6 +402,7 @@ function startRoomPlaybackActivityHeartbeat(roomId) {
     if (
       activeKaraokeRoomId !== roomId ||
       !karaokeDisplayEnabled ||
+      performerScreenModeActive ||
       !currentSong?.videoId ||
       isPlayingBootUpVideo ||
       typeof YT === "undefined" ||
@@ -416,6 +419,7 @@ function startRoomPlaybackActivityHeartbeat(roomId) {
     if (
       activeKaraokeRoomId !== roomId ||
       !karaokeDisplayEnabled ||
+      performerScreenModeActive ||
       !currentSong?.videoId ||
       isPlayingBootUpVideo ||
       typeof YT === "undefined" ||
@@ -537,6 +541,17 @@ function activateKaraokeRoom(roomId) {
       if (performerScreenNotice) {
         performerScreenNotice.hidden =
           settings.enabled === false || !settings.performerScreenActive;
+      }
+      const wasPerformerScreenModeActive = performerScreenModeActive;
+      performerScreenModeActive = Boolean(
+        settings.enabled !== false && settings.performerScreenActive,
+      );
+      if (performerScreenModeActive) {
+        window.tvPlayer?.pauseVideo?.();
+      } else if (wasPerformerScreenModeActive && settings.enabled !== false) {
+        resumeTVPlaybackAfterPerformerScreen().catch((error) =>
+          console.warn("Could not resume TV playback:", error.message),
+        );
       }
       const wasRoomDisabled = !roomDisplayEnabled;
       roomDisplayEnabled = settings.enabled !== false;
@@ -1036,6 +1051,7 @@ function handleRoomControl(control) {
 
   switch (control.command) {
     case "togglePlay":
+      if (performerScreenModeActive) break;
       if (!window.tvPlayer || typeof YT === "undefined") return;
       if (window.tvPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
         window.tvPlayer.pauseVideo();
@@ -1047,6 +1063,7 @@ function handleRoomControl(control) {
       playNextSong();
       break;
     case "restart":
+      if (performerScreenModeActive) break;
       if (window.tvPlayer && currentSong) {
         window.tvPlayer.seekTo(0);
         window.tvPlayer.playVideo();
@@ -1429,6 +1446,7 @@ function initializeLegacyFirebaseListeners() {
 
       switch (control.command) {
         case "togglePlay":
+          if (performerScreenModeActive) break;
           if (
             window.tvPlayer &&
             window.tvPlayer.getPlayerState() === YT.PlayerState.PLAYING
@@ -1447,6 +1465,7 @@ function initializeLegacyFirebaseListeners() {
           break;
 
         case "restart":
+          if (performerScreenModeActive) break;
           if (window.tvPlayer && currentSong) {
             window.tvPlayer.seekTo(0);
             window.tvPlayer.playVideo();
@@ -1667,6 +1686,11 @@ function createYouTubePlayer() {
 
 // D. SINGLE ENTRY POINT (MOST IMPORTANT)
 function tryInitPlayback() {
+  if (performerScreenModeActive) {
+    window.tvPlayer?.pauseVideo?.();
+    return;
+  }
+
   if (!karaokeDisplayEnabled || !ytReady || !firebaseReady) {
     console.log(
       `⏳ Not ready yet: ytReady=${ytReady}, firebaseReady=${firebaseReady}`,
@@ -1685,6 +1709,41 @@ function tryInitPlayback() {
   }
 
   loadSong(currentSong);
+}
+
+async function resumeTVPlaybackAfterPerformerScreen() {
+  if (!karaokeDisplayEnabled || !activeKaraokeRoomId || !currentSong?.videoId) {
+    return;
+  }
+  const snapshot = await KaraokeSessions.roomRef(
+    activeKaraokeRoomId,
+    "control",
+  ).once("value");
+  const control = snapshot.val() || {};
+  if (control.playbackVideoId !== currentSong.videoId) return;
+  const position = Math.max(0, Number(control.playbackPositionSeconds) || 0);
+  if (!window.tvPlayer) {
+    currentVideoId = null;
+    loadSong(currentSong, position, Boolean(control.playing));
+    return;
+  }
+  if (!playerReady) {
+    pendingTVPerformerResume = {
+      videoId: currentSong.videoId,
+      position,
+      playing: Boolean(control.playing),
+    };
+    return;
+  }
+  pendingTVPerformerResume = null;
+  window.tvPlayer.seekTo(position, true);
+  if (!performerScreenModeActive && currentSong?.videoId) {
+    if (control.playing) {
+      window.tvPlayer.playVideo();
+    } else {
+      window.tvPlayer.pauseVideo();
+    }
+  }
 }
 
 /* ===== FULLSCREEN & CONNECTION ===== */
@@ -1803,7 +1862,7 @@ function toggleFullscreen() {
 
 // D. LOAD SONG - Unified playback handler
 // E. PLAYER CREATION (ONCE LANG)
-function loadSong(song) {
+function loadSong(song, startSeconds = 0, shouldPlay = true) {
   // Boot-up video disabled - create player directly with karaoke song
   currentPerformerName = song.singer || song.requestedBy || "Karaoke performer";
   resetPitchScore();
@@ -1816,11 +1875,12 @@ function loadSong(song) {
     window.tvPlayer = new YT.Player("videoPlayer", {
       videoId: song.videoId,
       playerVars: {
-        autoplay: 1,
+        autoplay: shouldPlay && !performerScreenModeActive ? 1 : 0,
         controls: 0,
         enablejsapi: 1,
         modestbranding: 1,
         fs: 0,
+        start: Math.floor(Math.max(0, startSeconds)),
       },
       events: {
         onReady: (e) => {
@@ -1829,6 +1889,26 @@ function loadSong(song) {
           e.target.setVolume(activeRoomVolume);
           activeRoomMuted ? e.target.mute() : e.target.unMute();
           checkBootupCompletion();
+          if (performerScreenModeActive) {
+            e.target.pauseVideo();
+            return;
+          }
+          const pendingResume = pendingTVPerformerResume;
+          if (pendingResume) {
+            pendingTVPerformerResume = null;
+            if (pendingResume.videoId === currentSong?.videoId) {
+              e.target.seekTo(pendingResume.position, true);
+              pendingResume.playing
+                ? e.target.playVideo()
+                : e.target.pauseVideo();
+              return;
+            }
+          }
+          if (startSeconds > 0) e.target.seekTo(startSeconds, true);
+          if (!shouldPlay) {
+            e.target.pauseVideo();
+            return;
+          }
           // Try to play with autoplay - if blocked by browser, will be caught in onError
           try {
             const playPromise = e.target.playVideo();
@@ -1874,7 +1954,7 @@ function loadSong(song) {
     console.log("▶️ [REUSE] Loading video:", song.videoId);
     window.tvPlayer.loadVideoById({
       videoId: song.videoId,
-      startSeconds: 0,
+      startSeconds,
     });
     // Ensure audio is unmuted for new videos
     try {
@@ -2159,6 +2239,8 @@ function onPlayerStateChange(e) {
   };
 
   console.log(`📊 Player state changed to: ${states[e.data]}`);
+
+  if (performerScreenModeActive) return;
 
   if (
     activeKaraokeRoomId &&

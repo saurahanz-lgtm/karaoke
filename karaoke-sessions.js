@@ -1338,7 +1338,10 @@
     });
   }
 
-  async function advanceToNextSong(roomId, { allowPhoneDisplay = false } = {}) {
+  async function advanceToNextSong(
+    roomId,
+    { allowPhoneDisplay = false, expectedSongKey = null } = {},
+  ) {
     if (allowPhoneDisplay) {
       if (!roomId) throw new Error("ROOM_REQUIRED");
       const roomSnapshot = await database()
@@ -1351,6 +1354,13 @@
     }
     return roomRef(roomId).transaction((current) => {
       const room = current || {};
+      if (expectedSongKey) {
+        const currentSong = room.currentSong;
+        const currentSongKey = currentSong?.videoId
+          ? `${currentSong.videoId}:${currentSong.id || currentSong.timestamp || ""}`
+          : null;
+        if (currentSongKey !== expectedSongKey) return undefined;
+      }
       const queue = normalizeQueue(room.queue);
       if (queue.length === 0) {
         return {
