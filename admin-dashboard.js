@@ -215,7 +215,15 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     document.getElementById("adminRequestNotificationsButton").title =
       "Pending account, room, and time extension requests";
-    document.getElementById("accountRequestsPanel").hidden = true;
+    currentAccountRequestType = "account";
+    currentAccountRequestView = "pending";
+    document
+      .querySelectorAll(
+        '[data-account-request-type="password-reset"], [data-account-request-filter="history"]',
+      )
+      .forEach((button) => {
+        button.hidden = true;
+      });
     const roleSelect = document.getElementById("userRole");
     Array.from(roleSelect.options).forEach((option) => {
       if (option.value && option.value !== "user") option.hidden = true;
@@ -634,7 +642,8 @@ function initializeAccountRequestListener() {
       knownPendingAccountRequestIds = pendingIds;
       if (accountManager) {
         roomManagerPendingAccountRequests = requestsForNotifications;
-        updateAdminRequestNotifications();
+        accountRequests = requestsForNotifications;
+        renderAccountRequests();
         return;
       }
       accountRequests = requests;
@@ -858,7 +867,7 @@ function renderAccountRequests() {
         actionGroup.appendChild(resolution);
       }
 
-      if (request.status !== "approving") {
+      if (request.status !== "approving" && !isRoomManager()) {
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
         deleteButton.className = "table-action table-action-danger";
@@ -1156,7 +1165,7 @@ function updateAdminRequestNotifications() {
       request.type === "password-reset"
         ? `Password reset from ${request.username || "unknown user"}`
         : `Account request from ${request.username || "unknown user"}`,
-    view: isRoomManager() ? "dashboard" : "users",
+    view: "users",
     requestType:
       request.type === "password-reset" ? "password-reset" : "account",
     createdAt: request.createdAt || 0,
@@ -1209,6 +1218,14 @@ function updateAdminRequestNotifications() {
 }
 
 async function handleAccountRequestDecision(request, decision, buttons) {
+  if (
+    !["approve", "reject"].includes(decision) ||
+    (loggedInUser?.role !== "admin" &&
+      !(isRoomManager() && request.type !== "password-reset"))
+  ) {
+    return;
+  }
+
   if (
     decision === "reject" &&
     !(await showAppConfirm(
