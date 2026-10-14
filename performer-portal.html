@@ -1512,6 +1512,7 @@
       let performerPhoneDisplayActive = false;
       let performerPhoneDisplayPlayer = null;
       let performerPhoneDisplayPlayerReady = false;
+      let performerPhonePlaybackSyncTimer = null;
       let performerPhoneDisplayedSongKey = null;
       let performerPhoneMicRequestPromise = null;
       let performerPhoneMicScoringEnabled = false;
@@ -1852,6 +1853,8 @@
 
       window.addEventListener("pagehide", () => {
         performerPhoneDisplayActive = false;
+        clearInterval(performerPhonePlaybackSyncTimer);
+        performerPhonePlaybackSyncTimer = null;
         stopPerformerPhoneMicScoring();
         if (
           performerPhoneScoreAudioContext &&
@@ -1889,10 +1892,16 @@
         applyTVControlAvailability();
 
         if (shouldOpen) {
+          performerPhonePlaybackSyncTimer = setInterval(
+            syncPerformerPhonePlayback,
+            500,
+          );
           requestPerformerPhoneMicScoring();
           updatePerformerPhoneDisplaySong();
           document.getElementById("performerPhoneDisplayClose").focus();
         } else {
+          clearInterval(performerPhonePlaybackSyncTimer);
+          performerPhonePlaybackSyncTimer = null;
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
           stopPerformerPhoneMicScoring();
@@ -1981,23 +1990,33 @@
 
         if (roomPlaybackVideoId === roomCurrentSong?.videoId) {
           const targetPosition = getSynchronizedRoomPlaybackPosition();
+          const phoneState = performerPhoneDisplayPlayer.getPlayerState?.();
           const phonePosition = Number(
             performerPhoneDisplayPlayer.getCurrentTime?.(),
           );
           if (
+            [
+              window.YT?.PlayerState?.PLAYING,
+              window.YT?.PlayerState?.PAUSED,
+            ].includes(phoneState) &&
             Number.isFinite(phonePosition) &&
-            Math.abs(phonePosition - targetPosition) > 1.5
+            Math.abs(phonePosition - targetPosition) > 0.75
           ) {
             performerPhoneDisplayPlayer.seekTo(targetPosition, true);
           }
         }
 
-        const phoneIsPlaying =
-          performerPhoneDisplayPlayer.getPlayerState?.() ===
-          window.YT?.PlayerState?.PLAYING;
-        if (roomPlaybackIsPlaying && !phoneIsPlaying) {
+        const phoneState = performerPhoneDisplayPlayer.getPlayerState?.();
+        if (
+          roomPlaybackIsPlaying &&
+          phoneState !== window.YT?.PlayerState?.PLAYING &&
+          phoneState !== window.YT?.PlayerState?.BUFFERING
+        ) {
           performerPhoneDisplayPlayer.playVideo();
-        } else if (!roomPlaybackIsPlaying && phoneIsPlaying) {
+        } else if (
+          !roomPlaybackIsPlaying &&
+          phoneState === window.YT?.PlayerState?.PLAYING
+        ) {
           performerPhoneDisplayPlayer.pauseVideo();
         }
       }
