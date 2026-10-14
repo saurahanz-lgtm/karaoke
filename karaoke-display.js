@@ -1712,37 +1712,55 @@ function tryInitPlayback() {
 }
 
 async function resumeTVPlaybackAfterPerformerScreen() {
-  if (!karaokeDisplayEnabled || !activeKaraokeRoomId || !currentSong?.videoId) {
+  if (!karaokeDisplayEnabled || !activeKaraokeRoomId) {
     return;
   }
-  const snapshot = await KaraokeSessions.roomRef(
-    activeKaraokeRoomId,
-    "control",
-  ).once("value");
-  const control = snapshot.val() || {};
-  if (control.playbackVideoId !== currentSong.videoId) return;
-  const position = Math.max(0, Number(control.playbackPositionSeconds) || 0);
+  const snapshot =
+    await KaraokeSessions.roomRef(activeKaraokeRoomId).once("value");
+  const room = snapshot.val() || {};
+  currentSong = room.currentSong || null;
+  tvQueue = Array.isArray(room.queue)
+    ? room.queue
+    : room.queue && typeof room.queue === "object"
+      ? Object.values(room.queue)
+      : [];
+  displayQueue();
+  updateNextSongDisplay();
+  if (!currentSong?.videoId) {
+    clearCurrentSongPlayback();
+    return;
+  }
+
+  const control = room.control || {};
+  const playbackMatchesCurrentSong =
+    control.playbackVideoId === currentSong.videoId;
+  const position = playbackMatchesCurrentSong
+    ? Math.max(0, Number(control.playbackPositionSeconds) || 0)
+    : 0;
+  const shouldPlay = playbackMatchesCurrentSong
+    ? Boolean(control.playing)
+    : true;
   if (!window.tvPlayer) {
     currentVideoId = null;
-    loadSong(currentSong, position, Boolean(control.playing));
+    loadSong(currentSong, position, shouldPlay);
     return;
   }
   if (!playerReady) {
     pendingTVPerformerResume = {
       videoId: currentSong.videoId,
       position,
-      playing: Boolean(control.playing),
+      playing: shouldPlay,
     };
     return;
   }
   if (currentVideoId !== currentSong.videoId) {
-    loadSong(currentSong, position, Boolean(control.playing));
+    loadSong(currentSong, position, shouldPlay);
     return;
   }
   pendingTVPerformerResume = null;
   window.tvPlayer.seekTo(position, true);
   if (!performerScreenModeActive && currentSong?.videoId) {
-    if (control.playing) {
+    if (shouldPlay) {
       window.tvPlayer.playVideo();
     } else {
       window.tvPlayer.pauseVideo();
