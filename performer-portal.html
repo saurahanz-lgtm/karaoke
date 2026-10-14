@@ -1582,22 +1582,33 @@
         return performerPhonePitchDetectorPromise;
       }
 
-      function preparePerformerPhoneScoreSound() {
+      function getPerformerPhoneAudioContext() {
         const AudioContextConstructor =
           window.AudioContext || window.webkitAudioContext;
         if (!AudioContextConstructor) {
-          return Promise.reject(new Error("Web Audio is not supported."));
+          throw new Error("Web Audio is not supported.");
         }
-
         if (
           !performerPhoneScoreAudioContext ||
           performerPhoneScoreAudioContext.state === "closed"
         ) {
           performerPhoneScoreAudioContext = new AudioContextConstructor();
+          performerPhoneScoreAudioBuffer = null;
+          performerPhoneScoreAudioLoadPromise = null;
+        }
+        return performerPhoneScoreAudioContext;
+      }
+
+      function preparePerformerPhoneScoreSound() {
+        let audioContext;
+        try {
+          audioContext = getPerformerPhoneAudioContext();
+        } catch (error) {
+          return Promise.reject(error);
         }
         const resumePromise =
-          performerPhoneScoreAudioContext.state === "suspended"
-            ? performerPhoneScoreAudioContext.resume()
+          audioContext.state === "suspended"
+            ? audioContext.resume()
             : Promise.resolve();
 
         if (!performerPhoneScoreAudioLoadPromise) {
@@ -1606,9 +1617,7 @@
               if (!response.ok) throw new Error("Score sound could not load.");
               return response.arrayBuffer();
             })
-            .then((audioData) =>
-              performerPhoneScoreAudioContext.decodeAudioData(audioData),
-            )
+            .then((audioData) => audioContext.decodeAudioData(audioData))
             .then((audioBuffer) => {
               performerPhoneScoreAudioBuffer = audioBuffer;
             })
@@ -1648,8 +1657,8 @@
         try {
           microphoneRequest = navigator.mediaDevices.getUserMedia({
             audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
+              echoCancellation: false,
+              noiseSuppression: false,
               autoGainControl: false,
             },
             video: false,
@@ -1680,14 +1689,7 @@
               return;
             }
 
-            const AudioContextConstructor =
-              window.AudioContext || window.webkitAudioContext;
-            if (!AudioContextConstructor) {
-              throw new Error(
-                "This browser does not support microphone scoring.",
-              );
-            }
-            performerPhoneMicAudioContext = new AudioContextConstructor();
+            performerPhoneMicAudioContext = getPerformerPhoneAudioContext();
             performerPhoneMicAnalyser =
               performerPhoneMicAudioContext.createAnalyser();
             performerPhoneMicAnalyser.fftSize = 2048;
@@ -1915,11 +1917,17 @@
         performerPhoneMicAnalyser = null;
         performerPhoneMicSamples = null;
         performerPhonePitchDetector = null;
-        if (
-          performerPhoneMicAudioContext &&
-          performerPhoneMicAudioContext.state !== "closed"
-        ) {
-          performerPhoneMicAudioContext.close().catch(() => {});
+        if (performerPhoneMicAudioContext) {
+          if (performerPhoneMicAudioContext.state !== "closed") {
+            performerPhoneMicAudioContext.close().catch(() => {});
+          }
+          if (
+            performerPhoneMicAudioContext === performerPhoneScoreAudioContext
+          ) {
+            performerPhoneScoreAudioContext = null;
+            performerPhoneScoreAudioBuffer = null;
+            performerPhoneScoreAudioLoadPromise = null;
+          }
         }
         performerPhoneMicAudioContext = null;
       }
