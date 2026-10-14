@@ -324,6 +324,13 @@
         margin-bottom: 12px;
       }
 
+      .performer-volume-notice {
+        margin: -4px 14px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.82rem;
+        line-height: 1.4;
+      }
+
       .volume-icon {
         font-size: 1.3rem;
         min-width: 30px;
@@ -1322,6 +1329,14 @@
           />
           <span class="volume-value"><span id="volumeValue">70</span>%</span>
         </div>
+        <p
+          id="performerVolumeNotice"
+          class="performer-volume-notice"
+          role="status"
+          hidden
+        >
+          Use the device volume buttons to adjust performer playback.
+        </p>
 
         <!-- Hidden audio player for preview -->
         <audio id="audioPlayer" style="display: none"></audio>
@@ -2018,7 +2033,7 @@
           height: "100%",
           playerVars: {
             autoplay: 0,
-            controls: 0,
+            controls: performerPhoneNeedsDeviceVolumeControl() ? 1 : 0,
             enablejsapi: 1,
             fs: 0,
             modestbranding: 1,
@@ -2028,11 +2043,13 @@
           events: {
             onReady: (event) => {
               performerPhoneDisplayPlayerReady = true;
-              event.target.setVolume(roomVolume);
-              roomMuted ? event.target.mute() : event.target.unMute();
+              applyPerformerPhoneVolume();
               updatePerformerPhoneDisplaySong();
             },
             onStateChange: (event) => {
+              if (event.data === window.YT?.PlayerState?.PLAYING) {
+                applyPerformerPhoneVolume();
+              }
               if (event.data === window.YT?.PlayerState?.ENDED) {
                 const position = Number(
                   performerPhoneDisplayPlayer.getCurrentTime?.(),
@@ -2135,6 +2152,7 @@
           const video = { videoId, startSeconds };
           if (performerPhoneDisplayActive || roomPlaybackIsPlaying) {
             performerPhoneDisplayPlayer.loadVideoById(video);
+            applyPerformerPhoneVolume();
           } else {
             performerPhoneDisplayPlayer.cueVideoById(video);
           }
@@ -2150,14 +2168,37 @@
 
       window.initializePerformerPhonePlayer = initializePerformerPhonePlayer;
 
+      function performerPhoneNeedsDeviceVolumeControl() {
+        return Boolean(
+          window.matchMedia?.("(pointer: coarse)").matches ||
+          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ""),
+        );
+      }
+
+      function applyPerformerPhoneVolume() {
+        if (!performerPhoneDisplayPlayerReady) return;
+        performerPhoneDisplayPlayer.setVolume(roomVolume);
+        roomMuted
+          ? performerPhoneDisplayPlayer.mute()
+          : performerPhoneDisplayPlayer.unMute();
+      }
+
       function applyTVControlAvailability() {
         const disabled =
           (!karaokeDisplayEnabled && !performerPhoneDisplayActive) ||
           performerRoomTimeExpired;
+        const useDeviceVolumeButtons =
+          performerPhoneDisplayActive &&
+          performerPhoneNeedsDeviceVolumeControl();
         ["muteBtn", "playPauseBtn", "volumeSlider"].forEach((id) => {
           const control = document.getElementById(id);
-          if (control) control.disabled = disabled;
+          if (control) {
+            control.disabled =
+              disabled || (id === "volumeSlider" && useDeviceVolumeButtons);
+          }
         });
+        const volumeNotice = document.getElementById("performerVolumeNotice");
+        if (volumeNotice) volumeNotice.hidden = !useDeviceVolumeButtons;
         const phoneDisplayToggle = document.getElementById(
           "performerPhoneDisplayToggle",
         );
@@ -4001,9 +4042,7 @@
         const volumeValue = document.getElementById("volumeValue");
         if (slider) slider.value = String(volume);
         if (volumeValue) volumeValue.textContent = String(volume);
-        if (performerPhoneDisplayPlayerReady) {
-          performerPhoneDisplayPlayer.setVolume(volume);
-        }
+        applyPerformerPhoneVolume();
       }
 
       function updateMuteDisplay(muted) {
@@ -4013,11 +4052,7 @@
           muteBtn.textContent = roomMuted ? "🔇" : "🔊";
           muteBtn.setAttribute("aria-pressed", String(roomMuted));
         }
-        if (performerPhoneDisplayPlayerReady) {
-          roomMuted
-            ? performerPhoneDisplayPlayer.mute()
-            : performerPhoneDisplayPlayer.unMute();
-        }
+        applyPerformerPhoneVolume();
       }
 
       function updatePlaybackDisplay(playing, control = {}) {
