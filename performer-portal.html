@@ -163,23 +163,32 @@
       }
 
       .phone-score-result:not([hidden]) {
-        display: grid;
-        place-items: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         position: absolute;
         z-index: 5;
         inset: 0;
         box-sizing: border-box;
         padding: 16px;
         margin: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
         color: #eafffb;
         text-align: center;
         pointer-events: none;
       }
 
       .phone-score-copy {
-        display: block;
+        display: grid;
+        justify-items: center;
+        align-content: center;
+        width: 100%;
         min-width: 0;
         overflow-wrap: anywhere;
+        text-align: center;
         text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
       }
 
