@@ -101,19 +101,17 @@
       }
 
       #performerPhoneDisplay:not([hidden]) {
-        position: fixed;
-        inset: 0;
-        z-index: 12000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        background: #000;
+        display: grid;
+        justify-items: center;
+        gap: 8px;
+        margin: 0 0 16px;
       }
 
       .phone-display-frame {
         position: relative;
-        width: min(100vw, 177.78dvh);
+        width: min(100%, 640px);
+        width: min(100%, 640px, calc(42vh * 16 / 9));
+        width: min(100%, 640px, calc(42dvh * 16 / 9));
         aspect-ratio: 16 / 9;
         overflow: hidden;
         background: #000;
@@ -143,24 +141,22 @@
         display: none !important;
       }
 
-      .phone-display-close {
-        position: fixed;
-        top: max(12px, env(safe-area-inset-top));
-        right: max(12px, env(safe-area-inset-right));
-        z-index: 1;
-        min-height: 42px;
-        padding: 8px 12px;
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 7px;
-        color: #fff;
-        background: rgba(0, 0, 0, 0.7);
-        font: inherit;
-        font-size: 0.85rem;
-        cursor: pointer;
+      .phone-display-actions {
+        display: flex;
+        justify-content: flex-end;
+        width: min(100%, 640px);
       }
 
-      body.performer-phone-display-open {
-        overflow: hidden;
+      .phone-display-close {
+        min-height: 36px;
+        padding: 6px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 6px;
+        color: #fff;
+        background: rgba(11, 23, 54, 0.9);
+        font: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
       }
 
       .header h1 {
@@ -1131,6 +1127,7 @@
             id="performerPhoneDisplayToggle"
             type="button"
             aria-pressed="false"
+            aria-expanded="false"
             aria-controls="performerPhoneDisplay"
             onclick="togglePerformerPhoneDisplay()"
           >
@@ -1138,6 +1135,33 @@
             <span>Use phone as display</span>
           </button>
         </div>
+        <section
+          id="performerPhoneDisplay"
+          aria-label="Phone karaoke display"
+          hidden
+        >
+          <div class="phone-display-frame">
+            <div id="performerPhoneVideo"></div>
+            <div
+              class="phone-display-empty"
+              id="performerPhoneDisplayMessage"
+              role="status"
+              aria-live="polite"
+            >
+              No song is playing.
+            </div>
+          </div>
+          <div class="phone-display-actions">
+            <button
+              class="phone-display-close"
+              id="performerPhoneDisplayClose"
+              type="button"
+              onclick="togglePerformerPhoneDisplay(false)"
+            >
+              Close display
+            </button>
+          </div>
+        </section>
         <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
         <div
           id="roomIdleNotice"
@@ -1238,34 +1262,6 @@
         <div id="reservedSongs" aria-live="polite"></div>
       </div>
     </div>
-
-    <section
-      id="performerPhoneDisplay"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Phone karaoke display"
-      hidden
-    >
-      <div class="phone-display-frame">
-        <div id="performerPhoneVideo"></div>
-        <div
-          class="phone-display-empty"
-          id="performerPhoneDisplayMessage"
-          role="status"
-          aria-live="polite"
-        >
-          No song is playing.
-        </div>
-      </div>
-      <button
-        class="phone-display-close"
-        id="performerPhoneDisplayClose"
-        type="button"
-        onclick="togglePerformerPhoneDisplay(false)"
-      >
-        Close display
-      </button>
-    </section>
 
     <!-- FOOTER -->
     <footer class="footer-section">
@@ -1424,14 +1420,9 @@
         performerPhoneDisplayActive = shouldOpen;
         const display = document.getElementById("performerPhoneDisplay");
         const toggle = document.getElementById("performerPhoneDisplayToggle");
-        const app = document.getElementById("singerApp");
         display.hidden = !shouldOpen;
         toggle?.setAttribute("aria-pressed", String(shouldOpen));
-        app.inert = shouldOpen;
-        document.body.classList.toggle(
-          "performer-phone-display-open",
-          shouldOpen,
-        );
+        toggle?.setAttribute("aria-expanded", String(shouldOpen));
 
         if (shouldOpen) {
           updatePerformerPhoneDisplaySong();
