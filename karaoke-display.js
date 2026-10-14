@@ -58,7 +58,9 @@ let activeRoomVolume = 70;
 let activeRoomMuted = false;
 let activeRoomDeviceCount = 0;
 let roomPlaybackActivityTimer = null;
+let roomPlaybackPositionTimer = null;
 const ROOM_PLAYBACK_ACTIVITY_INTERVAL_MS = 15000;
+const ROOM_PLAYBACK_POSITION_SYNC_INTERVAL_MS = 2000;
 const roomSongCleanupTimers = new Map();
 const roomSongCleanupListeners = new Map();
 const roomSongCleanupRequests = new Set();
@@ -390,6 +392,9 @@ function startRoomPlaybackActivityHeartbeat(roomId) {
   if (roomPlaybackActivityTimer !== null) {
     clearInterval(roomPlaybackActivityTimer);
   }
+  if (roomPlaybackPositionTimer !== null) {
+    clearInterval(roomPlaybackPositionTimer);
+  }
   roomPlaybackActivityTimer = setInterval(() => {
     const activePlayer = window.tvPlayer || player;
     if (
@@ -406,6 +411,29 @@ function startRoomPlaybackActivityHeartbeat(roomId) {
       console.warn("Could not refresh room playback activity:", error.message);
     });
   }, ROOM_PLAYBACK_ACTIVITY_INTERVAL_MS);
+  roomPlaybackPositionTimer = setInterval(() => {
+    const activePlayer = window.tvPlayer || player;
+    if (
+      activeKaraokeRoomId !== roomId ||
+      !karaokeDisplayEnabled ||
+      !currentSong?.videoId ||
+      isPlayingBootUpVideo ||
+      typeof YT === "undefined" ||
+      activePlayer?.getPlayerState?.() !== YT.PlayerState.PLAYING
+    ) {
+      return;
+    }
+
+    const positionSeconds = Number(activePlayer.getCurrentTime?.());
+    if (!Number.isFinite(positionSeconds)) return;
+    KaraokeSessions.setPlaybackPosition(
+      roomId,
+      currentSong.videoId,
+      positionSeconds,
+    ).catch((error) => {
+      console.warn("Could not sync room playback position:", error.message);
+    });
+  }, ROOM_PLAYBACK_POSITION_SYNC_INTERVAL_MS);
 }
 
 function activateKaraokeRoom(roomId) {
@@ -1015,6 +1043,14 @@ function handleRoomControl(control) {
       if (window.tvPlayer && currentSong) {
         window.tvPlayer.seekTo(0);
         window.tvPlayer.playVideo();
+        KaraokeSessions.setPlaybackState(
+          activeKaraokeRoomId,
+          true,
+          currentSong.videoId,
+          0,
+        ).catch((error) =>
+          console.warn("Could not sync restarted playback:", error.message),
+        );
       }
       break;
     case "toggleMute":
@@ -2125,9 +2161,13 @@ function onPlayerStateChange(e) {
       YT.PlayerState.ENDED,
     ].includes(e.data)
   ) {
+    const activePlayer = window.tvPlayer || player;
+    const positionSeconds = Number(activePlayer?.getCurrentTime?.()) || 0;
     KaraokeSessions.setPlaybackState(
       activeKaraokeRoomId,
       e.data === YT.PlayerState.PLAYING,
+      currentSong?.videoId || currentVideoId,
+      positionSeconds,
     ).catch((error) =>
       console.warn("Could not sync room playback state:", error.message),
     );

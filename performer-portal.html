@@ -1403,6 +1403,9 @@
       let roomQueue = [];
       let karaokeDisplayEnabled = true;
       let roomPlaybackIsPlaying = false;
+      let roomPlaybackVideoId = null;
+      let roomPlaybackPositionSeconds = 0;
+      let roomPlaybackPositionUpdatedAt = 0;
       let roomVolume = 70;
       let performerPhoneDisplayActive = false;
       let performerPhoneDisplayPlayer = null;
@@ -1433,6 +1436,7 @@
           "title",
           shouldOpen ? "Close phone display" : "Open phone display",
         );
+        applyTVControlAvailability();
 
         if (shouldOpen) {
           updatePerformerPhoneDisplaySong();
@@ -1484,6 +1488,55 @@
         });
       }
 
+      function getSynchronizedRoomPlaybackPosition() {
+        const elapsedSeconds =
+          roomPlaybackIsPlaying && roomPlaybackPositionUpdatedAt
+            ? Math.max(
+                0,
+                Math.min(
+                  15,
+                  (Date.now() - roomPlaybackPositionUpdatedAt) / 1000,
+                ),
+              )
+            : 0;
+        return Math.max(0, roomPlaybackPositionSeconds + elapsedSeconds);
+      }
+
+      function syncPerformerPhonePlayback() {
+        if (!performerPhoneDisplayActive || !performerPhoneDisplayPlayerReady) {
+          return;
+        }
+        if (
+          roomPlaybackVideoId &&
+          roomCurrentSong?.videoId &&
+          roomPlaybackVideoId !== roomCurrentSong.videoId
+        ) {
+          return;
+        }
+
+        if (roomPlaybackVideoId === roomCurrentSong?.videoId) {
+          const targetPosition = getSynchronizedRoomPlaybackPosition();
+          const phonePosition = Number(
+            performerPhoneDisplayPlayer.getCurrentTime?.(),
+          );
+          if (
+            Number.isFinite(phonePosition) &&
+            Math.abs(phonePosition - targetPosition) > 1.5
+          ) {
+            performerPhoneDisplayPlayer.seekTo(targetPosition, true);
+          }
+        }
+
+        const phoneIsPlaying =
+          performerPhoneDisplayPlayer.getPlayerState?.() ===
+          window.YT?.PlayerState?.PLAYING;
+        if (roomPlaybackIsPlaying && !phoneIsPlaying) {
+          performerPhoneDisplayPlayer.playVideo();
+        } else if (!roomPlaybackIsPlaying && phoneIsPlaying) {
+          performerPhoneDisplayPlayer.pauseVideo();
+        }
+      }
+
       function updatePerformerPhoneDisplaySong() {
         if (!performerPhoneDisplayActive) return;
 
@@ -1512,17 +1565,20 @@
         const songKey = `${videoId}:${roomCurrentSong.id || roomCurrentSong.timestamp || ""}`;
         if (performerPhoneDisplayedSongKey !== songKey) {
           performerPhoneDisplayedSongKey = songKey;
+          const startSeconds =
+            roomPlaybackVideoId === videoId
+              ? getSynchronizedRoomPlaybackPosition()
+              : 0;
+          const video = { videoId, startSeconds };
           if (roomPlaybackIsPlaying) {
-            performerPhoneDisplayPlayer.loadVideoById(videoId);
+            performerPhoneDisplayPlayer.loadVideoById(video);
           } else {
-            performerPhoneDisplayPlayer.cueVideoById(videoId);
+            performerPhoneDisplayPlayer.cueVideoById(video);
           }
           return;
         }
 
-        roomPlaybackIsPlaying
-          ? performerPhoneDisplayPlayer.playVideo()
-          : performerPhoneDisplayPlayer.pauseVideo();
+        syncPerformerPhonePlayback();
       }
 
       document.addEventListener("keydown", (event) => {
@@ -1534,7 +1590,9 @@
       window.initializePerformerPhonePlayer = initializePerformerPhonePlayer;
 
       function applyTVControlAvailability() {
-        const disabled = !karaokeDisplayEnabled || performerRoomTimeExpired;
+        const disabled =
+          (!karaokeDisplayEnabled && !performerPhoneDisplayActive) ||
+          performerRoomTimeExpired;
         ["muteBtn", "playPauseBtn", "volumeSlider"].forEach((id) => {
           const control = document.getElementById(id);
           if (control) control.disabled = disabled;
@@ -2045,7 +2103,16 @@
                 updateReservedSongsFromRoom();
               },
               onControl: (control) => {
-                if (control.command === "restart") animateRefreshButton();
+                if (control.command === "restart") {
+                  animateRefreshButton();
+                  if (
+                    performerPhoneDisplayActive &&
+                    performerPhoneDisplayPlayerReady
+                  ) {
+                    performerPhoneDisplayPlayer.seekTo(0, true);
+                    performerPhoneDisplayPlayer.playVideo();
+                  }
+                }
               },
             },
             (error) => console.warn("Room sync failed:", error.message),
@@ -3149,11 +3216,18 @@
 
       // Reload player - restart current song on karaoke display
       function reloadPlayer() {
-        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
+        if (performerRoomTimeExpired) {
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
         animateRefreshButton();
+
+        if (performerPhoneDisplayActive && roomCurrentSong?.videoId) {
+          performerPhoneDisplayPlayer?.seekTo?.(0, true);
+          performerPhoneDisplayPlayer?.playVideo?.();
+          syncPerformerPhonePlaybackState(true, 0, roomCurrentSong?.videoId);
+        }
+        if (!karaokeDisplayEnabled) return;
 
         console.log("🔄 Reload requested");
         if (
@@ -3191,11 +3265,26 @@
 
       // Toggle play/pause on karaoke display
       function togglePlayPause() {
-        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
+        if (performerRoomTimeExpired) {
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
         console.log("⏯️ Play/Pause toggled");
+
+        if (performerPhoneDisplayActive && roomCurrentSong?.videoId) {
+          const shouldPlay = !roomPlaybackIsPlaying;
+          shouldPlay
+            ? performerPhoneDisplayPlayer?.playVideo?.()
+            : performerPhoneDisplayPlayer?.pauseVideo?.();
+          const position = Number(
+            performerPhoneDisplayPlayer?.getCurrentTime?.(),
+          );
+          syncPerformerPhonePlaybackState(
+            shouldPlay,
+            Number.isFinite(position) ? position : 0,
+          );
+        }
+        if (!karaokeDisplayEnabled) return;
 
         if (
           usePerformerFirebase &&
@@ -3223,11 +3312,39 @@
 
       // Stop player - skip to next song on karaoke display
       function stopPlayer() {
-        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
+        if (performerRoomTimeExpired) {
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
         console.log("⏭️ Stop (skip) requested");
+
+        if (performerPhoneDisplayActive) {
+          if (!activeKaraokeRoomId || !usePerformerFirebase) {
+            showAlert("Firebase not available - controls disabled", "warning");
+            return;
+          }
+          KaraokeSessions.advanceToNextSong(activeKaraokeRoomId, {
+            allowPhoneDisplay: true,
+          })
+            .then((result) => {
+              const nextSong = result.snapshot?.val()?.currentSong;
+              if (nextSong?.videoId) {
+                syncPerformerPhonePlaybackState(true, 0, nextSong.videoId);
+              } else {
+                performerPhoneDisplayPlayer?.stopVideo?.();
+                syncPerformerPhonePlaybackState(false, 0, null);
+              }
+            })
+            .catch((error) => {
+              console.warn("Could not skip to the next song:", error.message);
+              showAlert("Could not skip to the next song", "warning");
+            });
+          return;
+        }
+        if (!karaokeDisplayEnabled) {
+          showAlert(tvDisabledAnnouncement, "danger");
+          return;
+        }
 
         if (
           usePerformerFirebase &&
@@ -3255,7 +3372,16 @@
 
       // Toggle mute on karaoke display
       function toggleMute() {
-        if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
+        if (performerRoomTimeExpired) {
+          showAlert(tvDisabledAnnouncement, "danger");
+          return;
+        }
+        const nextMuted = !roomMuted;
+        if (performerPhoneDisplayActive) {
+          updateMuteDisplay(nextMuted);
+          if (!karaokeDisplayEnabled) return;
+        }
+        if (!karaokeDisplayEnabled) {
           showAlert(tvDisabledAnnouncement, "danger");
           return;
         }
@@ -3264,7 +3390,7 @@
           return;
         }
 
-        KaraokeSessions.setRoomMuted(activeKaraokeRoomId, !roomMuted).catch(
+        KaraokeSessions.setRoomMuted(activeKaraokeRoomId, nextMuted).catch(
           (error) => {
             console.warn("Room mute update failed:", error.message);
             showAlert("Could not update room mute state", "warning");
@@ -3278,6 +3404,8 @@
         if (!Number.isFinite(numericVolume)) return;
         const volume = Math.max(0, Math.min(100, Math.round(numericVolume)));
         updateVolumeDisplay(volume);
+        if (performerRoomTimeExpired) return;
+        if (performerPhoneDisplayActive && !karaokeDisplayEnabled) return;
         if (!activeKaraokeRoomId || !usePerformerFirebase) return;
 
         KaraokeSessions.setRoomVolume(activeKaraokeRoomId, volume).catch(
@@ -3311,18 +3439,52 @@
         }
       }
 
-      function updatePlaybackDisplay(playing) {
+      function updatePlaybackDisplay(playing, control = {}) {
         roomPlaybackIsPlaying = Boolean(playing);
+        roomPlaybackVideoId = control.playbackVideoId || null;
+        roomPlaybackPositionSeconds = Math.max(
+          0,
+          Number(control.playbackPositionSeconds) || 0,
+        );
+        roomPlaybackPositionUpdatedAt =
+          Number(control.playbackPositionUpdatedAt) || 0;
         const button = document.getElementById("playPauseBtn");
         if (button) {
           button.textContent = playing ? "⏸" : "▶";
           button.setAttribute("aria-pressed", String(roomPlaybackIsPlaying));
         }
-        if (performerPhoneDisplayActive && performerPhoneDisplayPlayerReady) {
-          roomPlaybackIsPlaying
-            ? performerPhoneDisplayPlayer.playVideo()
-            : performerPhoneDisplayPlayer.pauseVideo();
+        syncPerformerPhonePlayback();
+      }
+
+      function syncPerformerPhonePlaybackState(
+        playing,
+        positionSeconds,
+        videoId = roomCurrentSong?.videoId,
+      ) {
+        const control = {
+          playbackVideoId: videoId || null,
+          playbackPositionSeconds: Math.max(0, Number(positionSeconds) || 0),
+          playbackPositionUpdatedAt: Date.now(),
+        };
+        updatePlaybackDisplay(playing, control);
+        if (
+          !activeKaraokeRoomId ||
+          !usePerformerFirebase ||
+          !karaokeDisplayEnabled
+        ) {
+          return;
         }
+        KaraokeSessions.setPlaybackState(
+          activeKaraokeRoomId,
+          playing,
+          control.playbackVideoId,
+          control.playbackPositionSeconds,
+        ).catch((error) =>
+          console.warn(
+            "Could not sync performer playback state:",
+            error.message,
+          ),
+        );
       }
 
       // Update singer activity

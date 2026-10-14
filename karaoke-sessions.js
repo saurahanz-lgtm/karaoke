@@ -1065,7 +1065,10 @@
 
   function listenPlaybackState(roomId, callback) {
     const ref = roomRef(roomId, "control");
-    const handler = (snapshot) => callback(Boolean(snapshot.val()?.playing));
+    const handler = (snapshot) => {
+      const control = snapshot.val() || {};
+      callback(Boolean(control.playing), control);
+    };
     ref.on("value", handler);
     return () => ref.off("value", handler);
   }
@@ -1079,10 +1082,32 @@
     });
   }
 
-  async function setPlaybackState(roomId, playing) {
+  async function setPlaybackState(
+    roomId,
+    playing,
+    videoId = null,
+    positionSeconds = 0,
+  ) {
     await assertKaraokeDisplayEnabled(roomId);
     await touchRoomActivity(roomId);
-    return roomRef(roomId, "control").update({ playing: Boolean(playing) });
+    return roomRef(roomId, "control").update({
+      playing: Boolean(playing),
+      playbackVideoId: videoId || null,
+      playbackPositionSeconds: Math.max(0, Number(positionSeconds) || 0),
+      playbackPositionUpdatedAt: Date.now(),
+    });
+  }
+
+  function setPlaybackPosition(roomId, videoId, positionSeconds) {
+    if (!roomId || !videoId) {
+      return Promise.reject(new Error("PLAYBACK_SYNC_REQUIRED"));
+    }
+    return roomRef(roomId, "control").update({
+      playing: true,
+      playbackVideoId: videoId,
+      playbackPositionSeconds: Math.max(0, Number(positionSeconds) || 0),
+      playbackPositionUpdatedAt: Date.now(),
+    });
   }
 
   function setRoomVolume(roomId, volume) {
@@ -1306,8 +1331,17 @@
     });
   }
 
-  async function advanceToNextSong(roomId) {
-    await assertKaraokeDisplayEnabled(roomId);
+  async function advanceToNextSong(roomId, { allowPhoneDisplay = false } = {}) {
+    if (allowPhoneDisplay) {
+      if (!roomId) throw new Error("ROOM_REQUIRED");
+      const roomSnapshot = await database()
+        .ref(`${ROOM_LIST_PATH}/${roomId}`)
+        .once("value");
+      if (!roomSnapshot.exists()) throw new Error("ROOM_NOT_FOUND");
+      throwIfRoomTimeExpired(roomSnapshot.val());
+    } else {
+      await assertKaraokeDisplayEnabled(roomId);
+    }
     return roomRef(roomId).transaction((current) => {
       const room = current || {};
       const queue = normalizeQueue(room.queue);
@@ -1398,6 +1432,7 @@
     setRoomMuted,
     setRoomDisplayAvailability,
     setPlaybackState,
+    setPlaybackPosition,
     touchRoomActivity,
     setRoomTimeLimit,
     setRoomDeviceLimit,
