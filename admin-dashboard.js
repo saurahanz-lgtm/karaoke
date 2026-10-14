@@ -81,7 +81,8 @@ function isRoomManager() {
 function canAccessAdminView(viewName) {
   return (
     loggedInUser?.role === "admin" ||
-    (isRoomManager() && ["users", "rooms", "requests"].includes(viewName))
+    (isRoomManager() &&
+      ["dashboard", "users", "rooms", "requests"].includes(viewName))
   );
 }
 
@@ -207,9 +208,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.querySelector(".profile-copy small").textContent =
       "Room & Account Manager";
     document
-      .querySelectorAll(
-        '[data-admin-view-target="dashboard"], [data-admin-view-target="display"]',
-      )
+      .querySelectorAll('[data-admin-view-target="display"]')
       .forEach((button) => {
         button.hidden = true;
       });
@@ -223,7 +222,7 @@ document.addEventListener("DOMContentLoaded", function () {
       "#userManagementSection table thead th:last-child",
     ).hidden = true;
   }
-  setAdminView(isRoomManager() ? "rooms" : "dashboard");
+  setAdminView("dashboard");
 
   // Load users from localStorage
   loadUsers();
@@ -395,7 +394,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function setAdminView(viewName) {
   if (!canAccessAdminView(viewName)) {
-    if (isRoomManager()) setAdminView("rooms");
+    if (isRoomManager()) setAdminView("dashboard");
     return;
   }
 
