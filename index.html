@@ -30,6 +30,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="karaoke-sessions.js"></script>
+    <script src="admin-presence.js"></script>
     <script src="account-requests.js"></script>
     <script src="account-request-ui.js" defer></script>
     <!-- YouTube IFrame API -->
@@ -534,7 +535,7 @@
             type="text"
             minlength="3"
             maxlength="30"
-            pattern="[A-Za-z0-9_.-]+"
+            pattern="[A-Za-z0-9_.\-]+"
             autocomplete="username"
             placeholder="3-30 letters, numbers, dots, dashes, or underscores"
             required
@@ -553,6 +554,23 @@
           role="status"
           aria-live="assertive"
         ></p>
+        <div
+          class="admin-contact-notice"
+          id="accountAdminContactNotice"
+          role="status"
+          hidden
+        >
+          <span>Message us on Facebook for help with your request.</span>
+          <a
+            class="admin-contact-link"
+            href="https://www.facebook.com/profile.php?id=61580750922961"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <i class="bi bi-facebook" aria-hidden="true"></i>
+            Contact on Facebook
+          </a>
+        </div>
         <section
           id="accountRequestCredentials"
           class="account-request-credentials"
@@ -652,6 +670,23 @@
         role="status"
         aria-live="polite"
       ></p>
+      <div
+        class="admin-contact-notice"
+        id="passwordResetAdminContactNotice"
+        role="status"
+        hidden
+      >
+        <span>Message us on Facebook for help with your request.</span>
+        <a
+          class="admin-contact-link"
+          href="https://www.facebook.com/profile.php?id=61580750922961"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <i class="bi bi-facebook" aria-hidden="true"></i>
+          Contact on Facebook
+        </a>
+      </div>
       <div class="password-reset-modal-actions">
         <button
           id="passwordResetRetryButton"

@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const usernameInput = document.getElementById("requestedAccountUsername");
   const submitButton = document.getElementById("submitAccountRequestButton");
   const feedback = document.getElementById("accountRequestFeedback");
+  const accountAdminContactNotice = document.getElementById(
+    "accountAdminContactNotice",
+  );
   const credentials = document.getElementById("accountRequestCredentials");
   const anotherRequestButton = document.getElementById(
     "anotherAccountRequestButton",
@@ -189,6 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function showFeedback(message, state = "info") {
+    accountAdminContactNotice.hidden = true;
     feedback.textContent = message;
     feedback.dataset.state = state;
   }
@@ -304,6 +308,12 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.disabled = true;
     showFeedback("Submitting your account request...", "pending");
     try {
+      if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
+        submitButton.disabled = false;
+        showFeedback("No admin is online right now.", "error");
+        accountAdminContactNotice.hidden = false;
+        return;
+      }
       const request = await KaraokeAccountRequests.create(requestedUsername);
       recordSuccessfulAccountRequest();
       sessionStorage.setItem("karaoke_account_request_id", request.id);
@@ -315,6 +325,8 @@ document.addEventListener("DOMContentLoaded", () => {
           "That username already has an account. Return to sign in instead.",
         ACCOUNT_REQUEST_ALREADY_PENDING:
           "A request for that username is already awaiting review.",
+        ADMIN_PRESENCE_UNAVAILABLE:
+          "Could not check admin availability. Check your connection and try again.",
         FIREBASE_UNAVAILABLE:
           "Account requests are temporarily unavailable. Please try again later.",
       };
@@ -371,6 +383,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const passwordResetFeedback = document.getElementById(
     "passwordResetFeedback",
   );
+  const passwordResetAdminContactNotice = document.getElementById(
+    "passwordResetAdminContactNotice",
+  );
   const passwordResetRequestButton = document.getElementById(
     "passwordResetRequestButton",
   );
@@ -410,6 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function setPasswordResetFeedback(message, state = "info") {
+    passwordResetAdminContactNotice.hidden = true;
     passwordResetFeedback.textContent = message;
     passwordResetFeedback.dataset.state = state;
   }
@@ -542,6 +558,12 @@ document.addEventListener("DOMContentLoaded", () => {
     passwordResetRequestButton.disabled = true;
     setPasswordResetFeedback("Submitting request...", "pending");
     try {
+      if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
+        passwordResetRequestButton.disabled = false;
+        setPasswordResetFeedback("No admin is online right now.", "error");
+        passwordResetAdminContactNotice.hidden = false;
+        return;
+      }
       const request = await KaraokeAccountRequests.createPasswordReset(
         username,
         passwordResetRole,
@@ -562,6 +584,8 @@ document.addEventListener("DOMContentLoaded", () => {
           "A password reset request is already waiting for this account.",
         PASSWORD_RESET_UNAVAILABLE:
           "Secure password reset is unavailable in this browser.",
+        ADMIN_PRESENCE_UNAVAILABLE:
+          "Could not check admin availability. Check your connection and try again.",
       };
       setPasswordResetFeedback(
         messages[error.message] ||

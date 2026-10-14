@@ -3399,6 +3399,65 @@ body.karaoke-display-page {
   color: #b7b3ff;
 }
 
+.admin-contact-notice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  width: min(100%, 520px);
+  box-sizing: border-box;
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(87, 167, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(31, 81, 126, 0.22);
+  color: #e4efff;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.admin-contact-notice[hidden] {
+  display: none !important;
+}
+
+.admin-contact-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid rgba(114, 181, 255, 0.55);
+  border-radius: 6px;
+  background: rgba(36, 102, 171, 0.58);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.admin-contact-link:hover,
+.admin-contact-link:focus-visible {
+  border-color: #a8d0ff;
+  background: rgba(42, 121, 204, 0.8);
+  color: #fff;
+}
+
+@media (max-width: 420px), (max-height: 420px) and (orientation: landscape) {
+  .admin-contact-notice {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    padding: 8px 10px;
+  }
+
+  .admin-contact-link {
+    justify-self: start;
+  }
+}
+
 .account-request-credentials {
   margin-top: 12px;
   padding: 14px;

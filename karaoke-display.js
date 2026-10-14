@@ -780,6 +780,7 @@ function showKaraokeDisplayRoomRequestStatus(
   message,
   rejected = false,
   retryAnchorRoomId = null,
+  contactAdmin = false,
 ) {
   const splash = document.getElementById("splashScreen");
   if (!splash) return;
@@ -792,6 +793,21 @@ function showKaraokeDisplayRoomRequestStatus(
   `;
   splash.querySelector("#tvRoomRequestTitle").textContent = title;
   splash.querySelector("#tvRoomRequestMessage").textContent = message;
+  if (contactAdmin) {
+    const contactNotice = document.createElement("div");
+    contactNotice.className = "admin-contact-notice";
+    const contactMessage = document.createElement("span");
+    contactMessage.textContent =
+      "Message us on Facebook for help with your request.";
+    const contactLink = document.createElement("a");
+    contactLink.className = "admin-contact-link";
+    contactLink.href = "https://www.facebook.com/profile.php?id=61580750922961";
+    contactLink.target = "_blank";
+    contactLink.rel = "noopener noreferrer";
+    contactLink.textContent = "Contact on Facebook";
+    contactNotice.append(contactMessage, contactLink);
+    splash.querySelector("section").append(contactNotice);
+  }
   if (rejected && retryAnchorRoomId) {
     const retryButton = document.createElement("button");
     retryButton.type = "button";
@@ -945,9 +961,51 @@ async function requestKaraokeDisplayRoomApproval(anchorRoomId) {
     return;
   }
   if (!anchorRoomId) {
+    try {
+      if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
+        showKaraokeDisplayRoomRequestStatus(
+          "No admin online",
+          "Another room cannot be opened right now.",
+          false,
+          null,
+          true,
+        );
+        return;
+      }
+    } catch (error) {
+      console.warn("Could not check admin availability:", error.message);
+      showKaraokeDisplayRoomRequestStatus(
+        "Room request unavailable",
+        "Could not check admin availability. Check the connection and try again.",
+        true,
+      );
+      return;
+    }
     showKaraokeDisplayRoomRequestStatus(
       "Waiting for approval",
       "No room is available. Waiting for the administrator to add one.",
+    );
+    return;
+  }
+
+  try {
+    if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
+      showKaraokeDisplayRoomRequestStatus(
+        "No admin online",
+        "Another room cannot be opened right now.",
+        false,
+        null,
+        true,
+      );
+      return;
+    }
+  } catch (error) {
+    console.warn("Could not check admin availability:", error.message);
+    showKaraokeDisplayRoomRequestStatus(
+      "Room request unavailable",
+      "Could not check admin availability. Check the connection and try again.",
+      true,
+      anchorRoomId,
     );
     return;
   }

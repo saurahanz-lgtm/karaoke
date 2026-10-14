@@ -24,6 +24,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="karaoke-sessions.js"></script>
+    <script src="admin-presence.js"></script>
     <!-- YouTube IFrame API -->
     <script>
       window.performerYouTubeApiReady = false;
@@ -1130,6 +1131,23 @@
           Request another room
         </button>
         <p id="roomRequestStatus" aria-live="polite"></p>
+        <div
+          class="admin-contact-notice"
+          id="roomAdminContactNotice"
+          role="status"
+          hidden
+        >
+          <span>Message us on Facebook for help with your request.</span>
+          <a
+            class="admin-contact-link"
+            href="https://www.facebook.com/profile.php?id=61580750922961"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <i class="bi bi-facebook" aria-hidden="true"></i>
+            Contact on Facebook
+          </a>
+        </div>
         <section id="roomTimeExtensionPanel" hidden>
           <p id="roomTimeExpiredMessage">
             This room's time limit has expired. Request additional time from the
@@ -3299,9 +3317,16 @@
           return;
         }
 
+        document.getElementById("roomAdminContactNotice").hidden = true;
         button.disabled = true;
         status.textContent = "Sending request...";
         try {
+          if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
+            status.textContent = "No admin is online right now.";
+            document.getElementById("roomAdminContactNotice").hidden = false;
+            button.disabled = false;
+            return;
+          }
           const request = await KaraokeSessions.createRoomRequest(
             loggedInUser.username,
             roomRequestRoomId,
@@ -3319,9 +3344,11 @@
         } catch (error) {
           console.error("Could not send room request:", error.message);
           status.textContent =
-            error.code === "PERMISSION_DENIED"
-              ? "Firebase blocked the request. Contact the administrator to enable room request access."
-              : `Could not send request: ${error.message || "Check your connection and try again."}`;
+            error.message === "ADMIN_PRESENCE_UNAVAILABLE"
+              ? "Could not check admin availability. Check your connection and try again."
+              : error.code === "PERMISSION_DENIED"
+                ? "Firebase blocked the request. Contact the administrator to enable room request access."
+                : `Could not send request: ${error.message || "Check your connection and try again."}`;
           button.disabled = false;
         }
       }
