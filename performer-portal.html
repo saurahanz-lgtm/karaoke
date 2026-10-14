@@ -1526,6 +1526,11 @@
       let roomCurrentSong = null;
       let roomQueue = [];
       let karaokeDisplayEnabled = true;
+      let globalKaraokeDisplayEnabled = true;
+      let roomKaraokeDisplayEnabled = true;
+      let globalKaraokeDisplayAnnouncement = "";
+      let roomKaraokeDisplayAnnouncement = "";
+      let stopListeningToPerformerRoomDisplayStatus = null;
       let roomPlaybackIsPlaying = false;
       let roomPlaybackVideoId = null;
       let roomPlaybackPositionSeconds = 0;
@@ -1933,6 +1938,8 @@
       }
 
       window.addEventListener("pagehide", () => {
+        stopListeningToPerformerRoomDisplayStatus?.();
+        stopListeningToPerformerRoomDisplayStatus = null;
         if (performerPhoneDisplayActive) {
           const position = Number(
             performerPhoneDisplayPlayer?.getCurrentTime?.(),
@@ -2200,9 +2207,7 @@
       }
 
       function applyTVControlAvailability() {
-        const disabled =
-          (!karaokeDisplayEnabled && !performerPhoneDisplayActive) ||
-          performerRoomTimeExpired;
+        const disabled = !karaokeDisplayEnabled || performerRoomTimeExpired;
         const useDeviceVolumeButtons =
           performerPhoneDisplayActive &&
           performerPhoneNeedsDeviceVolumeControl();
@@ -2219,7 +2224,9 @@
           "performerPhoneDisplayToggle",
         );
         if (phoneDisplayToggle) {
-          phoneDisplayToggle.disabled = performerRoomTimeExpired;
+          phoneDisplayToggle.disabled =
+            performerRoomTimeExpired ||
+            (!karaokeDisplayEnabled && !performerPhoneDisplayActive);
         }
         const skipButton = document.querySelector(".controls .stop");
         if (skipButton) skipButton.disabled = disabled;
@@ -2381,16 +2388,52 @@
       }
 
       function updateKaraokeDisplayAvailability(settings = {}) {
-        karaokeDisplayEnabled = settings.enabled !== false;
-        tvDisabledAnnouncement =
+        globalKaraokeDisplayEnabled = settings.enabled !== false;
+        globalKaraokeDisplayAnnouncement =
           settings.announcement ||
           "The karaoke display is temporarily unavailable. Please check back soon.";
+        refreshPerformerDisplayAvailability();
+      }
+
+      function updatePerformerRoomDisplayAvailability(settings = {}) {
+        roomKaraokeDisplayEnabled = settings.enabled !== false;
+        roomKaraokeDisplayAnnouncement =
+          settings.announcement ||
+          "The karaoke display in this room is temporarily unavailable.";
+        refreshPerformerDisplayAvailability();
+      }
+
+      function refreshPerformerDisplayAvailability() {
+        karaokeDisplayEnabled =
+          globalKaraokeDisplayEnabled && roomKaraokeDisplayEnabled;
+        tvDisabledAnnouncement = !roomKaraokeDisplayEnabled
+          ? roomKaraokeDisplayAnnouncement
+          : !globalKaraokeDisplayEnabled
+            ? globalKaraokeDisplayAnnouncement
+            : "";
         const notice = document.getElementById("displayAvailabilityNotice");
         notice.hidden = karaokeDisplayEnabled;
         notice.textContent = karaokeDisplayEnabled
           ? ""
           : `${tvDisabledAnnouncement} Song reservations and playback are temporarily disabled.`;
         applyTVControlAvailability();
+
+        if (!performerPhoneDisplayActive) return;
+        const message = document.getElementById("performerPhoneDisplayMessage");
+        if (!karaokeDisplayEnabled) {
+          performerPhoneDisplayPlayer?.stopVideo?.();
+          performerPhoneDisplayedSongKey = null;
+          stopPerformerPhoneMicScoring();
+          if (message) {
+            message.textContent = tvDisabledAnnouncement;
+            message.hidden = false;
+          }
+          return;
+        }
+
+        if (message) message.hidden = true;
+        requestPerformerPhoneMicScoring();
+        updatePerformerPhoneDisplaySong();
       }
 
       function listenToKaraokeDisplayAvailability() {
@@ -2629,6 +2672,17 @@
           }
           const connectedRoomId = membership.room.id;
           activeKaraokeRoomId = connectedRoomId;
+          stopListeningToPerformerRoomDisplayStatus?.();
+          stopListeningToPerformerRoomDisplayStatus =
+            KaraokeSessions.listenRoomDisplayStatus(
+              connectedRoomId,
+              updatePerformerRoomDisplayAvailability,
+              (error) =>
+                console.warn(
+                  "Could not follow room display availability:",
+                  error.message,
+                ),
+            );
           let roomDeviceLimit = membership.maxDevices;
           let roomDeviceCount = 0;
           const updateRoomCapacityNotice = () => {
