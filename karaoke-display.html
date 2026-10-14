@@ -461,27 +461,20 @@
         place-items: center;
         padding: max(16px, env(safe-area-inset-top)) 16px
           max(16px, env(safe-area-inset-bottom));
-        background: rgba(2, 7, 22, 0.78);
-        backdrop-filter: blur(5px);
+        background: transparent;
         animation: score-overlay-in 180ms ease-out both;
       }
 
       .score-modal-card {
-        width: min(480px, 100%);
+        width: 100%;
         max-height: 100%;
-        padding: clamp(20px, 5vw, 36px);
+        padding: 16px;
         overflow-y: auto;
-        border: 1px solid var(--karaoke-panel-border);
-        border-radius: 12px;
+        border: 0;
+        border-radius: 0;
         color: var(--karaoke-text);
-        background:
-          radial-gradient(
-            ellipse at 50% 0,
-            rgba(49, 92, 251, 0.2),
-            transparent 65%
-          ),
-          var(--karaoke-bg-raised);
-        box-shadow: 0 24px 72px rgba(0, 0, 0, 0.55);
+        background: transparent;
+        box-shadow: none;
         text-align: center;
         animation: score-card-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
       }
@@ -493,23 +486,26 @@
         font-size: clamp(1.25rem, 4vw, 1.7rem);
         font-weight: 600;
         overflow-wrap: anywhere;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
       }
 
       .score-modal-value {
-        margin-top: 14px;
+        margin-top: 6px;
         color: var(--karaoke-teal);
         font-family: "Space Grotesk", sans-serif;
-        font-size: clamp(3rem, 15vw, 5rem);
+        font-size: clamp(3rem, 16vw, 5rem);
         font-weight: 700;
         line-height: 1;
-        text-shadow: 0 0 30px rgba(32, 212, 176, 0.2);
+        text-shadow:
+          0 2px 16px rgba(0, 0, 0, 0.95),
+          0 0 28px rgba(32, 212, 176, 0.28);
       }
 
       .score-modal-feedback {
-        margin: 16px 0 0;
+        margin: 8px 0 0;
         color: #a7f3e3;
         font-family: "Space Grotesk", sans-serif;
-        font-size: clamp(1rem, 4vw, 1.2rem);
+        font-size: clamp(0.95rem, 3.6vw, 1.15rem);
         font-weight: 600;
         line-height: 1.35;
         overflow-wrap: anywhere;
