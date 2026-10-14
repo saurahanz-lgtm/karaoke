@@ -150,6 +150,69 @@
         width: min(100%, 640px);
       }
 
+      .phone-mic-status {
+        width: min(100%, 640px);
+        margin: 0;
+        color: #b9c8e8;
+        font-size: 0.76rem;
+        line-height: 1.4;
+      }
+
+      .phone-score-result[hidden] {
+        display: none !important;
+      }
+
+      .phone-score-result:not([hidden]) {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        margin: 0 0 16px;
+        border: 1px solid rgba(32, 212, 176, 0.42);
+        border-radius: 8px;
+        color: #eafffb;
+        background: rgba(8, 66, 68, 0.58);
+      }
+
+      .phone-score-value {
+        color: #7fe0c3;
+        font-size: 1.65rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .phone-score-copy strong,
+      .phone-score-copy p,
+      .phone-score-copy small {
+        display: block;
+        margin: 0;
+      }
+
+      .phone-score-copy strong {
+        font-size: 0.88rem;
+      }
+
+      .phone-score-copy p,
+      .phone-score-copy small {
+        margin-top: 2px;
+        color: #b9c8e8;
+        font-size: 0.72rem;
+        line-height: 1.35;
+      }
+
+      .phone-score-dismiss {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 6px;
+        color: #fff;
+        background: rgba(5, 13, 37, 0.6);
+        cursor: pointer;
+      }
+
       .phone-display-close {
         min-height: 36px;
         padding: 6px 10px;
@@ -1131,7 +1194,7 @@
             aria-expanded="false"
             aria-label="Toggle phone display"
             aria-controls="performerPhoneDisplay"
-            title="Toggle phone display"
+            title="Open phone display and enable pitch scoring"
             onclick="togglePerformerPhoneDisplay()"
           >
             <i class="bi bi-display" aria-hidden="true"></i>
@@ -1153,6 +1216,13 @@
               No song is playing.
             </div>
           </div>
+          <p
+            class="phone-mic-status"
+            id="performerPhoneMicStatus"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></p>
           <div class="phone-display-actions">
             <button
               class="phone-display-close"
@@ -1163,6 +1233,38 @@
               Close display
             </button>
           </div>
+          <p
+            class="phone-mic-status"
+            id="performerPhoneMicStatus"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></p>
+        </section>
+        <section
+          class="phone-score-result"
+          id="performerPhoneScoreResult"
+          aria-label="Song pitch score"
+          aria-live="polite"
+          hidden
+        >
+          <strong class="phone-score-value" id="performerPhoneScoreValue"
+            >--</strong
+          >
+          <div class="phone-score-copy">
+            <strong>Your pitch score</strong>
+            <p id="performerPhoneScoreFeedback"></p>
+            <small id="performerPhoneScoreDetails"></small>
+          </div>
+          <button
+            class="phone-score-dismiss"
+            type="button"
+            aria-label="Dismiss pitch score"
+            title="Dismiss pitch score"
+            onclick="dismissPerformerPhoneScore()"
+          >
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
         </section>
         <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
         <div
@@ -1411,9 +1513,353 @@
       let performerPhoneDisplayPlayer = null;
       let performerPhoneDisplayPlayerReady = false;
       let performerPhoneDisplayedSongKey = null;
+      let performerPhoneMicRequestPromise = null;
+      let performerPhoneMicScoringEnabled = false;
+      let performerPhoneMicStream = null;
+      let performerPhoneMicAudioContext = null;
+      let performerPhoneMicAnalyser = null;
+      let performerPhoneMicSamples = null;
+      let performerPhonePitchDetector = null;
+      let performerPhonePitchDetectorPromise = null;
+      let performerPhoneMicSamplingTimer = null;
+      let performerPhoneMicObservedMs = 0;
+      let performerPhonePitchDetectedMs = 0;
+      let performerPhonePitchStableMs = 0;
+      let performerPhonePreviousPitchHz = null;
+      let performerPhoneLastMicSampleAt = null;
+      let performerPhoneScoreSongKey = null;
+      let performerPhoneFinalizedScoreSongKey = null;
+      let performerPhoneScoreAudioContext = null;
+      let performerPhoneScoreAudioBuffer = null;
+      let performerPhoneScoreAudioLoadPromise = null;
+      const PERFORMER_MIC_MIN_ACTIVITY_RMS = 0.02;
+      const PERFORMER_PITCH_MIN_FREQUENCY_HZ = 75;
+      const PERFORMER_PITCH_MAX_FREQUENCY_HZ = 1000;
+      const PERFORMER_PITCH_MIN_CLARITY = 0.85;
+      const PERFORMER_PITCH_STABILITY_TOLERANCE_CENTS = 75;
       let tvDisabledAnnouncement = "";
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
+
+      function getPerformerPhoneSongKey(song = roomCurrentSong) {
+        return song?.videoId
+          ? `${song.videoId}:${song.id || song.timestamp || ""}`
+          : null;
+      }
+
+      function loadPerformerPhonePitchDetector() {
+        if (!performerPhonePitchDetectorPromise) {
+          performerPhonePitchDetectorPromise =
+            import("https://esm.sh/pitchy@4.1.0").then(
+              ({ PitchDetector }) => PitchDetector,
+            );
+        }
+        return performerPhonePitchDetectorPromise;
+      }
+
+      function preparePerformerPhoneScoreSound() {
+        const AudioContextConstructor =
+          window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextConstructor) {
+          return Promise.reject(new Error("Web Audio is not supported."));
+        }
+
+        if (
+          !performerPhoneScoreAudioContext ||
+          performerPhoneScoreAudioContext.state === "closed"
+        ) {
+          performerPhoneScoreAudioContext = new AudioContextConstructor();
+        }
+        const resumePromise =
+          performerPhoneScoreAudioContext.state === "suspended"
+            ? performerPhoneScoreAudioContext.resume()
+            : Promise.resolve();
+
+        if (!performerPhoneScoreAudioLoadPromise) {
+          performerPhoneScoreAudioLoadPromise = fetch("assets/score.mp3")
+            .then((response) => {
+              if (!response.ok) throw new Error("Score sound could not load.");
+              return response.arrayBuffer();
+            })
+            .then((audioData) =>
+              performerPhoneScoreAudioContext.decodeAudioData(audioData),
+            )
+            .then((audioBuffer) => {
+              performerPhoneScoreAudioBuffer = audioBuffer;
+            })
+            .catch((error) => {
+              performerPhoneScoreAudioLoadPromise = null;
+              throw error;
+            });
+        }
+
+        return Promise.all([
+          resumePromise,
+          performerPhoneScoreAudioLoadPromise,
+        ]);
+      }
+
+      function requestPerformerPhoneMicScoring() {
+        if (
+          performerPhoneMicScoringEnabled ||
+          performerPhoneMicRequestPromise
+        ) {
+          return;
+        }
+
+        const status = document.getElementById("performerPhoneMicStatus");
+        if (!navigator.mediaDevices?.getUserMedia) {
+          status.hidden = false;
+          status.textContent =
+            "Microphone scoring requires HTTPS or localhost. Video playback is still available.";
+          return;
+        }
+
+        status.hidden = false;
+        status.textContent =
+          "Allow microphone access for local pitch scoring. Audio is not recorded or sent.";
+
+        let microphoneRequest;
+        try {
+          microphoneRequest = navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: false,
+            },
+            video: false,
+          });
+        } catch (error) {
+          status.textContent = `${error.message} Video playback is still available.`;
+          return;
+        }
+
+        preparePerformerPhoneScoreSound().catch((error) =>
+          console.warn(
+            "Could not prepare the performer score sound:",
+            error.message,
+          ),
+        );
+        performerPhoneMicRequestPromise = microphoneRequest
+          .then((stream) => {
+            performerPhoneMicStream = stream;
+            return loadPerformerPhonePitchDetector().then((PitchDetector) => ({
+              stream,
+              PitchDetector,
+            }));
+          })
+          .then(({ stream, PitchDetector }) => {
+            if (!performerPhoneDisplayActive) {
+              stream.getTracks().forEach((track) => track.stop());
+              performerPhoneMicStream = null;
+              return;
+            }
+
+            const AudioContextConstructor =
+              window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextConstructor) {
+              throw new Error(
+                "This browser does not support microphone scoring.",
+              );
+            }
+            performerPhoneMicAudioContext = new AudioContextConstructor();
+            performerPhoneMicAnalyser =
+              performerPhoneMicAudioContext.createAnalyser();
+            performerPhoneMicAnalyser.fftSize = 2048;
+            performerPhoneMicSamples = new Float32Array(
+              performerPhoneMicAnalyser.fftSize,
+            );
+            performerPhonePitchDetector = PitchDetector.forFloat32Array(
+              performerPhoneMicAnalyser.fftSize,
+            );
+            performerPhoneMicAudioContext
+              .createMediaStreamSource(stream)
+              .connect(performerPhoneMicAnalyser);
+            return performerPhoneMicAudioContext.resume().then(() => {
+              performerPhoneMicScoringEnabled = true;
+              beginPerformerPhoneSongScore(getPerformerPhoneSongKey());
+              performerPhoneMicSamplingTimer = window.setInterval(
+                samplePerformerPhonePitch,
+                100,
+              );
+              status.textContent =
+                "Pitch scoring is on. Microphone audio stays on this device and is not recorded or sent.";
+            });
+          })
+          .catch((error) => {
+            stopPerformerPhoneMicScoring();
+            status.textContent = `${error.message || "Microphone access was denied."} Video playback is still available without scoring.`;
+          })
+          .finally(() => {
+            performerPhoneMicRequestPromise = null;
+          });
+      }
+
+      function beginPerformerPhoneSongScore(songKey) {
+        if (!performerPhoneMicScoringEnabled || !songKey) return;
+        performerPhoneScoreSongKey = songKey;
+        performerPhoneFinalizedScoreSongKey = null;
+        performerPhoneMicObservedMs = 0;
+        performerPhonePitchDetectedMs = 0;
+        performerPhonePitchStableMs = 0;
+        performerPhonePreviousPitchHz = null;
+        performerPhoneLastMicSampleAt = null;
+        document.getElementById("performerPhoneScoreResult").hidden = true;
+      }
+
+      function samplePerformerPhonePitch() {
+        if (
+          !performerPhoneMicScoringEnabled ||
+          !performerPhoneMicAnalyser ||
+          !performerPhoneMicSamples ||
+          !performerPhonePitchDetector
+        ) {
+          return;
+        }
+
+        performerPhoneMicAnalyser.getFloatTimeDomainData(
+          performerPhoneMicSamples,
+        );
+        let sumSquares = 0;
+        for (const sample of performerPhoneMicSamples) {
+          sumSquares += sample * sample;
+        }
+        const rms = Math.sqrt(sumSquares / performerPhoneMicSamples.length);
+        const [pitchHz, clarity] = performerPhonePitchDetector.findPitch(
+          performerPhoneMicSamples,
+          performerPhoneMicAudioContext.sampleRate,
+        );
+        const now = performance.now();
+        const phoneIsPlaying =
+          performerPhoneDisplayPlayerReady &&
+          performerPhoneDisplayPlayer.getPlayerState?.() ===
+            window.YT?.PlayerState?.PLAYING;
+
+        if (!phoneIsPlaying) {
+          performerPhoneLastMicSampleAt = null;
+          performerPhonePreviousPitchHz = null;
+          return;
+        }
+        if (performerPhoneLastMicSampleAt === null) {
+          performerPhoneLastMicSampleAt = now;
+          return;
+        }
+
+        const elapsedMs = Math.min(now - performerPhoneLastMicSampleAt, 200);
+        performerPhoneLastMicSampleAt = now;
+        performerPhoneMicObservedMs += elapsedMs;
+        if (
+          rms < PERFORMER_MIC_MIN_ACTIVITY_RMS ||
+          clarity < PERFORMER_PITCH_MIN_CLARITY ||
+          pitchHz < PERFORMER_PITCH_MIN_FREQUENCY_HZ ||
+          pitchHz > PERFORMER_PITCH_MAX_FREQUENCY_HZ
+        ) {
+          performerPhonePreviousPitchHz = null;
+          return;
+        }
+
+        performerPhonePitchDetectedMs += elapsedMs;
+        if (performerPhonePreviousPitchHz !== null) {
+          const pitchChangeCents = Math.abs(
+            1200 * Math.log2(pitchHz / performerPhonePreviousPitchHz),
+          );
+          if (pitchChangeCents <= PERFORMER_PITCH_STABILITY_TOLERANCE_CENTS) {
+            performerPhonePitchStableMs += elapsedMs;
+          }
+        }
+        performerPhonePreviousPitchHz = pitchHz;
+      }
+
+      function showPerformerPhoneScore() {
+        const songKey = performerPhoneScoreSongKey;
+        if (
+          !performerPhoneMicScoringEnabled ||
+          !songKey ||
+          performerPhoneFinalizedScoreSongKey === songKey
+        ) {
+          return;
+        }
+
+        performerPhoneFinalizedScoreSongKey = songKey;
+        const pitchSteadiness =
+          performerPhonePitchDetectedMs > 0
+            ? Math.min(
+                1,
+                Math.max(
+                  0,
+                  performerPhonePitchStableMs / performerPhonePitchDetectedMs,
+                ),
+              )
+            : 0;
+        const score = 75 + Math.round(pitchSteadiness * 25);
+        document.getElementById("performerPhoneScoreValue").textContent =
+          String(score);
+        document.getElementById("performerPhoneScoreFeedback").textContent =
+          score === 100
+            ? "Your pitch was super steady!"
+            : score >= 80
+              ? "Great pitch consistency! Keep it up!"
+              : "You're finding a steady pitch!";
+        document.getElementById("performerPhoneScoreDetails").textContent =
+          `${(performerPhonePitchDetectedMs / 1000).toFixed(1)}s pitch detected · ${(performerPhonePitchStableMs / 1000).toFixed(1)}s steady`;
+        document.getElementById("performerPhoneScoreResult").hidden = false;
+        playPerformerPhoneScoreSound();
+      }
+
+      async function playPerformerPhoneScoreSound() {
+        try {
+          await preparePerformerPhoneScoreSound();
+          if (!performerPhoneScoreAudioBuffer) return;
+          const source = performerPhoneScoreAudioContext.createBufferSource();
+          const gain = performerPhoneScoreAudioContext.createGain();
+          source.buffer = performerPhoneScoreAudioBuffer;
+          gain.gain.value = 0.8;
+          source.connect(gain);
+          gain.connect(performerPhoneScoreAudioContext.destination);
+          source.start();
+        } catch (error) {
+          console.warn(
+            "Could not play the performer score sound:",
+            error.message,
+          );
+        }
+      }
+
+      function dismissPerformerPhoneScore() {
+        document.getElementById("performerPhoneScoreResult").hidden = true;
+      }
+
+      function stopPerformerPhoneMicScoring() {
+        performerPhoneMicScoringEnabled = false;
+        performerPhoneLastMicSampleAt = null;
+        if (performerPhoneMicSamplingTimer !== null) {
+          window.clearInterval(performerPhoneMicSamplingTimer);
+          performerPhoneMicSamplingTimer = null;
+        }
+        performerPhoneMicStream?.getTracks().forEach((track) => track.stop());
+        performerPhoneMicStream = null;
+        performerPhoneMicAnalyser = null;
+        performerPhoneMicSamples = null;
+        performerPhonePitchDetector = null;
+        if (
+          performerPhoneMicAudioContext &&
+          performerPhoneMicAudioContext.state !== "closed"
+        ) {
+          performerPhoneMicAudioContext.close().catch(() => {});
+        }
+        performerPhoneMicAudioContext = null;
+      }
+
+      window.addEventListener("pagehide", () => {
+        performerPhoneDisplayActive = false;
+        stopPerformerPhoneMicScoring();
+        if (
+          performerPhoneScoreAudioContext &&
+          performerPhoneScoreAudioContext.state !== "closed"
+        ) {
+          performerPhoneScoreAudioContext.close().catch(() => {});
+        }
+      });
 
       function togglePerformerPhoneDisplay(forceOpen) {
         const shouldOpen =
@@ -1430,20 +1876,31 @@
         toggle?.setAttribute("aria-expanded", String(shouldOpen));
         toggle?.setAttribute(
           "aria-label",
-          shouldOpen ? "Close phone display" : "Open phone display",
+          shouldOpen
+            ? "Close phone display"
+            : "Open phone display and enable pitch scoring",
         );
         toggle?.setAttribute(
           "title",
-          shouldOpen ? "Close phone display" : "Open phone display",
+          shouldOpen
+            ? "Close phone display"
+            : "Open phone display and enable pitch scoring",
         );
         applyTVControlAvailability();
 
         if (shouldOpen) {
+          requestPerformerPhoneMicScoring();
           updatePerformerPhoneDisplaySong();
           document.getElementById("performerPhoneDisplayClose").focus();
         } else {
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
+          stopPerformerPhoneMicScoring();
+          const micStatus = document.getElementById("performerPhoneMicStatus");
+          if (micStatus) {
+            micStatus.textContent = "Pitch scoring stopped.";
+            micStatus.hidden = false;
+          }
           toggle?.focus();
         }
       }
@@ -1478,6 +1935,14 @@
               event.target.setVolume(roomVolume);
               roomMuted ? event.target.mute() : event.target.unMute();
               updatePerformerPhoneDisplaySong();
+            },
+            onStateChange: (event) => {
+              if (
+                event.data === window.YT?.PlayerState?.ENDED &&
+                performerPhoneMicScoringEnabled
+              ) {
+                showPerformerPhoneScore();
+              }
             },
             onError: () => {
               performerPhoneDisplayPlayerReady = false;
@@ -1542,6 +2007,15 @@
 
         const message = document.getElementById("performerPhoneDisplayMessage");
         const videoId = roomCurrentSong?.videoId;
+        const nextSongKey = getPerformerPhoneSongKey();
+        if (
+          performerPhoneMicScoringEnabled &&
+          performerPhoneScoreSongKey &&
+          nextSongKey !== performerPhoneScoreSongKey
+        ) {
+          showPerformerPhoneScore();
+          beginPerformerPhoneSongScore(nextSongKey);
+        }
         if (!videoId) {
           message.textContent = "No song is playing.";
           message.hidden = false;
