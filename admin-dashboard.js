@@ -71,6 +71,7 @@ let stopListeningToAllRoomRequests = null;
 let roomRequestApprovalAudioContext = null;
 let pendingRoomRequestApprovalId = null;
 let knownPendingAccountRequestIds = null;
+let roomManagerPendingAccountRequests = [];
 let requestNotificationAudioContext = null;
 let pendingRequestNotificationSounds = 0;
 
@@ -213,7 +214,7 @@ document.addEventListener("DOMContentLoaded", function () {
         button.hidden = true;
       });
     document.getElementById("adminRequestNotificationsButton").title =
-      "Pending room and time extension requests";
+      "Pending account, room, and time extension requests";
     document.getElementById("accountRequestsPanel").hidden = true;
     const roleSelect = document.getElementById("userRole");
     Array.from(roleSelect.options).forEach((option) => {
@@ -597,23 +598,30 @@ function initializeRoomManagement() {
 }
 
 function initializeAccountRequestListener() {
-  if (isRoomManager()) return;
-
+  const accountManager = isRoomManager();
   const tableBody = document.getElementById("accountRequestsTableBody");
   if (
     !window.KaraokeAccountRequests ||
     typeof firebase === "undefined" ||
     !firebase.database
   ) {
-    tableBody.innerHTML =
-      '<tr><td colspan="4" class="text-center text-white-50">Account request review is unavailable.</td></tr>';
+    if (!accountManager && tableBody) {
+      tableBody.innerHTML =
+        '<tr><td colspan="4" class="text-center text-white-50">Account request review is unavailable.</td></tr>';
+    }
     return;
   }
 
   stopListeningToAccountRequests = KaraokeAccountRequests.listenAll(
     (requests) => {
+      const requestsForNotifications = accountManager
+        ? requests.filter(
+            (request) =>
+              request.type !== "password-reset" && request.status === "pending",
+          )
+        : requests;
       const pendingIds = new Set(
-        requests
+        requestsForNotifications
           .filter((request) => request.status === "pending")
           .map((request) => request.id),
       );
@@ -624,13 +632,20 @@ function initializeAccountRequestListener() {
         playRequestNotificationSound();
       }
       knownPendingAccountRequestIds = pendingIds;
+      if (accountManager) {
+        roomManagerPendingAccountRequests = requestsForNotifications;
+        updateAdminRequestNotifications();
+        return;
+      }
       accountRequests = requests;
       renderAccountRequests();
     },
     (error) => {
       console.error("Account request listener failed:", error.message);
-      tableBody.innerHTML =
-        '<tr><td colspan="4" class="text-center text-white-50">Could not load account requests.</td></tr>';
+      if (!accountManager && tableBody) {
+        tableBody.innerHTML =
+          '<tr><td colspan="4" class="text-center text-white-50">Could not load account requests.</td></tr>';
+      }
     },
   );
 }
@@ -1133,20 +1148,19 @@ function updateAdminRequestNotifications() {
       ].map((request) => [request.id, request]),
     ).values(),
   );
-  const pendingAccountRequests = isRoomManager()
-    ? []
-    : accountRequests
-        .filter((request) => request.status === "pending")
-        .map((request) => ({
-          label:
-            request.type === "password-reset"
-              ? `Password reset from ${request.username || "unknown user"}`
-              : `Account request from ${request.username || "unknown user"}`,
-          view: "users",
-          requestType:
-            request.type === "password-reset" ? "password-reset" : "account",
-          createdAt: request.createdAt || 0,
-        }));
+  const accountNotifications = isRoomManager()
+    ? roomManagerPendingAccountRequests
+    : accountRequests.filter((request) => request.status === "pending");
+  const pendingAccountRequests = accountNotifications.map((request) => ({
+    label:
+      request.type === "password-reset"
+        ? `Password reset from ${request.username || "unknown user"}`
+        : `Account request from ${request.username || "unknown user"}`,
+    view: isRoomManager() ? "dashboard" : "users",
+    requestType:
+      request.type === "password-reset" ? "password-reset" : "account",
+    createdAt: request.createdAt || 0,
+  }));
   const pendingRequests = [
     ...pendingAccountRequests,
     ...roomRequests
