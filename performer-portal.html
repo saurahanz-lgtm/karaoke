@@ -21,6 +21,13 @@
     <script src="firebase-config.js"></script>
     <script src="karaoke-sessions.js"></script>
     <!-- YouTube IFrame API -->
+    <script>
+      window.performerYouTubeApiReady = false;
+      window.onYouTubeIframeAPIReady = function () {
+        window.performerYouTubeApiReady = true;
+        window.initializePerformerPhonePlayer?.();
+      };
+    </script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="youtube-api.js"></script>
     <style>
@@ -41,6 +48,119 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 20px;
+      }
+
+      .performer-player-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 15px;
+      }
+
+      #userDisplayName {
+        min-width: 0;
+        margin: 0 !important;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #f093fb;
+        overflow-wrap: anywhere;
+      }
+
+      .phone-display-toggle {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 9px 13px;
+        border: 1px solid rgba(32, 212, 176, 0.54);
+        border-radius: 8px;
+        color: #eafffb;
+        background: rgba(8, 66, 68, 0.74);
+        font: inherit;
+        font-size: 0.88rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .phone-display-toggle:hover,
+      .phone-display-toggle[aria-pressed="true"] {
+        background: rgba(8, 89, 85, 0.96);
+      }
+
+      .phone-display-toggle:focus-visible,
+      .phone-display-close:focus-visible {
+        outline: 2px solid #20d4b0;
+        outline-offset: 3px;
+      }
+
+      #performerPhoneDisplay[hidden] {
+        display: none !important;
+      }
+
+      #performerPhoneDisplay:not([hidden]) {
+        position: fixed;
+        inset: 0;
+        z-index: 12000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: #000;
+      }
+
+      .phone-display-frame {
+        position: relative;
+        width: min(100vw, 177.78dvh);
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        background: #000;
+      }
+
+      #performerPhoneVideo,
+      #performerPhoneVideo iframe {
+        position: absolute;
+        inset: 0;
+        width: 100% !important;
+        height: 100% !important;
+        border: 0;
+      }
+
+      .phone-display-empty {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 1rem;
+        text-align: center;
+      }
+
+      #performerPhoneDisplayMessage[hidden] {
+        display: none !important;
+      }
+
+      .phone-display-close {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        right: max(12px, env(safe-area-inset-right));
+        z-index: 1;
+        min-height: 42px;
+        padding: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 7px;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.7);
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      body.performer-phone-display-open {
+        overflow: hidden;
       }
 
       .header h1 {
@@ -611,6 +731,17 @@
       }
 
       @media (max-width: 480px) {
+        .performer-player-heading {
+          align-items: flex-start;
+        }
+
+        .phone-display-toggle {
+          max-width: 48%;
+          padding: 8px 9px;
+          font-size: 0.78rem;
+          text-align: center;
+        }
+
         .searchbox input {
           min-width: 0;
         }
@@ -993,16 +1124,19 @@
 
       <!-- PLAYER -->
       <div class="card-ui">
-        <div
-          id="userDisplayName"
-          style="
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #f093fb;
-          "
-        >
-          Welcome
+        <div class="performer-player-heading">
+          <div id="userDisplayName">Welcome</div>
+          <button
+            class="phone-display-toggle"
+            id="performerPhoneDisplayToggle"
+            type="button"
+            aria-pressed="false"
+            aria-controls="performerPhoneDisplay"
+            onclick="togglePerformerPhoneDisplay()"
+          >
+            <span aria-hidden="true">&#9654;</span>
+            <span>Use phone as display</span>
+          </button>
         </div>
         <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
         <div
@@ -1104,6 +1238,34 @@
         <div id="reservedSongs" aria-live="polite"></div>
       </div>
     </div>
+
+    <section
+      id="performerPhoneDisplay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Phone karaoke display"
+      hidden
+    >
+      <div class="phone-display-frame">
+        <div id="performerPhoneVideo"></div>
+        <div
+          class="phone-display-empty"
+          id="performerPhoneDisplayMessage"
+          role="status"
+          aria-live="polite"
+        >
+          No song is playing.
+        </div>
+      </div>
+      <button
+        class="phone-display-close"
+        id="performerPhoneDisplayClose"
+        type="button"
+        onclick="togglePerformerPhoneDisplay(false)"
+      >
+        Close display
+      </button>
+    </section>
 
     <!-- FOOTER -->
     <footer class="footer-section">
@@ -1242,9 +1404,133 @@
       let roomCurrentSong = null;
       let roomQueue = [];
       let karaokeDisplayEnabled = true;
+      let roomPlaybackIsPlaying = false;
+      let roomVolume = 70;
+      let performerPhoneDisplayActive = false;
+      let performerPhoneDisplayPlayer = null;
+      let performerPhoneDisplayPlayerReady = false;
+      let performerPhoneDisplayedSongKey = null;
       let tvDisabledAnnouncement = "";
       let suppressAudioErrors = false; // Flag to suppress expected audio errors
       let loggedInUser = null; // Store logged-in user globally
+
+      function togglePerformerPhoneDisplay(forceOpen) {
+        const shouldOpen =
+          typeof forceOpen === "boolean"
+            ? forceOpen
+            : !performerPhoneDisplayActive;
+        if (shouldOpen === performerPhoneDisplayActive) return;
+
+        performerPhoneDisplayActive = shouldOpen;
+        const display = document.getElementById("performerPhoneDisplay");
+        const toggle = document.getElementById("performerPhoneDisplayToggle");
+        const app = document.getElementById("singerApp");
+        display.hidden = !shouldOpen;
+        toggle?.setAttribute("aria-pressed", String(shouldOpen));
+        app.inert = shouldOpen;
+        document.body.classList.toggle(
+          "performer-phone-display-open",
+          shouldOpen,
+        );
+
+        if (shouldOpen) {
+          updatePerformerPhoneDisplaySong();
+          document.getElementById("performerPhoneDisplayClose").focus();
+        } else {
+          performerPhoneDisplayPlayer?.stopVideo?.();
+          performerPhoneDisplayedSongKey = null;
+          toggle?.focus();
+        }
+      }
+
+      function initializePerformerPhonePlayer() {
+        if (
+          !performerPhoneDisplayActive ||
+          performerPhoneDisplayPlayer ||
+          !window.YT?.Player ||
+          !roomCurrentSong?.videoId
+        ) {
+          return;
+        }
+
+        const message = document.getElementById("performerPhoneDisplayMessage");
+        message.hidden = true;
+        performerPhoneDisplayPlayer = new YT.Player("performerPhoneVideo", {
+          width: "100%",
+          height: "100%",
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            enablejsapi: 1,
+            fs: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0,
+          },
+          events: {
+            onReady: (event) => {
+              performerPhoneDisplayPlayerReady = true;
+              event.target.setVolume(roomVolume);
+              roomMuted ? event.target.mute() : event.target.unMute();
+              updatePerformerPhoneDisplaySong();
+            },
+            onError: () => {
+              performerPhoneDisplayPlayerReady = false;
+              message.textContent = "This video cannot be played here.";
+              message.hidden = false;
+            },
+          },
+        });
+      }
+
+      function updatePerformerPhoneDisplaySong() {
+        if (!performerPhoneDisplayActive) return;
+
+        const message = document.getElementById("performerPhoneDisplayMessage");
+        const videoId = roomCurrentSong?.videoId;
+        if (!videoId) {
+          message.textContent = "No song is playing.";
+          message.hidden = false;
+          performerPhoneDisplayPlayer?.stopVideo?.();
+          performerPhoneDisplayedSongKey = null;
+          return;
+        }
+
+        message.hidden = true;
+        if (!performerPhoneDisplayPlayer) {
+          if (window.performerYouTubeApiReady && window.YT?.Player) {
+            initializePerformerPhonePlayer();
+          } else {
+            message.textContent = "Connecting to the video player...";
+            message.hidden = false;
+          }
+          return;
+        }
+        if (!performerPhoneDisplayPlayerReady) return;
+
+        const songKey = `${videoId}:${roomCurrentSong.id || roomCurrentSong.timestamp || ""}`;
+        if (performerPhoneDisplayedSongKey !== songKey) {
+          performerPhoneDisplayedSongKey = songKey;
+          if (roomPlaybackIsPlaying) {
+            performerPhoneDisplayPlayer.loadVideoById(videoId);
+          } else {
+            performerPhoneDisplayPlayer.cueVideoById(videoId);
+          }
+          return;
+        }
+
+        roomPlaybackIsPlaying
+          ? performerPhoneDisplayPlayer.playVideo()
+          : performerPhoneDisplayPlayer.pauseVideo();
+      }
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && performerPhoneDisplayActive) {
+          togglePerformerPhoneDisplay(false);
+        }
+      });
+
+      window.initializePerformerPhonePlayer = initializePerformerPhonePlayer;
 
       function applyTVControlAvailability() {
         const disabled = !karaokeDisplayEnabled;
@@ -1742,6 +2028,7 @@
               onRoom: ({ queue, currentSong }) => {
                 roomQueue = queue;
                 roomCurrentSong = currentSong;
+                updatePerformerPhoneDisplaySong();
                 localStorage.setItem(
                   `karaoke_queue_${connectedRoomId}`,
                   JSON.stringify(queue),
@@ -2993,10 +3280,14 @@
 
       function updateVolumeDisplay(value) {
         const volume = Math.max(0, Math.min(100, Number(value) || 0));
+        roomVolume = volume;
         const slider = document.getElementById("volumeSlider");
         const volumeValue = document.getElementById("volumeValue");
         if (slider) slider.value = String(volume);
         if (volumeValue) volumeValue.textContent = String(volume);
+        if (performerPhoneDisplayPlayerReady) {
+          performerPhoneDisplayPlayer.setVolume(volume);
+        }
       }
 
       function updateMuteDisplay(muted) {
@@ -3006,13 +3297,25 @@
           muteBtn.textContent = roomMuted ? "🔇" : "🔊";
           muteBtn.setAttribute("aria-pressed", String(roomMuted));
         }
+        if (performerPhoneDisplayPlayerReady) {
+          roomMuted
+            ? performerPhoneDisplayPlayer.mute()
+            : performerPhoneDisplayPlayer.unMute();
+        }
       }
 
       function updatePlaybackDisplay(playing) {
+        roomPlaybackIsPlaying = Boolean(playing);
         const button = document.getElementById("playPauseBtn");
-        if (!button) return;
-        button.textContent = playing ? "⏸" : "▶";
-        button.setAttribute("aria-pressed", String(Boolean(playing)));
+        if (button) {
+          button.textContent = playing ? "⏸" : "▶";
+          button.setAttribute("aria-pressed", String(roomPlaybackIsPlaying));
+        }
+        if (performerPhoneDisplayActive && performerPhoneDisplayPlayerReady) {
+          roomPlaybackIsPlaying
+            ? performerPhoneDisplayPlayer.playVideo()
+            : performerPhoneDisplayPlayer.pauseVideo();
+        }
       }
 
       // Update singer activity
