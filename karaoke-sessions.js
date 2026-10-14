@@ -643,6 +643,14 @@
     });
   }
 
+  function setRoomPerformerAvailability(roomId, enabled) {
+    if (!roomId) throw new Error("ROOM_REQUIRED");
+    return roomRef(roomId, "displayControl").update({
+      performerEnabled: Boolean(enabled),
+      ...(enabled ? {} : { performerScreenActive: false }),
+    });
+  }
+
   function setRoomPerformerScreenActive(roomId, active) {
     if (!roomId) throw new Error("ROOM_REQUIRED");
     return roomRef(roomId, "displayControl").update({
@@ -1448,6 +1456,7 @@
     setRoomVolume,
     setRoomMuted,
     setRoomDisplayAvailability,
+    setRoomPerformerAvailability,
     setRoomPerformerScreenActive,
     setPlaybackState,
     setPlaybackPosition,

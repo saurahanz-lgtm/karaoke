@@ -1188,6 +1188,13 @@
         hidden
       ></div>
       <div
+        class="tv-availability-notice"
+        id="performerScreenAvailabilityNotice"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
+      <div
         class="room-capacity-notice"
         id="roomTimeNotice"
         role="status"
@@ -1530,6 +1537,8 @@
       let roomKaraokeDisplayEnabled = true;
       let globalKaraokeDisplayAnnouncement = "";
       let roomKaraokeDisplayAnnouncement = "";
+      let performerScreenEnabled = true;
+      let performerScreenAnnouncement = "";
       let stopListeningToPerformerRoomDisplayStatus = null;
       let roomPlaybackIsPlaying = false;
       let roomPlaybackVideoId = null;
@@ -1688,7 +1697,11 @@
             }));
           })
           .then(({ stream, PitchDetector }) => {
-            if (!performerPhoneDisplayActive) {
+            if (
+              !performerPhoneDisplayActive ||
+              !performerScreenEnabled ||
+              !karaokeDisplayEnabled
+            ) {
               stream.getTracks().forEach((track) => track.stop());
               performerPhoneMicStream = null;
               return;
@@ -1970,6 +1983,15 @@
             ? forceOpen
             : !performerPhoneDisplayActive;
         if (shouldOpen === performerPhoneDisplayActive) return;
+        if (shouldOpen && (!performerScreenEnabled || !karaokeDisplayEnabled)) {
+          showAlert(
+            !performerScreenEnabled
+              ? performerScreenAnnouncement
+              : tvDisabledAnnouncement,
+            "danger",
+          );
+          return;
+        }
 
         performerPhoneDisplayActive = shouldOpen;
         const display = document.getElementById("performerPhoneDisplay");
@@ -2207,7 +2229,10 @@
       }
 
       function applyTVControlAvailability() {
-        const disabled = !karaokeDisplayEnabled || performerRoomTimeExpired;
+        const disabled =
+          !karaokeDisplayEnabled ||
+          performerRoomTimeExpired ||
+          (performerPhoneDisplayActive && !performerScreenEnabled);
         const useDeviceVolumeButtons =
           performerPhoneDisplayActive &&
           performerPhoneNeedsDeviceVolumeControl();
@@ -2226,7 +2251,8 @@
         if (phoneDisplayToggle) {
           phoneDisplayToggle.disabled =
             performerRoomTimeExpired ||
-            (!karaokeDisplayEnabled && !performerPhoneDisplayActive);
+            ((!karaokeDisplayEnabled || !performerScreenEnabled) &&
+              !performerPhoneDisplayActive);
         }
         const skipButton = document.querySelector(".controls .stop");
         if (skipButton) skipButton.disabled = disabled;
@@ -2396,14 +2422,21 @@
       }
 
       function updatePerformerRoomDisplayAvailability(settings = {}) {
+        const wasPerformerScreenEnabled = performerScreenEnabled;
         roomKaraokeDisplayEnabled = settings.enabled !== false;
         roomKaraokeDisplayAnnouncement =
           settings.announcement ||
           "The karaoke display in this room is temporarily unavailable.";
-        refreshPerformerDisplayAvailability();
+        performerScreenEnabled = settings.performerEnabled !== false;
+        performerScreenAnnouncement =
+          settings.performerAnnouncement ||
+          "The performer screen is unavailable in this room.";
+        refreshPerformerDisplayAvailability(wasPerformerScreenEnabled);
       }
 
-      function refreshPerformerDisplayAvailability() {
+      function refreshPerformerDisplayAvailability(
+        wasPerformerScreenEnabled = performerScreenEnabled,
+      ) {
         karaokeDisplayEnabled =
           globalKaraokeDisplayEnabled && roomKaraokeDisplayEnabled;
         tvDisabledAnnouncement = !roomKaraokeDisplayEnabled
@@ -2416,21 +2449,36 @@
         notice.textContent = karaokeDisplayEnabled
           ? ""
           : `${tvDisabledAnnouncement} Song reservations and playback are temporarily disabled.`;
+        const performerNotice = document.getElementById(
+          "performerScreenAvailabilityNotice",
+        );
+        if (performerNotice) {
+          performerNotice.hidden = performerScreenEnabled;
+          performerNotice.textContent = performerScreenEnabled
+            ? ""
+            : performerScreenAnnouncement;
+        }
         applyTVControlAvailability();
 
         if (!performerPhoneDisplayActive) return;
         const message = document.getElementById("performerPhoneDisplayMessage");
-        if (!karaokeDisplayEnabled) {
+        if (!karaokeDisplayEnabled || !performerScreenEnabled) {
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
           stopPerformerPhoneMicScoring();
+          document.getElementById("performerPhoneScoreResult").hidden = true;
           if (message) {
-            message.textContent = tvDisabledAnnouncement;
+            message.textContent = !karaokeDisplayEnabled
+              ? tvDisabledAnnouncement
+              : performerScreenAnnouncement;
             message.hidden = false;
           }
           return;
         }
 
+        if (!wasPerformerScreenEnabled) {
+          setRoomPerformerScreenActive(true);
+        }
         if (message) message.hidden = true;
         requestPerformerPhoneMicScoring();
         updatePerformerPhoneDisplaySong();

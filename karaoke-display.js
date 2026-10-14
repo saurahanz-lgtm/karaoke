@@ -538,13 +538,18 @@ function activateKaraokeRoom(roomId) {
       const performerScreenNotice = document.getElementById(
         "performerScreenNotice",
       );
+      const performerScreenEnabled = settings.performerEnabled !== false;
       if (performerScreenNotice) {
         performerScreenNotice.hidden =
-          settings.enabled === false || !settings.performerScreenActive;
+          settings.enabled === false ||
+          !performerScreenEnabled ||
+          !settings.performerScreenActive;
       }
       const wasPerformerScreenModeActive = performerScreenModeActive;
       performerScreenModeActive = Boolean(
-        settings.enabled !== false && settings.performerScreenActive,
+        settings.enabled !== false &&
+        performerScreenEnabled &&
+        settings.performerScreenActive,
       );
       if (performerScreenModeActive) {
         window.tvPlayer?.pauseVideo?.();

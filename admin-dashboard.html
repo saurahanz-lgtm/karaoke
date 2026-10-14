@@ -267,6 +267,36 @@
         border: 1px solid rgba(239, 68, 68, 0.5);
       }
 
+      .performer-screen-admin-control {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .performer-screen-admin-label {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        color: #d8dfff;
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+
+      .performer-screen-admin-control .display-control-buttons {
+        gap: 6px;
+      }
+
+      .performer-screen-admin-control .display-btn {
+        padding: 6px 10px;
+        font-size: 0.76rem;
+      }
+
       .room-device-limit-dialog {
         max-width: 360px;
       }
@@ -730,6 +760,35 @@
                     class="display-status display-status-enabled"
                     id="roomDisplayStatus"
                   >Select a room</span>
+                </div>
+                <div class="performer-screen-admin-control">
+                  <div class="performer-screen-admin-label">
+                    <span>Performer Screen</span>
+                    <span
+                      class="display-status display-status-enabled"
+                      id="performerScreenStatus"
+                    >Select a room</span>
+                  </div>
+                  <div class="display-control-buttons">
+                    <button
+                      class="display-btn display-btn-enable"
+                      id="enablePerformerScreenBtn"
+                      type="button"
+                      onclick="enableSelectedPerformerScreen()"
+                      disabled
+                    >
+                      Enable
+                    </button>
+                    <button
+                      class="display-btn display-btn-disable"
+                      id="disablePerformerScreenBtn"
+                      type="button"
+                      onclick="disableSelectedPerformerScreen()"
+                      disabled
+                    >
+                      Disable
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="display-control-buttons">

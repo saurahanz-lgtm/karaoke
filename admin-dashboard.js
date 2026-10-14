@@ -4286,14 +4286,18 @@ function listenToSelectedRoomDisplayStatus() {
   stopListeningToSelectedRoomDisplay = null;
   selectedRoomDisplayId = roomId || null;
   if (!roomId) {
-    updateSelectedRoomDisplayStatus(true, false);
+    updateSelectedRoomDisplayStatus(true, false, true);
     return;
   }
 
   stopListeningToSelectedRoomDisplay = KaraokeSessions.listenRoomDisplayStatus(
     roomId,
     (settings) =>
-      updateSelectedRoomDisplayStatus(settings.enabled !== false, true),
+      updateSelectedRoomDisplayStatus(
+        settings.enabled !== false,
+        true,
+        settings.performerEnabled !== false,
+      ),
     (error) =>
       console.warn(
         "Could not load selected room display status:",
@@ -4302,7 +4306,11 @@ function listenToSelectedRoomDisplayStatus() {
   );
 }
 
-function updateSelectedRoomDisplayStatus(isEnabled, hasRoom = true) {
+function updateSelectedRoomDisplayStatus(
+  isEnabled,
+  hasRoom = true,
+  performerEnabled = true,
+) {
   const status = document.getElementById("roomDisplayStatus");
   const enableButton = document.getElementById("enableRoomDisplayBtn");
   const disableButton = document.getElementById("disableRoomDisplayBtn");
@@ -4312,11 +4320,31 @@ function updateSelectedRoomDisplayStatus(isEnabled, hasRoom = true) {
     status.className = "display-status display-status-enabled";
     if (enableButton) enableButton.disabled = true;
     if (disableButton) disableButton.disabled = true;
+    updateSelectedPerformerScreenStatus(true, false);
     return;
   }
   status.textContent = isEnabled
     ? "Room Display Enabled"
     : "Room Display Disabled";
+  status.className = `display-status display-status-${isEnabled ? "enabled" : "disabled"}`;
+  if (enableButton) enableButton.disabled = isEnabled;
+  if (disableButton) disableButton.disabled = !isEnabled;
+  updateSelectedPerformerScreenStatus(performerEnabled, true);
+}
+
+function updateSelectedPerformerScreenStatus(isEnabled, hasRoom = true) {
+  const status = document.getElementById("performerScreenStatus");
+  const enableButton = document.getElementById("enablePerformerScreenBtn");
+  const disableButton = document.getElementById("disablePerformerScreenBtn");
+  if (!status) return;
+  if (!hasRoom) {
+    status.textContent = "Select a room";
+    status.className = "display-status display-status-enabled";
+    if (enableButton) enableButton.disabled = true;
+    if (disableButton) disableButton.disabled = true;
+    return;
+  }
+  status.textContent = isEnabled ? "Enabled" : "Disabled";
   status.className = `display-status display-status-${isEnabled ? "enabled" : "disabled"}`;
   if (enableButton) enableButton.disabled = isEnabled;
   if (disableButton) disableButton.disabled = !isEnabled;
@@ -4331,6 +4359,39 @@ function disableSelectedKaraokeRoomDisplay() {
     false,
     "The karaoke display in this room is temporarily unavailable.",
   );
+}
+
+function enableSelectedPerformerScreen() {
+  updateSelectedPerformerScreenAvailability(true);
+}
+
+function disableSelectedPerformerScreen() {
+  updateSelectedPerformerScreenAvailability(false);
+}
+
+function updateSelectedPerformerScreenAvailability(enabled) {
+  const roomId = document.getElementById("roomDisplayControlSelect").value;
+  if (!roomId) {
+    showNotification("Select a room first.", "warning");
+    return;
+  }
+  KaraokeSessions.setRoomPerformerAvailability(roomId, enabled)
+    .then(() =>
+      showNotification(
+        `Performer screen ${enabled ? "enabled" : "disabled"}.`,
+        enabled ? "success" : "warning",
+      ),
+    )
+    .catch((error) => {
+      console.error(
+        "Could not update performer screen availability:",
+        error.message,
+      );
+      showNotification(
+        "Could not update this room's performer screen.",
+        "danger",
+      );
+    });
 }
 
 function updateSelectedKaraokeRoomDisplayAvailability(enabled, announcement) {
