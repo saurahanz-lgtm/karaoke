@@ -164,66 +164,51 @@
 
       .phone-score-result:not([hidden]) {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        align-items: center;
+        place-items: center;
         position: absolute;
         z-index: 5;
-        right: 8px;
-        bottom: 8px;
-        left: 8px;
-        width: auto;
+        inset: 0;
         box-sizing: border-box;
-        gap: 8px;
-        padding: 8px 10px;
+        padding: 16px;
         margin: 0;
-        border: 1px solid rgba(32, 212, 176, 0.42);
-        border-radius: 8px;
         color: #eafffb;
-        background: rgba(5, 24, 31, 0.9);
-        backdrop-filter: blur(6px);
-      }
-
-      .phone-score-value {
-        color: #7fe0c3;
-        font-size: 1.35rem;
-        font-weight: 800;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .phone-score-copy strong,
-      .phone-score-copy p,
-      .phone-score-copy small {
-        display: block;
-        margin: 0;
+        text-align: center;
+        pointer-events: none;
       }
 
       .phone-score-copy {
+        display: block;
         min-width: 0;
         overflow-wrap: anywhere;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
       }
 
-      .phone-score-copy strong {
-        font-size: 0.88rem;
-      }
-
-      .phone-score-copy p,
-      .phone-score-copy small {
-        margin-top: 2px;
-        color: #b9c8e8;
-        font-size: 0.72rem;
-        line-height: 1.35;
-      }
-
-      .phone-score-dismiss {
-        display: grid;
-        place-items: center;
-        width: 34px;
-        height: 34px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 6px;
+      .phone-score-label {
+        margin: 0;
         color: #fff;
-        background: rgba(5, 13, 37, 0.6);
-        cursor: pointer;
+        font-size: clamp(1.1rem, 4vw, 1.6rem);
+        font-weight: 600;
+      }
+
+      .phone-score-value {
+        display: block;
+        margin-top: 6px;
+        color: #20d4b0;
+        font-size: clamp(3rem, 16vw, 5rem);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        text-shadow:
+          0 2px 16px rgba(0, 0, 0, 0.95),
+          0 0 28px rgba(32, 212, 176, 0.28);
+      }
+
+      .phone-score-feedback {
+        margin: 8px 0 0;
+        color: #a7f3e3;
+        font-size: clamp(0.95rem, 3.6vw, 1.15rem);
+        font-weight: 600;
+        line-height: 1.35;
       }
 
       .phone-display-close {
@@ -1249,23 +1234,13 @@
               aria-live="polite"
               hidden
             >
-              <strong class="phone-score-value" id="performerPhoneScoreValue"
-                >--</strong
-              >
               <div class="phone-score-copy">
-                <strong>Your pitch score</strong>
+                <p class="phone-score-label">Your score is</p>
+                <div class="phone-score-value" id="performerPhoneScoreValue">
+                  --
+                </div>
                 <p id="performerPhoneScoreFeedback"></p>
-                <small id="performerPhoneScoreDetails"></small>
               </div>
-              <button
-                class="phone-score-dismiss"
-                type="button"
-                aria-label="Dismiss pitch score"
-                title="Dismiss pitch score"
-                onclick="dismissPerformerPhoneScore()"
-              >
-                <i class="bi bi-x-lg" aria-hidden="true"></i>
-              </button>
             </section>
           </div>
           <p
@@ -1854,10 +1829,6 @@
               : score >= 80
                 ? "Great pitch consistency!"
                 : "You're finding a steady pitch!";
-        document.getElementById("performerPhoneScoreDetails").textContent =
-          score === null
-            ? "Pitch scoring was not enabled for this song."
-            : `${(performerPhonePitchDetectedMs / 1000).toFixed(1)}s pitch detected · ${(performerPhonePitchStableMs / 1000).toFixed(1)}s steady`;
         document.getElementById("performerPhoneScoreResult").hidden = false;
         return playPerformerPhoneScoreSound();
       }
@@ -1923,10 +1894,6 @@
           );
           showAlert("Could not continue to the next song", "warning");
         }
-      }
-
-      function dismissPerformerPhoneScore() {
-        document.getElementById("performerPhoneScoreResult").hidden = true;
       }
 
       function stopPerformerPhoneMicScoring() {
