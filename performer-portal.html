@@ -166,6 +166,8 @@
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
+        width: min(100%, 640px);
+        box-sizing: border-box;
         gap: 12px;
         padding: 12px 14px;
         margin: 0 0 16px;
@@ -187,6 +189,11 @@
       .phone-score-copy small {
         display: block;
         margin: 0;
+      }
+
+      .phone-score-copy {
+        min-width: 0;
+        overflow-wrap: anywhere;
       }
 
       .phone-score-copy strong {
@@ -1223,6 +1230,31 @@
               No song is playing.
             </div>
           </div>
+          <section
+            class="phone-score-result"
+            id="performerPhoneScoreResult"
+            aria-label="Song pitch score"
+            aria-live="polite"
+            hidden
+          >
+            <strong class="phone-score-value" id="performerPhoneScoreValue"
+              >--</strong
+            >
+            <div class="phone-score-copy">
+              <strong>Your pitch score</strong>
+              <p id="performerPhoneScoreFeedback"></p>
+              <small id="performerPhoneScoreDetails"></small>
+            </div>
+            <button
+              class="phone-score-dismiss"
+              type="button"
+              aria-label="Dismiss pitch score"
+              title="Dismiss pitch score"
+              onclick="dismissPerformerPhoneScore()"
+            >
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+          </section>
           <p
             class="phone-mic-status"
             id="performerPhoneMicStatus"
@@ -1247,31 +1279,6 @@
             aria-live="polite"
             hidden
           ></p>
-        </section>
-        <section
-          class="phone-score-result"
-          id="performerPhoneScoreResult"
-          aria-label="Song pitch score"
-          aria-live="polite"
-          hidden
-        >
-          <strong class="phone-score-value" id="performerPhoneScoreValue"
-            >--</strong
-          >
-          <div class="phone-score-copy">
-            <strong>Your pitch score</strong>
-            <p id="performerPhoneScoreFeedback"></p>
-            <small id="performerPhoneScoreDetails"></small>
-          </div>
-          <button
-            class="phone-score-dismiss"
-            type="button"
-            aria-label="Dismiss pitch score"
-            title="Dismiss pitch score"
-            onclick="dismissPerformerPhoneScore()"
-          >
-            <i class="bi bi-x-lg" aria-hidden="true"></i>
-          </button>
         </section>
         <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
         <div
@@ -1789,19 +1796,17 @@
         performerPhonePreviousPitchHz = pitchHz;
       }
 
-      function showPerformerPhoneScore() {
-        const songKey = performerPhoneScoreSongKey;
-        if (
-          !performerPhoneMicScoringEnabled ||
-          !songKey ||
-          performerPhoneFinalizedScoreSongKey === songKey
-        ) {
+      function showPerformerPhoneScore(songKey = performerPhoneScoreSongKey) {
+        if (!songKey || performerPhoneFinalizedScoreSongKey === songKey) {
           return Promise.resolve();
         }
 
         performerPhoneFinalizedScoreSongKey = songKey;
+        const hasPitchScore =
+          performerPhoneMicScoringEnabled &&
+          performerPhoneScoreSongKey === songKey;
         const pitchSteadiness =
-          performerPhonePitchDetectedMs > 0
+          hasPitchScore && performerPhonePitchDetectedMs > 0
             ? Math.min(
                 1,
                 Math.max(
@@ -1810,17 +1815,23 @@
                 ),
               )
             : 0;
-        const score = 75 + Math.round(pitchSteadiness * 25);
+        const score = hasPitchScore
+          ? 75 + Math.round(pitchSteadiness * 25)
+          : null;
         document.getElementById("performerPhoneScoreValue").textContent =
-          String(score);
+          score === null ? "--" : String(score);
         document.getElementById("performerPhoneScoreFeedback").textContent =
-          score === 100
-            ? "Your pitch was super steady!"
-            : score >= 80
-              ? "Great pitch consistency! Keep it up!"
-              : "You're finding a steady pitch!";
+          score === null
+            ? "Try pitch scoring on the next song!"
+            : score === 100
+              ? "Your pitch was super steady!"
+              : score >= 80
+                ? "Great pitch consistency!"
+                : "You're finding a steady pitch!";
         document.getElementById("performerPhoneScoreDetails").textContent =
-          `${(performerPhonePitchDetectedMs / 1000).toFixed(1)}s pitch detected · ${(performerPhonePitchStableMs / 1000).toFixed(1)}s steady`;
+          score === null
+            ? "Pitch scoring was not enabled for this song."
+            : `${(performerPhonePitchDetectedMs / 1000).toFixed(1)}s pitch detected · ${(performerPhonePitchStableMs / 1000).toFixed(1)}s steady`;
         document.getElementById("performerPhoneScoreResult").hidden = false;
         return playPerformerPhoneScoreSound();
       }
@@ -1856,9 +1867,7 @@
           return;
         }
         performerPhoneCompletedSongKey = songKey;
-        const scoreSound = performerPhoneMicScoringEnabled
-          ? showPerformerPhoneScore()
-          : playPerformerPhoneScoreSound();
+        const scoreSound = showPerformerPhoneScore(songKey);
         await scoreSound;
 
         if (
@@ -2115,12 +2124,11 @@
         const message = document.getElementById("performerPhoneDisplayMessage");
         const videoId = roomCurrentSong?.videoId;
         const songKey = getPerformerPhoneSongKey();
-        if (
-          performerPhoneMicScoringEnabled &&
-          songKey &&
-          performerPhoneScoreSongKey !== songKey
-        ) {
-          beginPerformerPhoneSongScore(songKey);
+        if (songKey && performerPhoneScoreSongKey !== songKey) {
+          document.getElementById("performerPhoneScoreResult").hidden = true;
+          if (performerPhoneMicScoringEnabled) {
+            beginPerformerPhoneSongScore(songKey);
+          }
         }
         if (!videoId) {
           message.textContent = "No song is playing.";

@@ -1735,6 +1735,10 @@ async function resumeTVPlaybackAfterPerformerScreen() {
     };
     return;
   }
+  if (currentVideoId !== currentSong.videoId) {
+    loadSong(currentSong, position, Boolean(control.playing));
+    return;
+  }
   pendingTVPerformerResume = null;
   window.tvPlayer.seekTo(position, true);
   if (!performerScreenModeActive && currentSong?.videoId) {
@@ -1897,10 +1901,21 @@ function loadSong(song, startSeconds = 0, shouldPlay = true) {
           if (pendingResume) {
             pendingTVPerformerResume = null;
             if (pendingResume.videoId === currentSong?.videoId) {
-              e.target.seekTo(pendingResume.position, true);
-              pendingResume.playing
-                ? e.target.playVideo()
-                : e.target.pauseVideo();
+              if (pendingResume.videoId !== currentVideoId) {
+                currentVideoId = pendingResume.videoId;
+                const video = {
+                  videoId: pendingResume.videoId,
+                  startSeconds: pendingResume.position,
+                };
+                pendingResume.playing
+                  ? e.target.loadVideoById(video)
+                  : e.target.cueVideoById(video);
+              } else {
+                e.target.seekTo(pendingResume.position, true);
+                pendingResume.playing
+                  ? e.target.playVideo()
+                  : e.target.pauseVideo();
+              }
               return;
             }
           }
@@ -1952,10 +1967,13 @@ function loadSong(song, startSeconds = 0, shouldPlay = true) {
     });
   } else {
     console.log("▶️ [REUSE] Loading video:", song.videoId);
-    window.tvPlayer.loadVideoById({
+    const video = {
       videoId: song.videoId,
       startSeconds,
-    });
+    };
+    shouldPlay
+      ? window.tvPlayer.loadVideoById(video)
+      : window.tvPlayer.cueVideoById(video);
     // Ensure audio is unmuted for new videos
     try {
       if (window.tvPlayer.isMuted && window.tvPlayer.isMuted()) {
