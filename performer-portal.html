@@ -1576,6 +1576,7 @@
       let performerPhoneLastMicSampleAt = null;
       let performerPhoneScoreSongKey = null;
       let performerPhoneFinalizedScoreSongKey = null;
+      let performerPhoneScorePresentationActive = false;
       let performerPhoneScoreAudioContext = null;
       let performerPhoneScoreAudioBuffer = null;
       let performerPhoneScoreAudioLoadPromise = null;
@@ -1830,6 +1831,7 @@
         }
 
         performerPhoneFinalizedScoreSongKey = songKey;
+        performerPhoneScorePresentationActive = true;
         const hasPitchScore =
           performerPhoneMicScoringEnabled &&
           performerPhoneScoreSongKey === songKey;
@@ -1857,7 +1859,16 @@
                 ? "Great pitch consistency!"
                 : "You're finding a steady pitch!";
         document.getElementById("performerPhoneScoreResult").hidden = false;
-        return playPerformerPhoneScoreSound();
+        return playPerformerPhoneScoreSound().finally(() => {
+          performerPhoneScorePresentationActive = false;
+          const currentSongKey = getPerformerPhoneSongKey();
+          if (currentSongKey !== songKey) {
+            document.getElementById("performerPhoneScoreResult").hidden = true;
+            if (performerPhoneMicScoringEnabled) {
+              beginPerformerPhoneSongScore(currentSongKey);
+            }
+          }
+        });
       }
 
       async function playPerformerPhoneScoreSound() {
@@ -2175,7 +2186,11 @@
 
         const videoId = roomCurrentSong?.videoId;
         const songKey = getPerformerPhoneSongKey();
-        if (songKey && performerPhoneScoreSongKey !== songKey) {
+        if (
+          songKey &&
+          performerPhoneScoreSongKey !== songKey &&
+          !performerPhoneScorePresentationActive
+        ) {
           document.getElementById("performerPhoneScoreResult").hidden = true;
           if (performerPhoneMicScoringEnabled) {
             beginPerformerPhoneSongScore(songKey);
