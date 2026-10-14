@@ -218,6 +218,8 @@ document.addEventListener("DOMContentLoaded", function () {
     Array.from(roleSelect.options).forEach((option) => {
       if (option.value && option.value !== "user") option.hidden = true;
     });
+    roleSelect.value = "user";
+    roleSelect.disabled = true;
     document.querySelector(
       "#userManagementSection table thead th:last-child",
     ).hidden = true;
@@ -3306,6 +3308,9 @@ function continueAddUser(username, password, role) {
 
   // Reset form
   document.getElementById("addUserForm").reset();
+  if (isRoomManager()) {
+    document.getElementById("userRole").value = "user";
+  }
 
   toggleAddUserPanel();
 
