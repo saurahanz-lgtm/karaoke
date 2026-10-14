@@ -345,7 +345,7 @@
     }
   }
 
-  function listenRooms(callback) {
+  function listenRooms(callback, onError) {
     const ref = database().ref(ROOM_LIST_PATH);
     const handler = (snapshot) => {
       const rooms = snapshot.val() || {};
@@ -355,8 +355,40 @@
           .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)),
       );
     };
-    ref.on("value", handler);
+    ref.on("value", handler, onError);
     return () => ref.off("value", handler);
+  }
+
+  function listenRoomAvailability(roomId, callback, onError) {
+    const ref = database().ref(`${ROOM_DATA_PATH}/${roomId}/members`);
+    let members = {};
+    let hasSnapshot = false;
+    const updateAvailability = () => {
+      if (!hasSnapshot) return;
+      const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
+      const occupied = Object.values(members).some(
+        (member) => member && Number(member.lastSeen) >= cutoff,
+      );
+      callback(!occupied);
+    };
+    const handler = (snapshot) => {
+      members = snapshot.val() || {};
+      hasSnapshot = true;
+      updateAvailability();
+    };
+    const errorHandler = (error) => {
+      hasSnapshot = false;
+      onError?.(error);
+    };
+    ref.on("value", handler, errorHandler);
+    const refreshTimer = global.setInterval(
+      updateAvailability,
+      HEARTBEAT_INTERVAL_MS,
+    );
+    return () => {
+      ref.off("value", handler);
+      global.clearInterval(refreshTimer);
+    };
   }
 
   function listenRoomUsage(roomId, callback, onError) {
@@ -1441,6 +1473,7 @@
     listenMuted,
     listenPlaybackState,
     listenRoom,
+    listenRoomAvailability,
     listenRoomIdleState,
     listenRoomRequest,
     listenRooms,

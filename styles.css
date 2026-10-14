@@ -3399,6 +3399,133 @@ body.karaoke-display-page {
   color: #b7b3ff;
 }
 
+.performer-room-status {
+  margin: 4px 0 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(97, 124, 218, 0.26);
+  border-radius: 8px;
+  background: rgba(7, 18, 45, 0.42);
+}
+
+.performer-room-status-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.performer-room-status-heading h2 {
+  margin: 0;
+  color: var(--karaoke-text);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.performer-room-status-heading > span {
+  color: var(--karaoke-muted);
+  font-size: 10px;
+  text-align: right;
+}
+
+.performer-room-list {
+  display: grid;
+  gap: 5px;
+  max-height: min(28vh, 170px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.performer-room-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(97, 124, 218, 0.18);
+  border-radius: 6px;
+  background: rgba(5, 13, 37, 0.44);
+}
+
+.performer-room-details {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.performer-room-name {
+  overflow-wrap: anywhere;
+  color: var(--karaoke-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.performer-room-id {
+  overflow-wrap: anywhere;
+  color: var(--karaoke-muted);
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.performer-room-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: #c5d1e9;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.performer-room-light {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9aa8c4;
+  box-shadow: 0 0 0 2px rgba(154, 168, 196, 0.12);
+}
+
+.performer-room-entry[data-status="available"] .performer-room-light {
+  background: #32d583;
+  box-shadow: 0 0 0 2px rgba(50, 213, 131, 0.15);
+}
+
+.performer-room-entry[data-status="occupied"] .performer-room-light {
+  background: #ff6378;
+  box-shadow: 0 0 0 2px rgba(255, 99, 120, 0.15);
+}
+
+.performer-room-entry[data-status="unavailable"] .performer-room-light {
+  background: #f2bd55;
+  box-shadow: 0 0 0 2px rgba(242, 189, 85, 0.15);
+}
+
+.performer-room-status-feedback {
+  margin: 6px 0 0;
+  color: var(--karaoke-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.performer-room-status-feedback[hidden] {
+  display: none;
+}
+
+@media (max-width: 420px), (max-height: 420px) and (orientation: landscape) {
+  .performer-room-status {
+    padding: 8px 9px;
+  }
+
+  .performer-room-list {
+    max-height: min(34vh, 130px);
+  }
+}
+
 .admin-contact-notice {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

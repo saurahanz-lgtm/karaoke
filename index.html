@@ -33,6 +33,7 @@
     <script src="admin-presence.js"></script>
     <script src="account-requests.js"></script>
     <script src="account-request-ui.js" defer></script>
+    <script src="performer-room-status.js" defer></script>
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="youtube-api.js"></script>
@@ -522,6 +523,28 @@
       >
         Don’t have an account? Request access
       </button>
+      <section
+        class="performer-room-status"
+        aria-labelledby="performerRoomStatusTitle"
+      >
+        <div class="performer-room-status-heading">
+          <h2 id="performerRoomStatusTitle">Room availability</h2>
+          <span id="performerRoomStatusSummary" aria-live="polite"
+            >Checking rooms...</span
+          >
+        </div>
+        <ul
+          class="performer-room-list"
+          id="performerRoomList"
+          aria-label="Karaoke rooms"
+        ></ul>
+        <p
+          class="performer-room-status-feedback"
+          id="performerRoomStatusFeedback"
+          role="status"
+          hidden
+        ></p>
+      </section>
       <form id="accountRequestPanel" class="account-request-form" hidden>
         <div>
           <h2>Request an Account</h2>
