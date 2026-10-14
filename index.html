@@ -538,6 +538,33 @@
           id="performerRoomList"
           aria-label="Karaoke rooms"
         ></ul>
+        <nav
+          class="performer-room-pagination"
+          id="performerRoomPagination"
+          aria-label="Room availability pages"
+          hidden
+        >
+          <button
+            class="performer-room-page-button"
+            id="performerRoomPreviousPage"
+            type="button"
+            aria-label="Previous rooms"
+            title="Previous rooms"
+            disabled
+          >
+            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+          </button>
+          <span id="performerRoomPageInfo" aria-live="polite">1 / 1</span>
+          <button
+            class="performer-room-page-button"
+            id="performerRoomNextPage"
+            type="button"
+            aria-label="Next rooms"
+            title="Next rooms"
+          >
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+          </button>
+        </nav>
         <p
           class="performer-room-status-feedback"
           id="performerRoomStatusFeedback"

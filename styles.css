@@ -3432,10 +3432,8 @@ body.karaoke-display-page {
 .performer-room-list {
   display: grid;
   gap: 5px;
-  max-height: min(28vh, 170px);
   margin: 0;
   padding: 0;
-  overflow-y: auto;
   list-style: none;
 }
 
@@ -3505,6 +3503,55 @@ body.karaoke-display-page {
   box-shadow: 0 0 0 2px rgba(242, 189, 85, 0.15);
 }
 
+.performer-room-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.performer-room-pagination[hidden] {
+  display: none;
+}
+
+.performer-room-page-button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(97, 124, 218, 0.34);
+  border-radius: 6px;
+  background: rgba(5, 13, 37, 0.6);
+  color: var(--karaoke-text);
+  cursor: pointer;
+}
+
+.performer-room-page-button:hover:not(:disabled) {
+  border-color: rgba(32, 212, 176, 0.62);
+  background: rgba(32, 212, 176, 0.12);
+}
+
+.performer-room-page-button:focus-visible {
+  outline: 2px solid var(--karaoke-teal);
+  outline-offset: 2px;
+}
+
+.performer-room-page-button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.performer-room-pagination > span {
+  min-width: 42px;
+  color: var(--karaoke-muted);
+  font-size: 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .performer-room-status-feedback {
   margin: 6px 0 0;
   color: var(--karaoke-muted);
@@ -3519,10 +3566,6 @@ body.karaoke-display-page {
 @media (max-width: 420px), (max-height: 420px) and (orientation: landscape) {
   .performer-room-status {
     padding: 8px 9px;
-  }
-
-  .performer-room-list {
-    max-height: min(34vh, 130px);
   }
 }
 
