@@ -212,7 +212,8 @@ document.addEventListener("DOMContentLoaded", function () {
       .forEach((button) => {
         button.hidden = true;
       });
-    document.getElementById("adminRequestNotificationsButton").hidden = true;
+    document.getElementById("adminRequestNotificationsButton").title =
+      "Pending room and time extension requests";
     document.getElementById("accountRequestsPanel").hidden = true;
     const roleSelect = document.getElementById("userRole");
     Array.from(roleSelect.options).forEach((option) => {
@@ -596,6 +597,8 @@ function initializeRoomManagement() {
 }
 
 function initializeAccountRequestListener() {
+  if (isRoomManager()) return;
+
   const tableBody = document.getElementById("accountRequestsTableBody");
   if (
     !window.KaraokeAccountRequests ||
@@ -1130,19 +1133,22 @@ function updateAdminRequestNotifications() {
       ].map((request) => [request.id, request]),
     ).values(),
   );
+  const pendingAccountRequests = isRoomManager()
+    ? []
+    : accountRequests
+        .filter((request) => request.status === "pending")
+        .map((request) => ({
+          label:
+            request.type === "password-reset"
+              ? `Password reset from ${request.username || "unknown user"}`
+              : `Account request from ${request.username || "unknown user"}`,
+          view: "users",
+          requestType:
+            request.type === "password-reset" ? "password-reset" : "account",
+          createdAt: request.createdAt || 0,
+        }));
   const pendingRequests = [
-    ...accountRequests
-      .filter((request) => request.status === "pending")
-      .map((request) => ({
-        label:
-          request.type === "password-reset"
-            ? `Password reset from ${request.username || "unknown user"}`
-            : `Account request from ${request.username || "unknown user"}`,
-        view: "users",
-        requestType:
-          request.type === "password-reset" ? "password-reset" : "account",
-        createdAt: request.createdAt || 0,
-      })),
+    ...pendingAccountRequests,
     ...roomRequests
       .filter((request) => request.status === "pending")
       .map((request) => ({
@@ -1609,6 +1615,8 @@ async function handleDeleteRoomRequest(request, button) {
 }
 
 async function handleRoomRequestDecision(request, decision, buttons) {
+  if (!["admin", "room_manager"].includes(loggedInUser?.role)) return;
+
   buttons.forEach((button) => {
     button.disabled = true;
   });
