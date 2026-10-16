@@ -1002,7 +1002,10 @@
     const ref = database().ref(`${ROOM_DATA_PATH}/${roomId}/members`);
     let members = {};
     let roomWasOccupied = false;
+    let hasSnapshot = false;
+    let hasTrackedOccupancy = false;
     const updateCount = () => {
+      if (!hasSnapshot) return;
       const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
       const activeMembers = Object.entries(members)
         .filter(([, member]) => member && Number(member.lastSeen) >= cutoff)
@@ -1011,6 +1014,11 @@
           username: String(member.username || "Performer"),
         }));
       const roomIsOccupied = activeMembers.length > 0;
+      if (!hasTrackedOccupancy || roomIsOccupied !== roomWasOccupied) {
+        syncRoomActiveSince(roomId, roomIsOccupied).catch((error) => {
+          console.warn("Could not update room usage start:", error.message);
+        });
+      }
       if (roomIsOccupied && !roomWasOccupied) {
         roomWasOccupied = true;
         startRoomUsage(roomId).catch((error) => {
@@ -1020,6 +1028,7 @@
       } else if (!roomIsOccupied) {
         roomWasOccupied = false;
       }
+      hasTrackedOccupancy = true;
       callback(
         activeMembers.length,
         activeMembers.map((member) => member.id),
@@ -1028,6 +1037,7 @@
     };
     const handler = (snapshot) => {
       members = snapshot.val() || {};
+      hasSnapshot = true;
       updateCount();
     };
     ref.on("value", handler);
@@ -1067,6 +1077,20 @@
           usageStartedAt: now,
           expiresAt: now + duration * 60000,
         };
+      });
+  }
+
+  function syncRoomActiveSince(roomId, isOccupied) {
+    const now = Date.now();
+    return database()
+      .ref(`${ROOM_LIST_PATH}/${roomId}`)
+      .transaction((room) => {
+        if (!room) return undefined;
+        const activeSince = Number(room.activeSince) || 0;
+        if (isOccupied) {
+          return activeSince > 0 ? undefined : { ...room, activeSince: now };
+        }
+        return activeSince > 0 ? { ...room, activeSince: null } : undefined;
       });
   }
 

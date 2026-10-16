@@ -1859,6 +1859,11 @@ function renderKaraokeRooms() {
         roomTimeLabel.className = "room-time-countdown";
         roomTimeLabel.dataset.roomId = room.id;
         roomTimeCell.appendChild(roomTimeLabel);
+        const roomUsageLabel = document.createElement("small");
+        roomUsageLabel.className = "room-usage-duration text-white-50 d-block";
+        roomUsageLabel.dataset.roomId = room.id;
+        roomUsageLabel.title = "Time with at least one connected device";
+        roomTimeCell.appendChild(roomUsageLabel);
         const cleanupLabel = document.createElement("span");
         cleanupLabel.className = "room-idle-countdown";
         cleanupLabel.dataset.roomId = room.id;
@@ -1939,6 +1944,7 @@ function renderKaraokeRooms() {
   );
   updateRoomIdleCountdowns();
   updateRoomTimeLimitCountdowns();
+  updateRoomUsageDurations();
 }
 
 function updateRoomIdleCountdowns() {
@@ -1967,6 +1973,25 @@ function updateRoomIdleCountdowns() {
         label.textContent = `Clears in ${minutes}:${String(seconds).padStart(2, "0")}`;
       }
     }
+  });
+}
+
+function updateRoomUsageDurations() {
+  document.querySelectorAll(".room-usage-duration").forEach((label) => {
+    const room = karaokeRooms.find((item) => item.id === label.dataset.roomId);
+    const activeSince = Number(room?.activeSince);
+    if (!Number.isFinite(activeSince) || activeSince <= 0) {
+      label.textContent = "Not in use";
+      return;
+    }
+
+    const totalSeconds = Math.floor(
+      Math.max(0, Date.now() - activeSince) / 1000,
+    );
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    label.textContent = `Used ${hours}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
   });
 }
 
@@ -2008,7 +2033,10 @@ async function clearExpiredRoomSongs(roomId, label) {
   }
 }
 
-setInterval(updateRoomIdleCountdowns, 1000);
+setInterval(() => {
+  updateRoomIdleCountdowns();
+  updateRoomUsageDurations();
+}, 1000);
 
 function updateRoomTimeLimitCountdowns() {
   document.querySelectorAll(".room-time-countdown").forEach((label) => {
