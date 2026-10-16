@@ -23,25 +23,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const roomListeners = new Map();
   const roomAvailability = new Map();
+  const roomDisplayStatusListeners = new Map();
+  const roomDisplayEnabled = new Map();
   let currentRooms = [];
   let currentPage = 1;
 
   function updateSummary() {
-    const availableCount = [...roomAvailability.values()].filter(
-      (available) => available === true,
-    ).length;
-    const occupiedCount = [...roomAvailability.values()].filter(
-      (available) => available === false,
-    ).length;
-    const checkingCount =
-      roomAvailability.size - availableCount - occupiedCount;
+    let availableCount = 0;
+    let occupiedCount = 0;
+    let disabledCount = 0;
+    let checkingCount = 0;
+    currentRooms.forEach((room) => {
+      if (roomDisplayEnabled.get(room.id) === false) {
+        disabledCount += 1;
+      } else {
+        const available = roomAvailability.get(room.id);
+        if (available === true) availableCount += 1;
+        else if (available === false) occupiedCount += 1;
+        else checkingCount += 1;
+      }
+    });
     if (checkingCount) {
       roomSummary.textContent =
-        roomAvailability.size === checkingCount
+        availableCount + occupiedCount + disabledCount === 0
           ? "Checking rooms..."
-          : `${availableCount} available · ${occupiedCount} occupied · checking ${checkingCount}`;
+          : `${availableCount} available · ${occupiedCount} occupied${disabledCount ? ` · ${disabledCount} disabled` : ""} · checking ${checkingCount}`;
     } else {
-      roomSummary.textContent = `${availableCount} available · ${occupiedCount} occupied`;
+      roomSummary.textContent = `${availableCount} available · ${occupiedCount} occupied${disabledCount ? ` · ${disabledCount} disabled` : ""}`;
     }
   }
 
@@ -69,22 +77,29 @@ document.addEventListener("DOMContentLoaded", () => {
       .slice(pageStart, pageStart + ROOMS_PER_PAGE)
       .forEach((room) => {
         const state = roomAvailability.get(room.id);
+        const displayEnabled = roomDisplayEnabled.get(room.id);
         const status =
-          state === true
-            ? "available"
-            : state === false
-              ? "occupied"
-              : state === undefined
-                ? "unavailable"
-                : "checking";
+          displayEnabled === false
+            ? "disabled"
+            : displayEnabled === null
+              ? "checking"
+              : state === true
+                ? "available"
+                : state === false
+                  ? "occupied"
+                  : state === undefined
+                    ? "unavailable"
+                    : "checking";
         const label =
           status === "available"
             ? "Available"
             : status === "occupied"
               ? "Occupied"
-              : status === "unavailable"
-                ? "Unavailable"
-                : "Checking";
+              : status === "disabled"
+                ? "Disabled"
+                : status === "unavailable"
+                  ? "Unavailable"
+                  : "Checking";
         const row = document.createElement("li");
         row.className = "performer-room-entry";
         row.dataset.status = status;
@@ -136,23 +151,48 @@ document.addEventListener("DOMContentLoaded", () => {
         roomAvailability.delete(roomId);
       }
     });
+    roomDisplayStatusListeners.forEach((stopListening, roomId) => {
+      if (!roomIds.has(roomId)) {
+        stopListening();
+        roomDisplayStatusListeners.delete(roomId);
+        roomDisplayEnabled.delete(roomId);
+      }
+    });
 
     rooms.forEach((room) => {
-      if (roomListeners.has(room.id)) return;
-      roomAvailability.set(room.id, null);
-      const stopListening = KaraokeSessions.listenRoomAvailability(
-        room.id,
-        (available) => {
-          roomAvailability.set(room.id, available);
-          renderRooms();
-        },
-        (error) => {
-          console.warn("Could not read room availability:", error.message);
-          roomAvailability.set(room.id, undefined);
-          renderRooms();
-        },
-      );
-      roomListeners.set(room.id, stopListening);
+      if (!roomListeners.has(room.id)) {
+        roomAvailability.set(room.id, null);
+        roomDisplayEnabled.set(room.id, null);
+        const stopListening = KaraokeSessions.listenRoomAvailability(
+          room.id,
+          (available) => {
+            roomAvailability.set(room.id, available);
+            renderRooms();
+          },
+          (error) => {
+            console.warn("Could not read room availability:", error.message);
+            roomAvailability.set(room.id, undefined);
+            renderRooms();
+          },
+        );
+        roomListeners.set(room.id, stopListening);
+      }
+
+      if (!roomDisplayStatusListeners.has(room.id)) {
+        const stopListening = KaraokeSessions.listenRoomDisplayStatus(
+          room.id,
+          (settings) => {
+            roomDisplayEnabled.set(room.id, settings.enabled !== false);
+            renderRooms();
+          },
+          (error) => {
+            console.warn("Could not read room display status:", error.message);
+            roomDisplayEnabled.set(room.id, true);
+            renderRooms();
+          },
+        );
+        roomDisplayStatusListeners.set(room.id, stopListening);
+      }
     });
     renderRooms();
   }
