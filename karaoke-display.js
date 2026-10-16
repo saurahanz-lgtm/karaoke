@@ -2796,6 +2796,20 @@ function checkKaraokeDisplayEnabled(callback) {
     return;
   }
 
+  let checkCompleted = false;
+  const finishCheck = (isEnabled) => {
+    if (checkCompleted) return;
+    checkCompleted = true;
+    clearTimeout(timeoutId);
+    callback(isEnabled);
+  };
+  const timeoutId = setTimeout(() => {
+    console.warn(
+      "⚠️ Firebase TV status check timed out; continuing as enabled",
+    );
+    finishCheck(true);
+  }, 4000);
+
   try {
     firebase
       .database()
@@ -2805,7 +2819,7 @@ function checkKaraokeDisplayEnabled(callback) {
         tvDisabledAnnouncement = settings.announcement || "";
         const isEnabled = settings.enabled !== false;
         console.log("📺 TV Enabled Status from Firebase:", isEnabled);
-        callback(isEnabled);
+        finishCheck(isEnabled);
       })
       .catch((err) => {
         console.error("❌ Firebase error checking TV status:", err.message);
@@ -2814,11 +2828,11 @@ function checkKaraokeDisplayEnabled(callback) {
             'Firebase Permission Denied - Update database rules to: { "rules": { ".read": true, ".write": true } }',
           );
         }
-        callback(true); // Default to enabled on error
+        finishCheck(true); // Default to enabled on error
       });
   } catch (e) {
     console.error("Firebase exception:", e.message);
-    callback(true);
+    finishCheck(true);
   }
 }
 
