@@ -55,6 +55,8 @@ const roomIdleCleanupRequests = new Set();
 const roomIdleCleanupRetryTimers = new Map();
 const roomMemberListeners = new Map();
 const roomIdleListeners = new Map();
+const roomDisplayStatusListeners = new Map();
+const roomDisplayStates = new Map();
 const roomRequestListeners = new Map();
 const roomRequestsByRoom = new Map();
 let stopListeningToSelectedRoomDisplay = null;
@@ -578,6 +580,13 @@ function initializeRoomManagement() {
             roomIdleStates.delete(roomId);
           }
         });
+        roomDisplayStatusListeners.forEach((stopListening, roomId) => {
+          if (!roomIds.has(roomId)) {
+            stopListening();
+            roomDisplayStatusListeners.delete(roomId);
+            roomDisplayStates.delete(roomId);
+          }
+        });
         roomRequestListeners.forEach((stopListening, roomId) => {
           if (!roomIds.has(roomId)) {
             stopListening();
@@ -618,6 +627,22 @@ function initializeRoomManagement() {
                 ),
             );
             roomIdleListeners.set(room.id, stopListening);
+          }
+
+          if (!roomDisplayStatusListeners.has(room.id)) {
+            const stopListening = KaraokeSessions.listenRoomDisplayStatus(
+              room.id,
+              (settings) => {
+                roomDisplayStates.set(room.id, settings);
+                renderKaraokeRooms();
+              },
+              (error) =>
+                console.warn(
+                  `Could not follow display status for ${room.name}:`,
+                  error.message,
+                ),
+            );
+            roomDisplayStatusListeners.set(room.id, stopListening);
           }
 
           if (!roomRequestListeners.has(room.id)) {
@@ -1839,13 +1864,16 @@ function renderKaraokeRooms() {
           Number(room.timeLimitMinutes) > 0 &&
           Number(room.expiresAt) > 0 &&
           Date.now() >= Number(room.expiresAt);
-        const roomStatus = timeExpired
-          ? "expired"
-          : deviceCount >= deviceLimit
-            ? "full"
-            : deviceCount > 0
-              ? "occupied"
-              : "available";
+        const roomDisabled = roomDisplayStates.get(room.id)?.enabled === false;
+        const roomStatus = roomDisabled
+          ? "disabled"
+          : timeExpired
+            ? "expired"
+            : deviceCount >= deviceLimit
+              ? "full"
+              : deviceCount > 0
+                ? "occupied"
+                : "available";
         statusBadge.className = `account-state room-state-${roomStatus}`;
         statusBadge.textContent = roomStatus;
         statusCell.appendChild(statusBadge);

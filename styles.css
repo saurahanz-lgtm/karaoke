@@ -2115,6 +2115,22 @@ body.admin-page {
   color: #ffe4e8;
   background: rgba(120, 25, 42, 0.3);
 }
+.room-state-disabled {
+  display: inline-flex;
+  align-items: center;
+  border-color: rgba(240, 173, 78, 0.52);
+  color: #ffd38a;
+  background: rgba(183, 121, 31, 0.2);
+}
+.room-state-disabled::before {
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #f0ad4e;
+  box-shadow: 0 0 8px rgba(240, 173, 78, 0.75);
+  content: "";
+}
 .room-connected-users {
   display: block;
   max-width: clamp(7rem, 18vw, 11rem);
