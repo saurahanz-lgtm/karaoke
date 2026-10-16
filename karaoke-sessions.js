@@ -1004,6 +1004,7 @@
     let roomWasOccupied = false;
     let hasSnapshot = false;
     let hasTrackedOccupancy = false;
+    const trackedUsageUsers = new Set();
     const updateCount = () => {
       if (!hasSnapshot) return;
       const cutoff = Date.now() - MEMBER_TIMEOUT_MS;
@@ -1014,10 +1015,26 @@
           username: String(member.username || "Performer"),
         }));
       const roomIsOccupied = activeMembers.length > 0;
-      if (!hasTrackedOccupancy || roomIsOccupied !== roomWasOccupied) {
-        syncRoomActiveSince(roomId, roomIsOccupied).catch((error) => {
-          console.warn("Could not update room usage start:", error.message);
-        });
+      const newUsageUser = activeMembers.some(
+        (member) => !trackedUsageUsers.has(member.username),
+      );
+      if (
+        !hasTrackedOccupancy ||
+        roomIsOccupied !== roomWasOccupied ||
+        newUsageUser
+      ) {
+        syncRoomActiveSince(roomId, roomIsOccupied, activeMembers).catch(
+          (error) => {
+            console.warn("Could not update room usage start:", error.message);
+          },
+        );
+      }
+      if (roomIsOccupied) {
+        activeMembers.forEach((member) =>
+          trackedUsageUsers.add(member.username),
+        );
+      } else {
+        trackedUsageUsers.clear();
       }
       if (roomIsOccupied && !roomWasOccupied) {
         roomWasOccupied = true;
@@ -1080,17 +1097,73 @@
       });
   }
 
-  function syncRoomActiveSince(roomId, isOccupied) {
+  function syncRoomActiveSince(roomId, isOccupied, activeMembers = []) {
     const now = Date.now();
-    return database()
-      .ref(`${ROOM_LIST_PATH}/${roomId}`)
+    const db = database();
+    const roomRef = db.ref(`${ROOM_LIST_PATH}/${roomId}`);
+    const historyRef = db.ref("roomUsageHistory").push();
+    const activeUsernames = [
+      ...new Set(
+        activeMembers
+          .map((member) => String(member.username || "Performer").trim())
+          .filter(Boolean),
+      ),
+    ];
+    let historyRecord = null;
+
+    return roomRef
       .transaction((room) => {
         if (!room) return undefined;
         const activeSince = Number(room.activeSince) || 0;
+        const previousUsers = Array.isArray(room.activeUsers)
+          ? room.activeUsers
+          : [];
+
         if (isOccupied) {
-          return activeSince > 0 ? undefined : { ...room, activeSince: now };
+          const activeUsers = [
+            ...new Set([...previousUsers, ...activeUsernames]),
+          ];
+          if (activeSince > 0 && activeUsers.length === previousUsers.length) {
+            return undefined;
+          }
+          return {
+            ...room,
+            activeSince: activeSince || now,
+            activeUsers,
+          };
         }
-        return activeSince > 0 ? { ...room, activeSince: null } : undefined;
+
+        if (activeSince <= 0) {
+          return previousUsers.length
+            ? { ...room, activeUsers: null }
+            : undefined;
+        }
+
+        historyRecord = {
+          roomId,
+          roomName: room.name || roomId,
+          users: previousUsers,
+          startedAt: activeSince,
+          endedAt: now,
+          durationMs: Math.max(0, now - activeSince),
+        };
+        return {
+          ...room,
+          activeSince: null,
+          activeUsers: null,
+          lastUsageHistoryId: historyRef.key,
+        };
+      })
+      .then(async (result) => {
+        const room = result.snapshot.val();
+        if (
+          result.committed &&
+          historyRecord &&
+          room?.lastUsageHistoryId === historyRef.key
+        ) {
+          await historyRef.set({ ...historyRecord, id: historyRef.key });
+        }
+        return result;
       });
   }
 

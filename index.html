@@ -1596,8 +1596,9 @@
       }
 
       // Register login session in Firebase ONLY
-      function registerLoginSession(username) {
+      function registerLoginSession(username, role = "user") {
         const sessionId = getDeviceSessionId();
+        const loginTimestamp = Date.now();
         window.loggedInUsername = username;
         console.log("📝 Registering login session for", username);
         console.log("🎫 Session ID:", sessionId);
@@ -1619,16 +1620,23 @@
         // Store ONLY in Firebase (no localStorage for sessions)
         if (typeof firebase !== "undefined" && firebase.database) {
           try {
+            const database = firebase.database();
             // Register the session before redirecting to the protected page.
-            return firebase
-              .database()
+            return database
               .ref("activeLogin/" + username)
               .set({
                 sessionId: sessionId,
-                timestamp: Date.now(),
-                loginTime: new Date().toISOString(),
+                timestamp: loginTimestamp,
+                loginTime: new Date(loginTimestamp).toISOString(),
               })
-              .then(() => {
+              .then(async () => {
+                try {
+                  await database
+                    .ref("loginHistory")
+                    .push({ username, role, loggedInAt: loginTimestamp });
+                } catch (error) {
+                  console.warn("Could not save login history:", error.message);
+                }
                 console.log("✅ Session registered in Firebase");
                 return true;
               })
@@ -1867,20 +1875,22 @@
 
               console.log("✅ Proceeding with login...");
               // Store logged-in user
-              registerLoginSession(adminName).then((registered) => {
-                if (!registered) {
-                  adminLoginInProgress = false;
-                  showAppToast(
-                    "Login could not sync with Firebase. Please try again.",
+              registerLoginSession(adminName, adminUser.role).then(
+                (registered) => {
+                  if (!registered) {
+                    adminLoginInProgress = false;
+                    showAppToast(
+                      "Login could not sync with Firebase. Please try again.",
+                    );
+                    return;
+                  }
+                  localStorage.setItem(
+                    "karaoke_logged_in_user",
+                    JSON.stringify(adminUser),
                   );
-                  return;
-                }
-                localStorage.setItem(
-                  "karaoke_logged_in_user",
-                  JSON.stringify(adminUser),
-                );
-                window.location.href = "admin-dashboard.html";
-              });
+                  window.location.href = "admin-dashboard.html";
+                },
+              );
             });
           } else {
             adminLoginInProgress = false;
@@ -1976,21 +1986,23 @@
 
                 console.log("✅ Proceeding with login...");
                 // Store logged-in user
-                registerLoginSession(singerUsername).then((registered) => {
-                  if (!registered) {
-                    singerLoginInProgress = false;
-                    showAppToast(
-                      "Login could not sync with Firebase. Please try again.",
+                registerLoginSession(singerUsername, singerUser.role).then(
+                  (registered) => {
+                    if (!registered) {
+                      singerLoginInProgress = false;
+                      showAppToast(
+                        "Login could not sync with Firebase. Please try again.",
+                      );
+                      return;
+                    }
+                    localStorage.setItem(
+                      "karaoke_logged_in_user",
+                      JSON.stringify(singerUser),
                     );
-                    return;
-                  }
-                  localStorage.setItem(
-                    "karaoke_logged_in_user",
-                    JSON.stringify(singerUser),
-                  );
-                  closeLoginModal();
-                  window.location.href = `performer-portal.html?room=${encodeURIComponent(roomId)}`;
-                });
+                    closeLoginModal();
+                    window.location.href = `performer-portal.html?room=${encodeURIComponent(roomId)}`;
+                  },
+                );
               },
             );
           } else {

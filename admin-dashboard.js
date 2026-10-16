@@ -39,6 +39,7 @@ const USERS_PER_PAGE = 5;
 const KARAOKE_ROOMS_PER_PAGE = 5;
 const ROOM_REQUESTS_PER_PAGE = 5;
 const ACCOUNT_REQUESTS_PER_PAGE = 5;
+const HISTORY_PAGE_SIZE = 5;
 const selectedAccountHistoryIds = new Set();
 const selectedRoomHistoryIds = new Set();
 let activeLoginSessions = {};
@@ -75,6 +76,10 @@ let knownPendingAccountRequestIds = null;
 let roomManagerPendingAccountRequests = [];
 let requestNotificationAudioContext = null;
 let pendingRequestNotificationSounds = 0;
+let roomUsageHistory = [];
+let loginHistory = [];
+let currentRoomUsageHistoryPage = 1;
+let currentLoginHistoryPage = 1;
 
 function isRoomManager() {
   return loggedInUser?.role === "room_manager";
@@ -84,7 +89,13 @@ function canAccessAdminView(viewName) {
   return (
     loggedInUser?.role === "admin" ||
     (isRoomManager() &&
-      ["dashboard", "users", "rooms", "requests"].includes(viewName))
+      [
+        "dashboard",
+        "users",
+        "rooms",
+        "requests",
+        "room-usage-history",
+      ].includes(viewName))
   );
 }
 
@@ -209,6 +220,8 @@ document.addEventListener("DOMContentLoaded", function () {
   if (isRoomManager()) {
     document.querySelector(".profile-copy small").textContent =
       "Room & Account Manager";
+    document.querySelector('[data-admin-view-target="login-history"]').hidden =
+      true;
     document
       .querySelectorAll('[data-admin-view-target="display"]')
       .forEach((button) => {
@@ -242,6 +255,8 @@ document.addEventListener("DOMContentLoaded", function () {
   initializePresenceListener();
   initializeAccountRequestListener();
   initializeRoomManagement();
+  initializeRoomUsageHistory();
+  if (loggedInUser?.role === "admin") initializeLoginHistory();
   initializeQueueCleanupSettings();
   initializeRoomSpecificDisplayControls();
   initializeGlobalPerformerScreenControl();
@@ -314,6 +329,33 @@ document.addEventListener("DOMContentLoaded", function () {
     .addEventListener("click", () => {
       currentKaraokeRoomPage += 1;
       renderKaraokeRooms();
+    });
+  document
+    .getElementById("previousRoomUsageHistoryPage")
+    .addEventListener("click", () => {
+      currentRoomUsageHistoryPage = Math.max(
+        1,
+        currentRoomUsageHistoryPage - 1,
+      );
+      renderRoomUsageHistory();
+    });
+  document
+    .getElementById("nextRoomUsageHistoryPage")
+    .addEventListener("click", () => {
+      currentRoomUsageHistoryPage += 1;
+      renderRoomUsageHistory();
+    });
+  document
+    .getElementById("previousLoginHistoryPage")
+    .addEventListener("click", () => {
+      currentLoginHistoryPage = Math.max(1, currentLoginHistoryPage - 1);
+      renderLoginHistory();
+    });
+  document
+    .getElementById("nextLoginHistoryPage")
+    .addEventListener("click", () => {
+      currentLoginHistoryPage += 1;
+      renderLoginHistory();
     });
   document
     .getElementById("previousRoomRequestsPage")
@@ -440,11 +482,203 @@ function setAdminView(viewName) {
     display: ["Karaoke Display Control", "Manage the shared display."],
     rooms: ["Karaoke Rooms", "Monitor rooms and connected performers."],
     requests: ["Room Requests", "Review requests waiting for approval."],
+    "room-usage-history": [
+      "Room Usage History",
+      "Review completed room sessions and performers.",
+    ],
+    "login-history": [
+      "Login History",
+      "Review successful sign-ins by date and time.",
+    ],
   }[viewName];
   if (viewCopy && heading && subheading) {
     heading.textContent = viewCopy[0];
     subheading.textContent = viewCopy[1];
   }
+}
+
+function initializeRoomUsageHistory() {
+  const status = document.getElementById("roomUsageHistoryStatus");
+  if (typeof firebase === "undefined" || !firebase.database) {
+    if (status) status.textContent = "Room usage history is unavailable.";
+    return;
+  }
+
+  firebase
+    .database()
+    .ref("roomUsageHistory")
+    .on(
+      "value",
+      (snapshot) => {
+        roomUsageHistory = Object.entries(snapshot.val() || {})
+          .map(([id, record]) => ({ ...record, id }))
+          .sort(
+            (first, second) =>
+              (Number(second.endedAt) || 0) - (Number(first.endedAt) || 0),
+          );
+        renderRoomUsageHistory();
+      },
+      (error) => {
+        if (status) status.textContent = "Could not load room usage history.";
+        console.warn("Could not load room usage history:", error.message);
+      },
+    );
+}
+
+function initializeLoginHistory() {
+  const status = document.getElementById("loginHistoryStatus");
+  if (typeof firebase === "undefined" || !firebase.database) {
+    if (status) status.textContent = "Login history is unavailable.";
+    return;
+  }
+
+  firebase
+    .database()
+    .ref("loginHistory")
+    .on(
+      "value",
+      (snapshot) => {
+        loginHistory = Object.entries(snapshot.val() || {})
+          .map(([id, record]) => ({ ...record, id }))
+          .sort(
+            (first, second) =>
+              (Number(second.loggedInAt) || 0) -
+              (Number(first.loggedInAt) || 0),
+          );
+        renderLoginHistory();
+      },
+      (error) => {
+        if (status) status.textContent = "Could not load login history.";
+        console.warn("Could not load login history:", error.message);
+      },
+    );
+}
+
+function formatHistoryDateTime(timestamp) {
+  const time = Number(timestamp);
+  return Number.isFinite(time) && time > 0
+    ? new Date(time).toLocaleString()
+    : "—";
+}
+
+function formatHistoryDuration(durationMs) {
+  const totalSeconds = Math.floor(Math.max(0, Number(durationMs) || 0) / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+function updateHistoryPagination(prefix, page, pageCount, itemCount) {
+  const pagination = document.getElementById(`${prefix}Pagination`);
+  const previousButton = document.getElementById(`previous${prefix}Page`);
+  const nextButton = document.getElementById(`next${prefix}Page`);
+  const pageInfo = document.getElementById(`${prefix}PageInfo`);
+  pagination.hidden = itemCount <= HISTORY_PAGE_SIZE;
+  previousButton.disabled = page <= 1;
+  nextButton.disabled = page >= pageCount;
+  pageInfo.textContent = `${page} / ${pageCount}`;
+  pageInfo.setAttribute("aria-label", `Page ${page} of ${pageCount}`);
+}
+
+function renderRoomUsageHistory() {
+  const tableBody = document.getElementById("roomUsageHistoryTableBody");
+  const status = document.getElementById("roomUsageHistoryStatus");
+  if (!tableBody || !status) return;
+  const pageCount = Math.max(
+    1,
+    Math.ceil(roomUsageHistory.length / HISTORY_PAGE_SIZE),
+  );
+  currentRoomUsageHistoryPage = Math.min(
+    Math.max(1, currentRoomUsageHistoryPage),
+    pageCount,
+  );
+  const pageStart = (currentRoomUsageHistoryPage - 1) * HISTORY_PAGE_SIZE;
+  const pageRecords = roomUsageHistory.slice(
+    pageStart,
+    pageStart + HISTORY_PAGE_SIZE,
+  );
+  status.textContent = `${roomUsageHistory.length} sessions`;
+  tableBody.replaceChildren();
+
+  if (!pageRecords.length) {
+    tableBody.innerHTML =
+      '<tr><td colspan="5" class="text-center text-white-50">No room usage history yet.</td></tr>';
+  } else {
+    pageRecords.forEach((record) => {
+      const row = document.createElement("tr");
+      const roomCell = document.createElement("td");
+      const roomName = document.createElement("strong");
+      roomName.textContent = record.roomName || record.roomId || "Room";
+      const roomCode = document.createElement("small");
+      roomCode.className = "d-block text-white-50";
+      roomCode.textContent = record.roomId || "";
+      roomCell.append(roomName, roomCode);
+
+      const usersCell = document.createElement("td");
+      usersCell.textContent = Array.isArray(record.users)
+        ? record.users.join(", ") || "Unknown"
+        : "Unknown";
+      const startedCell = document.createElement("td");
+      startedCell.textContent = formatHistoryDateTime(record.startedAt);
+      const endedCell = document.createElement("td");
+      endedCell.textContent = formatHistoryDateTime(record.endedAt);
+      const durationCell = document.createElement("td");
+      durationCell.textContent = formatHistoryDuration(record.durationMs);
+      row.append(roomCell, usersCell, startedCell, endedCell, durationCell);
+      tableBody.appendChild(row);
+    });
+  }
+  updateHistoryPagination(
+    "RoomUsageHistory",
+    currentRoomUsageHistoryPage,
+    pageCount,
+    roomUsageHistory.length,
+  );
+}
+
+function renderLoginHistory() {
+  const tableBody = document.getElementById("loginHistoryTableBody");
+  const status = document.getElementById("loginHistoryStatus");
+  if (!tableBody || !status) return;
+  const pageCount = Math.max(
+    1,
+    Math.ceil(loginHistory.length / HISTORY_PAGE_SIZE),
+  );
+  currentLoginHistoryPage = Math.min(
+    Math.max(1, currentLoginHistoryPage),
+    pageCount,
+  );
+  const pageStart = (currentLoginHistoryPage - 1) * HISTORY_PAGE_SIZE;
+  const pageRecords = loginHistory.slice(
+    pageStart,
+    pageStart + HISTORY_PAGE_SIZE,
+  );
+  status.textContent = `${loginHistory.length} sign-ins`;
+  tableBody.replaceChildren();
+
+  if (!pageRecords.length) {
+    tableBody.innerHTML =
+      '<tr><td colspan="3" class="text-center text-white-50">No login history yet. New successful sign-ins will appear here.</td></tr>';
+  } else {
+    pageRecords.forEach((record) => {
+      const row = document.createElement("tr");
+      const usernameCell = document.createElement("td");
+      usernameCell.textContent = record.username || "Unknown";
+      const roleCell = document.createElement("td");
+      roleCell.textContent = record.role || "user";
+      const timeCell = document.createElement("td");
+      timeCell.textContent = formatHistoryDateTime(record.loggedInAt);
+      row.append(usernameCell, roleCell, timeCell);
+      tableBody.appendChild(row);
+    });
+  }
+  updateHistoryPagination(
+    "LoginHistory",
+    currentLoginHistoryPage,
+    pageCount,
+    loginHistory.length,
+  );
 }
 
 function toggleAddUserPanel() {

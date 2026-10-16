@@ -406,6 +406,66 @@
         color: #edf2ff;
       }
 
+      #roomUsageHistorySection .table,
+      #loginHistorySection .table {
+        min-width: 0;
+        margin-bottom: 0;
+        font-size: 0.88rem;
+      }
+
+      #roomUsageHistorySection .table th,
+      #roomUsageHistorySection .table td,
+      #loginHistorySection .table th,
+      #loginHistorySection .table td {
+        padding: 0.55rem 0.7rem;
+        vertical-align: middle;
+      }
+
+      #roomUsageHistorySection .table-responsive,
+      #loginHistorySection .table-responsive {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+      }
+
+      #roomUsageHistorySection .table td:nth-child(2) {
+        min-width: 140px;
+        overflow-wrap: anywhere;
+      }
+
+      #roomUsageHistorySection .table td:nth-child(3),
+      #roomUsageHistorySection .table td:nth-child(4),
+      #roomUsageHistorySection .table td:nth-child(5),
+      #loginHistorySection .table td:last-child {
+        white-space: nowrap;
+      }
+
+      @media (max-width: 520px), (orientation: landscape) and (max-height: 500px) {
+        #roomUsageHistorySection .table,
+        #loginHistorySection .table {
+          font-size: 0.78rem;
+        }
+
+        #roomUsageHistorySection .table th,
+        #roomUsageHistorySection .table td,
+        #loginHistorySection .table th,
+        #loginHistorySection .table td {
+          padding: 0.45rem 0.5rem;
+        }
+
+        #roomUsageHistorySection .section-toolbar,
+        #loginHistorySection .section-toolbar {
+          align-items: flex-start;
+          gap: 8px;
+        }
+
+        #roomUsageHistoryStatus,
+        #loginHistoryStatus {
+          padding-top: 0.3rem;
+          font-size: 0.75rem;
+          white-space: nowrap;
+        }
+      }
+
       @media (orientation: landscape) and (max-height: 500px) {
         .room-device-limit-dialog .modal-header,
         .room-device-limit-dialog .modal-body,
@@ -534,6 +594,22 @@
             aria-controls="roomRequestsSection"
           >
             <i class="bi bi-inbox"></i><span>Room Requests</span>
+          </button>
+          <button
+            class="admin-nav-link"
+            type="button"
+            data-admin-view-target="room-usage-history"
+            aria-controls="roomUsageHistorySection"
+          >
+            <i class="bi bi-clock-history"></i><span>Room Usage History</span>
+          </button>
+          <button
+            class="admin-nav-link"
+            type="button"
+            data-admin-view-target="login-history"
+            aria-controls="loginHistorySection"
+          >
+            <i class="bi bi-box-arrow-in-right"></i><span>Login History</span>
           </button>
         </nav>
         <div class="sidebar-note">
@@ -1612,6 +1688,140 @@
                 </nav>
               </div>
             </div>
+          </section>
+
+          <section
+            id="roomUsageHistorySection"
+            class="form-section"
+            data-admin-view="room-usage-history"
+            aria-labelledby="roomUsageHistoryHeading"
+            hidden
+          >
+            <div class="section-toolbar">
+              <div>
+                <h2 id="roomUsageHistoryHeading">Room Usage History</h2>
+                <p>Completed room sessions and connected performers</p>
+              </div>
+              <span
+                class="text-white-50"
+                id="roomUsageHistoryStatus"
+                role="status"
+              >Loading history...</span>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover">
+                <thead>
+                  <tr>
+                    <th>Room</th>
+                    <th>Used by</th>
+                    <th>Started</th>
+                    <th>Ended</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody id="roomUsageHistoryTableBody">
+                  <tr>
+                    <td colspan="5" class="text-center text-white-50">
+                      Loading history...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <nav
+              class="account-pagination"
+              id="roomUsageHistoryPagination"
+              aria-label="Room usage history pages"
+              hidden
+            >
+              <button
+                class="account-page-arrow"
+                id="previousRoomUsageHistoryPage"
+                type="button"
+                aria-label="Previous room usage history page"
+                disabled
+              >
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+              </button>
+              <span class="account-page-indicator" id="roomUsageHistoryPageInfo">
+                1 / 1
+              </span>
+              <button
+                class="account-page-arrow"
+                id="nextRoomUsageHistoryPage"
+                type="button"
+                aria-label="Next room usage history page"
+                disabled
+              >
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </nav>
+          </section>
+
+          <section
+            id="loginHistorySection"
+            class="form-section"
+            data-admin-view="login-history"
+            aria-labelledby="loginHistoryHeading"
+            hidden
+          >
+            <div class="section-toolbar">
+              <div>
+                <h2 id="loginHistoryHeading">Login History</h2>
+                <p>Successful sign-ins by date and time</p>
+              </div>
+              <span
+                class="text-white-50"
+                id="loginHistoryStatus"
+                role="status"
+              >Loading history...</span>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Login date and time</th>
+                  </tr>
+                </thead>
+                <tbody id="loginHistoryTableBody">
+                  <tr>
+                    <td colspan="3" class="text-center text-white-50">
+                      Loading history...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <nav
+              class="account-pagination"
+              id="loginHistoryPagination"
+              aria-label="Login history pages"
+              hidden
+            >
+              <button
+                class="account-page-arrow"
+                id="previousLoginHistoryPage"
+                type="button"
+                aria-label="Previous login history page"
+                disabled
+              >
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+              </button>
+              <span class="account-page-indicator" id="loginHistoryPageInfo">
+                1 / 1
+              </span>
+              <button
+                class="account-page-arrow"
+                id="nextLoginHistoryPage"
+                type="button"
+                aria-label="Next login history page"
+                disabled
+              >
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </nav>
           </section>
 
         </main>
