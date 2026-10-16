@@ -826,6 +826,45 @@
                 Default
               </span>
             </div>
+            <div
+              class="display-control-card"
+              role="group"
+              aria-labelledby="globalPerformerScreensHeading"
+            >
+              <div class="display-control-info">
+                <h3 id="globalPerformerScreensHeading">
+                  GLOBAL PERFORMER SCREEN CONTROL
+                </h3>
+                <p>Enable or disable performer screens in every room.</p>
+                <div style="margin-top: 12px">
+                  <span
+                    class="display-status"
+                    id="globalPerformerScreensStatus"
+                    aria-live="polite"
+                  >Loading...</span>
+                </div>
+              </div>
+              <div class="display-control-buttons">
+                <button
+                  class="display-btn display-btn-enable"
+                  id="enableAllPerformerScreensBtn"
+                  type="button"
+                  onclick="setGlobalPerformerScreensEnabled(true)"
+                  disabled
+                >
+                  Enable All
+                </button>
+                <button
+                  class="display-btn display-btn-disable"
+                  id="disableAllPerformerScreensBtn"
+                  type="button"
+                  onclick="setGlobalPerformerScreensEnabled(false)"
+                  disabled
+                >
+                  Disable All
+                </button>
+              </div>
+            </div>
             <div class="display-control-card">
               <div class="display-control-info">
                 <h3>ROOM-SPECIFIC DISPLAY CONTROL</h3>

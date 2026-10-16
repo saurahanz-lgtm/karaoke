@@ -1546,6 +1546,9 @@
       let globalKaraokeDisplayAnnouncement = "";
       let roomKaraokeDisplayAnnouncement = "";
       let performerScreenEnabled = true;
+      let globalPerformerScreensEnabled = true;
+      let roomPerformerScreenEnabled = true;
+      let roomPerformerScreenAnnouncement = "";
       let performerScreenAnnouncement = "";
       let stopListeningToPerformerRoomDisplayStatus = null;
       let roomPlaybackIsPlaying = false;
@@ -2470,10 +2473,29 @@
         roomKaraokeDisplayAnnouncement =
           settings.announcement ||
           "The karaoke display in this room is temporarily unavailable.";
-        performerScreenEnabled = settings.performerEnabled !== false;
-        performerScreenAnnouncement =
+        roomPerformerScreenEnabled = settings.performerEnabled !== false;
+        roomPerformerScreenAnnouncement =
           settings.performerAnnouncement ||
           "The performer screen is unavailable in this room.";
+        performerScreenEnabled =
+          globalPerformerScreensEnabled && roomPerformerScreenEnabled;
+        performerScreenAnnouncement = globalPerformerScreensEnabled
+          ? roomPerformerScreenAnnouncement
+          : "All performer screens are disabled by an administrator.";
+        refreshPerformerDisplayAvailability(wasAvailable);
+      }
+
+      function updateGlobalPerformerScreenAvailability(enabled) {
+        const wasAvailable = karaokeDisplayEnabled;
+        globalPerformerScreensEnabled = enabled !== false;
+        performerScreenEnabled =
+          globalPerformerScreensEnabled && roomPerformerScreenEnabled;
+        performerScreenAnnouncement = globalPerformerScreensEnabled
+          ? roomPerformerScreenAnnouncement
+          : "All performer screens are disabled by an administrator.";
+        if (!globalPerformerScreensEnabled && performerPhoneDisplayActive) {
+          togglePerformerPhoneDisplay(false);
+        }
         refreshPerformerDisplayAvailability(wasAvailable);
       }
 
@@ -2526,6 +2548,23 @@
         if (message) message.hidden = true;
         requestPerformerPhoneMicScoring();
         updatePerformerPhoneDisplaySong();
+      }
+
+      function listenToGlobalPerformerScreenAvailability() {
+        if (typeof firebase === "undefined" || !firebase.database) return;
+        firebase
+          .database()
+          .ref("appSettings/performerScreensEnabled")
+          .on(
+            "value",
+            (snapshot) =>
+              updateGlobalPerformerScreenAvailability(snapshot.val() !== false),
+            (error) =>
+              console.warn(
+                "Could not check global performer screen availability:",
+                error.message,
+              ),
+          );
       }
 
       function listenToKaraokeDisplayAvailability() {
@@ -2714,6 +2753,7 @@
       document.addEventListener("DOMContentLoaded", async function () {
         if (!checkPerformerLogin()) return;
         listenToPerformerPhoneScoreSoundVolume();
+        listenToGlobalPerformerScreenAvailability();
         listenToKaraokeDisplayAvailability();
 
         try {

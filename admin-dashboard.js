@@ -25,6 +25,7 @@ initializeDeviceSessionId();
 let users = [];
 let currentEditingUserId = null;
 let loggedInUser = null;
+let globalPerformerScreensEnabled = true;
 let currentFilter = null;
 let currentUserPage = 1;
 let currentRoomRequestView = "pending";
@@ -242,6 +243,7 @@ document.addEventListener("DOMContentLoaded", function () {
   initializeAccountRequestListener();
   initializeRoomManagement();
   initializeRoomSpecificDisplayControls();
+  initializeGlobalPerformerScreenControl();
 
   // Add event listeners
   document
@@ -4352,6 +4354,89 @@ function disableKaraokeDisplay() {
     console.error("Firebase exception:", e.message);
     showNotification("❌ Error: " + e.message, "danger");
   }
+}
+
+function initializeGlobalPerformerScreenControl() {
+  const status = document.getElementById("globalPerformerScreensStatus");
+  const enableButton = document.getElementById("enableAllPerformerScreensBtn");
+  const disableButton = document.getElementById(
+    "disableAllPerformerScreensBtn",
+  );
+  if (!status || !enableButton || !disableButton) return;
+  if (typeof firebase === "undefined" || !firebase.database) {
+    status.textContent = "Unavailable";
+    status.className = "display-status display-status-disabled";
+    return;
+  }
+
+  firebase
+    .database()
+    .ref("appSettings/performerScreensEnabled")
+    .on(
+      "value",
+      (snapshot) =>
+        updateGlobalPerformerScreenControl(snapshot.val() !== false),
+      (error) => {
+        status.textContent = "Unavailable";
+        status.className = "display-status display-status-disabled";
+        console.warn(
+          "Could not load global performer screen status:",
+          error.message,
+        );
+      },
+    );
+}
+
+function updateGlobalPerformerScreenControl(enabled) {
+  globalPerformerScreensEnabled = enabled;
+  const status = document.getElementById("globalPerformerScreensStatus");
+  const enableButton = document.getElementById("enableAllPerformerScreensBtn");
+  const disableButton = document.getElementById(
+    "disableAllPerformerScreensBtn",
+  );
+  if (!status) return;
+  status.textContent = enabled
+    ? "All Performer Screens Enabled"
+    : "All Performer Screens Disabled";
+  status.className = `display-status display-status-${enabled ? "enabled" : "disabled"}`;
+  if (enableButton) enableButton.disabled = enabled;
+  if (disableButton) disableButton.disabled = !enabled;
+}
+
+function setGlobalPerformerScreensEnabled(enabled) {
+  const previousEnabled = globalPerformerScreensEnabled;
+  const status = document.getElementById("globalPerformerScreensStatus");
+  const enableButton = document.getElementById("enableAllPerformerScreensBtn");
+  const disableButton = document.getElementById(
+    "disableAllPerformerScreensBtn",
+  );
+  if (status) status.textContent = "Saving...";
+  if (enableButton) enableButton.disabled = true;
+  if (disableButton) disableButton.disabled = true;
+
+  firebase
+    .database()
+    .ref("appSettings/performerScreensEnabled")
+    .set(Boolean(enabled))
+    .then(() => {
+      updateGlobalPerformerScreenControl(Boolean(enabled));
+      showNotification(
+        `All performer screens ${enabled ? "enabled" : "disabled"}.`,
+        enabled ? "success" : "warning",
+      );
+    })
+    .catch((error) => {
+      updateGlobalPerformerScreenControl(previousEnabled);
+      if (status) status.textContent = "Save failed";
+      console.error(
+        "Could not update global performer screen status:",
+        error.message,
+      );
+      showNotification(
+        "Could not update performer screen availability.",
+        "danger",
+      );
+    });
 }
 
 function initializeRoomSpecificDisplayControls() {
