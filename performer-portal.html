@@ -1612,6 +1612,8 @@
       let performerPhoneDisplayActive = false;
       let performerPhoneDisplayPlayer = null;
       let performerPhoneDisplayPlayerReady = false;
+      let performerPhoneRetrySongKey = null;
+      let performerPhoneRetryCount = 0;
       let performerPhonePlaybackPositionTimer = null;
       let performerPhoneDisplayedSongKey = null;
       let performerPhoneCompletedSongKey = null;
@@ -2160,6 +2162,89 @@
         );
       }
 
+      function skipUnavailablePerformerPhoneVideo(songKey, errorCode) {
+        const message = document.getElementById("performerPhoneDisplayMessage");
+        if (message) {
+          message.textContent =
+            "Video unavailable here. Skipping to next song...";
+          message.hidden = false;
+        }
+        if (!songKey || !activeKaraokeRoomId || !usePerformerFirebase) return;
+
+        window.setTimeout(async () => {
+          if (
+            !performerPhoneDisplayActive ||
+            getPerformerPhoneSongKey() !== songKey
+          ) {
+            return;
+          }
+          try {
+            await KaraokeSessions.advanceToNextSong(activeKaraokeRoomId, {
+              allowPhoneDisplay: true,
+              expectedSongKey: songKey,
+            });
+          } catch (error) {
+            console.warn(
+              `Could not skip unavailable video (${errorCode}):`,
+              error.message,
+            );
+            if (message) {
+              message.textContent =
+                "This video cannot be played here. Please request another song.";
+            }
+          }
+        }, 1200);
+      }
+
+      function handlePerformerPhonePlayerError(event) {
+        const errorCode = Number(event?.data);
+        const songKey =
+          performerPhoneDisplayedSongKey || getPerformerPhoneSongKey();
+        const message = document.getElementById("performerPhoneDisplayMessage");
+        performerPhoneDisplayPlayerReady = false;
+        console.error("Performer screen video error:", errorCode);
+
+        if ([2, 100, 101, 150].includes(errorCode)) {
+          skipUnavailablePerformerPhoneVideo(songKey, errorCode);
+          return;
+        }
+
+        if (performerPhoneRetrySongKey !== songKey) {
+          performerPhoneRetrySongKey = songKey;
+          performerPhoneRetryCount = 0;
+        }
+        if (performerPhoneRetryCount >= 1) {
+          skipUnavailablePerformerPhoneVideo(songKey, errorCode);
+          return;
+        }
+
+        performerPhoneRetryCount += 1;
+        if (message) {
+          message.textContent = "Retrying video playback...";
+          message.hidden = false;
+        }
+        window.setTimeout(() => {
+          if (
+            !performerPhoneDisplayActive ||
+            getPerformerPhoneSongKey() !== songKey ||
+            !performerPhoneDisplayPlayer
+          ) {
+            return;
+          }
+          try {
+            performerPhoneDisplayPlayerReady = true;
+            performerPhoneDisplayPlayer.loadVideoById({
+              videoId: roomCurrentSong.videoId,
+              startSeconds: getSynchronizedRoomPlaybackPosition(),
+            });
+            applyPerformerPhoneVolume();
+          } catch (error) {
+            console.warn("Could not retry performer video:", error.message);
+            skipUnavailablePerformerPhoneVideo(songKey, errorCode);
+          }
+        }, 600);
+      }
+
       function initializePerformerPhonePlayer() {
         if (
           !performerPhoneDisplayActive ||
@@ -2183,6 +2268,10 @@
             enablejsapi: 1,
             fs: 0,
             modestbranding: 1,
+            ...(window.location.protocol === "http:" ||
+            window.location.protocol === "https:"
+              ? { origin: window.location.origin }
+              : {}),
             playsinline: 1,
             rel: 0,
           },
@@ -2194,6 +2283,8 @@
             },
             onStateChange: (event) => {
               if (event.data === window.YT?.PlayerState?.PLAYING) {
+                performerPhoneDisplayPlayerReady = true;
+                message.hidden = true;
                 applyPerformerPhoneVolume();
               }
               if (event.data === window.YT?.PlayerState?.ENDED) {
@@ -2207,11 +2298,7 @@
                 finishPerformerPhoneSong(performerPhoneDisplayedSongKey);
               }
             },
-            onError: () => {
-              performerPhoneDisplayPlayerReady = false;
-              message.textContent = "This video cannot be played here.";
-              message.hidden = false;
-            },
+            onError: handlePerformerPhonePlayerError,
           },
         });
       }
@@ -2306,6 +2393,8 @@
         const displayedSongKey = `${videoId}:${roomCurrentSong.id || roomCurrentSong.timestamp || ""}`;
         if (performerPhoneDisplayedSongKey !== displayedSongKey) {
           performerPhoneDisplayedSongKey = displayedSongKey;
+          performerPhoneRetrySongKey = displayedSongKey;
+          performerPhoneRetryCount = 0;
           const startSeconds =
             roomPlaybackVideoId === videoId
               ? getSynchronizedRoomPlaybackPosition()
