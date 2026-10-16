@@ -3571,12 +3571,13 @@ body.karaoke-display-page {
 
 .admin-contact-notice {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
   align-items: center;
   gap: 8px 12px;
   width: min(100%, 520px);
   box-sizing: border-box;
-  margin: 8px 0 0;
+  margin: 8px auto 0;
   padding: 9px 11px;
   border: 1px solid rgba(87, 167, 255, 0.35);
   border-radius: 8px;
@@ -3584,7 +3585,7 @@ body.karaoke-display-page {
   color: #e4efff;
   font-size: 12px;
   line-height: 1.4;
-  text-align: left;
+  text-align: center;
 }
 
 .admin-contact-notice[hidden] {
@@ -3624,7 +3625,7 @@ body.karaoke-display-page {
   }
 
   .admin-contact-link {
-    justify-self: start;
+    justify-self: center;
   }
 }
 
