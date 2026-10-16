@@ -87,6 +87,7 @@ let pitchDetectorPromise = null;
 let scoreAudioContext = null;
 let scoreAudioBuffer = null;
 let scoreAudioLoadPromise = null;
+let scoreSoundVolume = 0.8;
 let micScoringEnabled = false;
 let micObservedPlayingMs = 0;
 let pitchDetectedMs = 0;
@@ -1224,6 +1225,15 @@ function initializeKaraokeDisplay() {
     );
     return;
   }
+
+  firebase
+    .database()
+    .ref("appSettings/scoreSoundVolume")
+    .on("value", (snapshot) => {
+      const savedVolume = Number(snapshot.val());
+      if (snapshot.val() == null || !Number.isFinite(savedVolume)) return;
+      scoreSoundVolume = Math.max(0, Math.min(100, savedVolume)) / 100;
+    });
 
   console.log("🔥 Firebase configured, waiting for data...");
 
@@ -2424,7 +2434,7 @@ function playScoreSound() {
           const source = scoreAudioContext.createBufferSource();
           const gain = scoreAudioContext.createGain();
           source.buffer = scoreAudioBuffer;
-          gain.gain.value = 0.8;
+          gain.gain.value = scoreSoundVolume;
           source.connect(gain);
           gain.connect(scoreAudioContext.destination);
           source.addEventListener("ended", () => resolve(true), {

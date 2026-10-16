@@ -189,6 +189,55 @@
         gap: clamp(15px, 3vw, 25px);
       }
 
+      .score-sound-control {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(180px, 300px) auto;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: clamp(16px, 3vw, 24px);
+        padding: 12px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .score-sound-control label {
+        display: block;
+        margin-bottom: 2px;
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .score-sound-control p {
+        margin: 0;
+        color: #b0b0b0;
+        font-size: 0.82rem;
+      }
+
+      .score-sound-slider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .score-sound-slider input {
+        min-width: 0;
+        margin: 0;
+      }
+
+      .score-sound-slider output {
+        min-width: 3.5ch;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+
+      #scoreSoundVolumeStatus {
+        color: #b0b0b0;
+        font-size: 0.8rem;
+        text-align: right;
+      }
+
       .display-control-info h3 {
         color: #667eea;
         font-weight: 700;
@@ -333,6 +382,19 @@
         .display-control-card {
           flex-direction: column;
           align-items: flex-start;
+        }
+
+        .score-sound-control {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .score-sound-control-copy,
+        #scoreSoundVolumeStatus {
+          grid-column: 1 / -1;
+        }
+
+        #scoreSoundVolumeStatus {
+          text-align: left;
         }
 
         .display-control-buttons {
@@ -739,6 +801,30 @@
                   🔴 Disable Display
                 </button>
               </div>
+            </div>
+            <div class="score-sound-control">
+              <div class="score-sound-control-copy">
+                <label for="scoreSoundVolume">Score sound effect</label>
+                <p>Volume on the karaoke display and performer devices</p>
+              </div>
+              <div class="score-sound-slider">
+                <input
+                  class="form-range"
+                  id="scoreSoundVolume"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value="80"
+                  aria-describedby="scoreSoundVolumeStatus"
+                />
+                <output for="scoreSoundVolume" id="scoreSoundVolumeValue">
+                  80%
+                </output>
+              </div>
+              <span id="scoreSoundVolumeStatus" role="status" aria-live="polite">
+                Default
+              </span>
             </div>
             <div class="display-control-card">
               <div class="display-control-info">

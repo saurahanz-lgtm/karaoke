@@ -401,6 +401,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Load karaoke display status on page load
   initializeKaraokeDisplayAnnouncementControls();
+  initializeScoreSoundVolumeControl();
   loadKaraokeDisplayStatus();
 });
 
@@ -4185,6 +4186,69 @@ function loadKaraokeDisplayStatus() {
     console.error("Firebase exception:", e.message);
     updateKaraokeDisplayStatusUI(true);
   }
+}
+
+function initializeScoreSoundVolumeControl() {
+  const slider = document.getElementById("scoreSoundVolume");
+  const valueOutput = document.getElementById("scoreSoundVolumeValue");
+  const status = document.getElementById("scoreSoundVolumeStatus");
+  if (!slider || !valueOutput || !status) return;
+  if (typeof firebase === "undefined" || !firebase.database) {
+    slider.disabled = true;
+    status.textContent = "Unavailable";
+    return;
+  }
+
+  const setVolumeValue = (value) => {
+    const parsedValue = Number(value);
+    const volume = Number.isFinite(parsedValue)
+      ? Math.max(0, Math.min(100, Math.round(parsedValue)))
+      : 80;
+    slider.value = String(volume);
+    valueOutput.value = `${volume}%`;
+    valueOutput.textContent = `${volume}%`;
+  };
+
+  slider.addEventListener("input", () => {
+    setVolumeValue(slider.value);
+    status.textContent = "Unsaved";
+  });
+  slider.addEventListener("change", () => {
+    const volume = Number(slider.value);
+    status.textContent = "Saving...";
+    firebase
+      .database()
+      .ref("appSettings/scoreSoundVolume")
+      .set(volume)
+      .then(() => {
+        status.textContent = "Saved";
+      })
+      .catch((error) => {
+        status.textContent = "Save failed";
+        showNotification(
+          `Could not save score sound volume: ${error.message}`,
+          "danger",
+        );
+      });
+  });
+
+  firebase
+    .database()
+    .ref("appSettings/scoreSoundVolume")
+    .on(
+      "value",
+      (snapshot) => {
+        const savedVolume = snapshot.val();
+        setVolumeValue(savedVolume ?? 80);
+        if (status.textContent !== "Saving...") {
+          status.textContent = savedVolume == null ? "Default" : "Saved";
+        }
+      },
+      (error) => {
+        status.textContent = "Unavailable";
+        console.warn("Could not load score sound volume:", error.message);
+      },
+    );
 }
 
 // Update UI to reflect TV status

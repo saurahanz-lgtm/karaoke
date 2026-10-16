@@ -1580,6 +1580,7 @@
       let performerPhoneScoreAudioContext = null;
       let performerPhoneScoreAudioBuffer = null;
       let performerPhoneScoreAudioLoadPromise = null;
+      let performerPhoneScoreSoundVolume = 0.8;
       const PERFORMER_MIC_MIN_ACTIVITY_RMS = 0.02;
       const PERFORMER_PITCH_MIN_FREQUENCY_HZ = 75;
       const PERFORMER_PITCH_MAX_FREQUENCY_HZ = 1000;
@@ -1654,6 +1655,18 @@
           resumePromise,
           performerPhoneScoreAudioLoadPromise,
         ]);
+      }
+
+      function listenToPerformerPhoneScoreSoundVolume() {
+        firebase
+          .database()
+          .ref("appSettings/scoreSoundVolume")
+          .on("value", (snapshot) => {
+            const savedVolume = Number(snapshot.val());
+            if (snapshot.val() == null || !Number.isFinite(savedVolume)) return;
+            performerPhoneScoreSoundVolume =
+              Math.max(0, Math.min(100, savedVolume)) / 100;
+          });
       }
 
       function requestPerformerPhoneMicScoring() {
@@ -1878,7 +1891,7 @@
           const source = performerPhoneScoreAudioContext.createBufferSource();
           const gain = performerPhoneScoreAudioContext.createGain();
           source.buffer = performerPhoneScoreAudioBuffer;
-          gain.gain.value = 0.8;
+          gain.gain.value = performerPhoneScoreSoundVolume;
           source.connect(gain);
           gain.connect(performerPhoneScoreAudioContext.destination);
           await new Promise((resolve) => {
@@ -2700,6 +2713,7 @@
       // Initialize page on load
       document.addEventListener("DOMContentLoaded", async function () {
         if (!checkPerformerLogin()) return;
+        listenToPerformerPhoneScoreSoundVolume();
         listenToKaraokeDisplayAvailability();
 
         try {
