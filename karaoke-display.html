@@ -468,20 +468,21 @@
         place-items: center;
         padding: max(16px, env(safe-area-inset-top)) 16px
           max(16px, env(safe-area-inset-bottom));
-        background: transparent;
+        background: rgba(2, 6, 18, 0.52);
+        backdrop-filter: blur(3px);
         animation: score-overlay-in 180ms ease-out both;
       }
 
       .score-modal-card {
-        width: 100%;
-        max-height: 100%;
-        padding: 16px;
+        width: min(100%, 560px);
+        max-height: calc(100dvh - 32px);
+        padding: 28px 32px;
         overflow-y: auto;
-        border: 0;
-        border-radius: 0;
-        color: var(--karaoke-text);
-        background: transparent;
-        box-shadow: none;
+        border: 1px solid rgba(255, 209, 102, 0.42);
+        border-radius: 16px;
+        color: #fff8e7;
+        background: rgba(8, 14, 31, 0.96);
+        box-shadow: 0 18px 55px rgba(0, 0, 0, 0.62);
         text-align: center;
         animation: score-card-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
       }
@@ -490,7 +491,7 @@
         margin: 0;
         color: #fff;
         font-family: "Space Grotesk", sans-serif;
-        font-size: clamp(1.25rem, 4vw, 1.7rem);
+        font-size: 2rem;
         font-weight: 600;
         overflow-wrap: anywhere;
         text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
@@ -498,24 +499,67 @@
 
       .score-modal-value {
         margin-top: 6px;
-        color: var(--karaoke-teal);
+        color: #ffd166;
         font-family: "Space Grotesk", sans-serif;
-        font-size: clamp(3rem, 16vw, 5rem);
+        font-size: 9rem;
         font-weight: 700;
         line-height: 1;
         text-shadow:
           0 2px 16px rgba(0, 0, 0, 0.95),
-          0 0 28px rgba(32, 212, 176, 0.28);
+          0 0 30px rgba(255, 209, 102, 0.34);
       }
 
       .score-modal-feedback {
         margin: 8px 0 0;
-        color: #a7f3e3;
+        color: #ffe8b5;
         font-family: "Space Grotesk", sans-serif;
-        font-size: clamp(0.95rem, 3.6vw, 1.15rem);
+        font-size: 1.35rem;
         font-weight: 600;
         line-height: 1.35;
         overflow-wrap: anywhere;
+      }
+
+      @media (max-width: 768px) {
+        .score-modal-card {
+          width: min(100%, 520px);
+          padding: 24px;
+        }
+
+        .score-modal-card h2 {
+          font-size: 1.5rem;
+        }
+
+        .score-modal-value {
+          font-size: 6rem;
+        }
+
+        .score-modal-feedback {
+          font-size: 1.05rem;
+        }
+      }
+
+      @media (max-height: 480px) and (orientation: landscape) {
+        .score-modal-overlay {
+          padding: 8px 12px;
+        }
+
+        .score-modal-card {
+          padding: 12px 20px;
+        }
+
+        .score-modal-card h2 {
+          font-size: 1.15rem;
+        }
+
+        .score-modal-value {
+          margin-top: 2px;
+          font-size: 4.5rem;
+        }
+
+        .score-modal-feedback {
+          margin-top: 4px;
+          font-size: 0.9rem;
+        }
       }
 
       @keyframes score-overlay-in {
