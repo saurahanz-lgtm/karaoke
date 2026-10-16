@@ -45,6 +45,54 @@
         cursor: pointer;
       }
 
+      .room-toolbar-actions {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .queue-cleanup-settings-button {
+        display: inline-grid;
+        flex: 0 0 42px;
+        place-items: center;
+        width: 42px;
+        height: 38px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        border-radius: 8px;
+        color: #edf2ff;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 1rem;
+      }
+
+      .queue-cleanup-settings-button:hover,
+      .queue-cleanup-settings-button:focus-visible {
+        border-color: rgba(32, 212, 176, 0.8);
+        color: #fff;
+        background: rgba(32, 212, 176, 0.16);
+      }
+
+      .queue-cleanup-settings-button:focus-visible {
+        outline: 2px solid #20d4b0;
+        outline-offset: 2px;
+      }
+
+      .queue-cleanup-settings-dialog {
+        width: min(420px, calc(100vw - 28px));
+      }
+
+      .queue-cleanup-settings-dialog .form-label {
+        color: #edf2ff;
+      }
+
+      @media (max-width: 480px) {
+        .room-toolbar-actions {
+          width: 100%;
+          justify-content: flex-end;
+        }
+      }
+
       .admin-menu-nav-button:hover,
       .admin-menu-nav-button[aria-current="page"] {
         border-color: rgba(102, 126, 234, 0.65);
@@ -974,17 +1022,33 @@
                 </p>
               </div>
             </div>
-            <form id="createRoomForm" class="d-flex flex-wrap gap-2 mb-4">
+            <form
+              id="createRoomForm"
+              class="d-flex flex-wrap align-items-center gap-2 mb-4"
+            >
               <p class="text-white-50 mb-0 align-self-center">
                 Room names are assigned automatically (SDR1, SDR2, ...).
               </p>
-              <button
-                class="btn btn-success"
-                id="createRoomButton"
-                type="submit"
-              >
-                ＋ Add Room
-              </button>
+              <div class="room-toolbar-actions">
+                <button
+                  class="btn btn-success"
+                  id="createRoomButton"
+                  type="submit"
+                >
+                  ＋ Add Room
+                </button>
+                <button
+                  class="queue-cleanup-settings-button"
+                  id="queueCleanupSettingsButton"
+                  type="button"
+                  aria-label="Set global queue cleanup countdown"
+                  title="Set global queue cleanup countdown"
+                  onclick="openQueueCleanupSettings()"
+                  disabled
+                >
+                  <i class="bi bi-clock-history" aria-hidden="true"></i>
+                </button>
+              </div>
             </form>
             <div class="table-responsive">
               <table class="table table-dark table-hover">
@@ -1553,6 +1617,70 @@
         </main>
       </div>
     </div>
+
+    <dialog
+      id="queueCleanupSettingsDialog"
+      class="app-action-dialog queue-cleanup-settings-dialog"
+      aria-labelledby="queueCleanupSettingsTitle"
+      aria-describedby="queueCleanupSettingsMessage"
+    >
+      <div class="account-create-dialog__header">
+        <h2 class="app-action-dialog__title" id="queueCleanupSettingsTitle">
+          Queue cleanup countdown
+        </h2>
+        <button
+          class="account-create-dialog__close"
+          type="button"
+          aria-label="Close queue cleanup settings"
+          title="Close"
+          onclick="closeQueueCleanupSettings()"
+        >
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+      <p class="app-action-dialog__message" id="queueCleanupSettingsMessage">
+        Set the global delay before reserved songs clear from each room with no connected devices.
+      </p>
+      <label class="form-label" for="queueCleanupDelayMinutes">
+        Countdown delay (minutes)
+      </label>
+      <input
+        class="app-action-dialog__input"
+        id="queueCleanupDelayMinutes"
+        type="number"
+        min="1"
+        max="1440"
+        step="1"
+        value="3"
+        inputmode="numeric"
+        required
+      />
+      <p
+        class="app-action-dialog__message"
+        id="queueCleanupSettingsStatus"
+        role="status"
+        aria-live="polite"
+      >
+        Default: 3 minutes. Maximum: 24 hours.
+      </p>
+      <div class="app-action-dialog__actions">
+        <button
+          class="app-action-dialog__button app-action-dialog__button--cancel"
+          type="button"
+          onclick="closeQueueCleanupSettings()"
+        >
+          Cancel
+        </button>
+        <button
+          class="app-action-dialog__button app-action-dialog__button--primary"
+          id="saveQueueCleanupDelayButton"
+          type="button"
+          onclick="saveQueueCleanupDelay()"
+        >
+          Save
+        </button>
+      </div>
+    </dialog>
 
     <div
       class="modal fade"

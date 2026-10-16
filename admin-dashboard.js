@@ -242,6 +242,7 @@ document.addEventListener("DOMContentLoaded", function () {
   initializePresenceListener();
   initializeAccountRequestListener();
   initializeRoomManagement();
+  initializeQueueCleanupSettings();
   initializeRoomSpecificDisplayControls();
   initializeGlobalPerformerScreenControl();
 
@@ -465,6 +466,82 @@ function closeAddUserDialog() {
   document
     .getElementById("toggleAddUserForm")
     .setAttribute("aria-expanded", "false");
+}
+
+function initializeQueueCleanupSettings() {
+  const button = document.getElementById("queueCleanupSettingsButton");
+  const input = document.getElementById("queueCleanupDelayMinutes");
+  const status = document.getElementById("queueCleanupSettingsStatus");
+  if (!button || !input || !status) return;
+  if (
+    !window.KaraokeSessions ||
+    typeof KaraokeSessions.listenQueueCleanupDelay !== "function" ||
+    typeof firebase === "undefined" ||
+    !firebase.database
+  ) {
+    button.disabled = true;
+    status.textContent = "Queue cleanup settings are unavailable.";
+    return;
+  }
+
+  KaraokeSessions.listenQueueCleanupDelay(
+    (minutes, isSaved) => {
+      input.value = String(minutes);
+      status.textContent = isSaved
+        ? `Current global delay: ${minutes} minutes.`
+        : `Using the default ${minutes}-minute delay.`;
+      button.disabled = false;
+      updateRoomIdleCountdowns();
+    },
+    (error) => {
+      button.disabled = true;
+      status.textContent = "Could not load the global cleanup delay.";
+      console.warn("Could not load queue cleanup settings:", error.message);
+    },
+  );
+}
+
+function openQueueCleanupSettings() {
+  const dialog = document.getElementById("queueCleanupSettingsDialog");
+  const input = document.getElementById("queueCleanupDelayMinutes");
+  if (!dialog || dialog.open) return;
+  dialog.showModal();
+  input?.focus();
+}
+
+function closeQueueCleanupSettings() {
+  const dialog = document.getElementById("queueCleanupSettingsDialog");
+  if (dialog?.open) dialog.close();
+  document.getElementById("queueCleanupSettingsButton")?.focus();
+}
+
+async function saveQueueCleanupDelay() {
+  const input = document.getElementById("queueCleanupDelayMinutes");
+  const status = document.getElementById("queueCleanupSettingsStatus");
+  const saveButton = document.getElementById("saveQueueCleanupDelayButton");
+  if (!input || !status || !saveButton) return;
+
+  const minutes = Number(input.value);
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
+    input.setCustomValidity("Choose a whole number from 1 to 1440 minutes.");
+    input.reportValidity();
+    return;
+  }
+  input.setCustomValidity("");
+  saveButton.disabled = true;
+  status.textContent = "Saving global cleanup delay...";
+  try {
+    await KaraokeSessions.setQueueCleanupDelayMinutes(minutes);
+    status.textContent = `Global cleanup delay set to ${minutes} minutes.`;
+    updateRoomIdleCountdowns();
+    showAppToast(`Queue cleanup delay set to ${minutes} minutes.`, "success");
+    closeQueueCleanupSettings();
+  } catch (error) {
+    status.textContent = "Could not save the global cleanup delay.";
+    console.error("Could not save queue cleanup delay:", error.message);
+  } finally {
+    saveButton.disabled = false;
+  }
 }
 
 function initializeRoomManagement() {

@@ -70,7 +70,6 @@ let karaokeDisplayEnabled = true;
 let tvDisabledAnnouncement = "";
 let tvAvailabilityListenerAttached = false;
 const KARAOKE_DISPLAY_ROOM_REQUEST_STORAGE_KEY = "karaoke_tv_room_request_v1";
-const EMPTY_ROOM_SONG_CLEANUP_DELAY_MS = 3 * 60 * 1000;
 let stopListeningToKaraokeDisplayRoomRequest = null;
 let activeKaraokeDisplayRoomRequestKey = null;
 let tvRoomRequestPollTimer = null;
@@ -669,6 +668,13 @@ function clearEmptyRoomSongCleanupTimer(roomId) {
   roomSongCleanupTimers.delete(roomId);
 }
 
+function rescheduleEmptyRoomSongCleanupTimers() {
+  const roomIds = [...roomSongCleanupListeners.keys()];
+  roomSongCleanupTimers.forEach((timer) => clearTimeout(timer));
+  roomSongCleanupTimers.clear();
+  roomIds.forEach((roomId) => scheduleEmptyRoomSongCleanup(roomId));
+}
+
 async function scheduleEmptyRoomSongCleanup(roomId) {
   if (
     roomSongCleanupTimers.has(roomId) ||
@@ -684,7 +690,7 @@ async function scheduleEmptyRoomSongCleanup(roomId) {
 
     const remainingMs = Math.max(
       0,
-      EMPTY_ROOM_SONG_CLEANUP_DELAY_MS - (Date.now() - emptySince),
+      KaraokeSessions.getQueueCleanupDelayMs() - (Date.now() - emptySince),
     );
     const timer = setTimeout(async () => {
       roomSongCleanupTimers.delete(roomId);
@@ -1225,6 +1231,12 @@ function initializeKaraokeDisplay() {
     );
     return;
   }
+
+  KaraokeSessions.listenQueueCleanupDelay(
+    rescheduleEmptyRoomSongCleanupTimers,
+    (error) =>
+      console.warn("Could not load queue cleanup delay:", error.message),
+  );
 
   firebase
     .database()

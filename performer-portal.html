@@ -2754,6 +2754,11 @@
         if (!checkPerformerLogin()) return;
         listenToPerformerPhoneScoreSoundVolume();
         listenToGlobalPerformerScreenAvailability();
+        KaraokeSessions.listenQueueCleanupDelay(
+          () => renderPerformerRoomIdleState(),
+          (error) =>
+            console.warn("Could not load queue cleanup delay:", error.message),
+        );
         listenToKaraokeDisplayAvailability();
 
         try {

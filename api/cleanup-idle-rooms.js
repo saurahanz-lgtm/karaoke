@@ -2,10 +2,24 @@ const { timingSafeEqual } = require("node:crypto");
 const { cert, getApps, initializeApp } = require("firebase-admin/app");
 const { getDatabase: getAdminDatabase } = require("firebase-admin/database");
 
-const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 3 * 60 * 1000;
+const DEFAULT_QUEUE_CLEANUP_DELAY_MINUTES = 3;
+const MAX_QUEUE_CLEANUP_DELAY_MINUTES = 1440;
 const MEMBER_TIMEOUT_MS = 60000;
 
-function updateIdleRoomSession(room, now) {
+function getQueueCleanupDelayMs(value) {
+  const minutes = Number(value);
+  return Number.isInteger(minutes) &&
+    minutes >= 1 &&
+    minutes <= MAX_QUEUE_CLEANUP_DELAY_MINUTES
+    ? minutes * 60000
+    : DEFAULT_QUEUE_CLEANUP_DELAY_MINUTES * 60000;
+}
+
+function updateIdleRoomSession(
+  room,
+  now,
+  cleanupDelayMs = DEFAULT_QUEUE_CLEANUP_DELAY_MINUTES * 60000,
+) {
   if (!room) return undefined;
 
   const hasActiveMembers = Object.values(room.members || {}).some(
@@ -29,7 +43,7 @@ function updateIdleRoomSession(room, now) {
 
   const storedEmptySince = Number(room.emptySince) || 0;
   const emptySince = storedEmptySince || now;
-  if (now - emptySince < EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS) {
+  if (now - emptySince < cleanupDelayMs) {
     return emptySince === storedEmptySince
       ? undefined
       : { ...room, emptySince };
@@ -74,13 +88,19 @@ async function cleanupIdleRooms(request, response) {
 
   try {
     const database = getDatabase();
-    const roomsSnapshot = await database.ref("karaokeRooms").once("value");
+    const [roomsSnapshot, cleanupDelaySnapshot] = await Promise.all([
+      database.ref("karaokeRooms").once("value"),
+      database.ref("appSettings/queueCleanupMinutes").once("value"),
+    ]);
+    const cleanupDelayMs = getQueueCleanupDelayMs(cleanupDelaySnapshot.val());
     const roomIds = Object.keys(roomsSnapshot.val() || {});
     const results = await Promise.all(
       roomIds.map((roomId) =>
         database
           .ref(`karaokeSessions/${roomId}`)
-          .transaction((room) => updateIdleRoomSession(room, Date.now())),
+          .transaction((room) =>
+            updateIdleRoomSession(room, Date.now(), cleanupDelayMs),
+          ),
       ),
     );
 

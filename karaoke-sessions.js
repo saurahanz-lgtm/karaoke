@@ -4,13 +4,16 @@
   const ROOM_REQUESTS_PATH = "roomRequests";
   const ACTIVE_ROOM_PATH = "karaokeControl/activeRoomId";
   const ROOM_NAME_COUNTER_PATH = "karaokeControl/nextRoomNameNumber";
+  const QUEUE_CLEANUP_SETTING_PATH = "appSettings/queueCleanupMinutes";
   const MAX_DEVICES = 3;
   const MAX_ROOM_DEVICES = 100;
   const DEFAULT_ROOM_VOLUME = 70;
   const MAX_ROOM_TIME_LIMIT_MINUTES = 10080;
   const MEMBER_TIMEOUT_MS = 60000;
-  const EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS = 3 * 60 * 1000;
+  const DEFAULT_QUEUE_CLEANUP_DELAY_MINUTES = 3;
+  const MAX_QUEUE_CLEANUP_DELAY_MINUTES = 1440;
   const HEARTBEAT_INTERVAL_MS = 15000;
+  let queueCleanupDelayMs = DEFAULT_QUEUE_CLEANUP_DELAY_MINUTES * 60000;
   const DEVICE_ID_STORAGE_KEY = "karaoke_room_tab_device_id";
   const TAB_INSTANCE_ID = global.crypto?.randomUUID
     ? global.crypto.randomUUID()
@@ -25,6 +28,7 @@
     typeof global.BroadcastChannel === "function"
       ? new global.BroadcastChannel("karaoke_room_device_identity")
       : null;
+  const roomIdleStateRefreshers = new Set();
 
   deviceIdChannel?.addEventListener("message", (event) => {
     const message = event.data;
@@ -55,6 +59,47 @@
       throw new Error("Firebase is unavailable");
     }
     return firebase.database();
+  }
+
+  function normalizeQueueCleanupDelayMinutes(value) {
+    const minutes = Number(value);
+    return Number.isInteger(minutes) &&
+      minutes >= 1 &&
+      minutes <= MAX_QUEUE_CLEANUP_DELAY_MINUTES
+      ? minutes
+      : DEFAULT_QUEUE_CLEANUP_DELAY_MINUTES;
+  }
+
+  function getQueueCleanupDelayMs() {
+    return queueCleanupDelayMs;
+  }
+
+  function listenQueueCleanupDelay(callback, onError) {
+    const ref = database().ref(QUEUE_CLEANUP_SETTING_PATH);
+    const handler = (snapshot) => {
+      const savedValue = snapshot.val();
+      const minutes =
+        savedValue == null
+          ? DEFAULT_QUEUE_CLEANUP_DELAY_MINUTES
+          : normalizeQueueCleanupDelayMinutes(savedValue);
+      queueCleanupDelayMs = minutes * 60000;
+      roomIdleStateRefreshers.forEach((refresh) => refresh());
+      callback?.(minutes, savedValue != null);
+    };
+    ref.on("value", handler, onError);
+    return () => ref.off("value", handler);
+  }
+
+  function setQueueCleanupDelayMinutes(value) {
+    const minutes = Number(value);
+    if (
+      !Number.isInteger(minutes) ||
+      minutes < 1 ||
+      minutes > MAX_QUEUE_CLEANUP_DELAY_MINUTES
+    ) {
+      throw new Error("QUEUE_CLEANUP_DELAY_INVALID");
+    }
+    return database().ref(QUEUE_CLEANUP_SETTING_PATH).set(minutes);
   }
 
   function isRoomTimeExpired(room, now = Date.now()) {
@@ -98,7 +143,7 @@
       emptySince: emptySince || null,
       expiresAt:
         hasSongs && !inUse && emptySince
-          ? emptySince + EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS
+          ? emptySince + queueCleanupDelayMs
           : null,
       shouldStartTimer: hasSongs && !inUse && !emptySince,
     };
@@ -939,6 +984,7 @@
         });
       }
     };
+    roomIdleStateRefreshers.add(updateState);
     const handler = (snapshot) => {
       room = snapshot.val();
       updateState();
@@ -948,6 +994,7 @@
     return () => {
       ref.off("value", handler);
       global.clearInterval(refreshTimer);
+      roomIdleStateRefreshers.delete(updateState);
     };
   }
 
@@ -1080,7 +1127,7 @@
       }
       const emptySince = Number(room.emptySince) || 0;
       const idleSince = emptySince || now;
-      if (now - idleSince < EMPTY_ROOM_QUEUE_CLEAR_DELAY_MS) {
+      if (now - idleSince < queueCleanupDelayMs) {
         return idleSince === emptySince
           ? undefined
           : { ...room, emptySince: idleSince };
@@ -1485,6 +1532,9 @@
     listenRoomUsage,
     listenRoomRequests,
     listenRoomDisplayStatus,
+    listenQueueCleanupDelay,
+    getQueueCleanupDelayMs,
+    setQueueCleanupDelayMinutes,
     listenVolume,
     roomRef,
     renameRoom,
