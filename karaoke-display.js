@@ -2461,6 +2461,23 @@ function playScoreSound() {
     });
 }
 
+function getScoreFeedback(score) {
+  if (score === null) return "Try pitch scoring on the next song!";
+
+  const feedbackByRange =
+    score >= 95
+      ? ["Perfect!", "Excellent!", "Professional!", "Superstar!", "Great Job!"]
+      : score >= 80
+        ? ["Good Job!", "Nice Try!", "Keep It Up!", "Not Bad!"]
+        : [
+            "Try Again!",
+            "More Practice!",
+            "Cheer Up!",
+            "Better Luck Next Time!",
+          ];
+  return feedbackByRange[Math.floor(Math.random() * feedbackByRange.length)];
+}
+
 // Display score modal
 function displayScoreModal(score) {
   const existingModal = document.getElementById("scoreModal");
@@ -2484,19 +2501,7 @@ function displayScoreModal(score) {
 
   const feedback = document.createElement("p");
   feedback.className = "score-modal-feedback";
-  if (score === null) {
-    feedback.textContent = "Try pitch scoring on the next song!";
-  } else if (score === 100) {
-    feedback.textContent = "Your pitch was super steady!";
-  } else if (score >= 80) {
-    feedback.textContent = "Great pitch consistency! Keep it up!";
-  } else if (score >= 60) {
-    feedback.textContent = "You're finding a steady pitch!";
-  } else if (score > 0) {
-    feedback.textContent = "Keep practicing your pitch!";
-  } else {
-    feedback.textContent = "Try holding a note steadily next time!";
-  }
+  feedback.textContent = getScoreFeedback(score);
 
   scoreDisplay.append(title, value, feedback);
 

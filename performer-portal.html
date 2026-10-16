@@ -1893,6 +1893,31 @@
         performerPhonePreviousPitchHz = pitchHz;
       }
 
+      function getPerformerPhoneScoreFeedback(score) {
+        if (score === null) return "Try pitch scoring on the next song!";
+
+        const feedbackByRange =
+          score >= 95
+            ? [
+                "Perfect!",
+                "Excellent!",
+                "Professional!",
+                "Superstar!",
+                "Great Job!",
+              ]
+            : score >= 80
+              ? ["Good Job!", "Nice Try!", "Keep It Up!", "Not Bad!"]
+              : [
+                  "Try Again!",
+                  "More Practice!",
+                  "Cheer Up!",
+                  "Better Luck Next Time!",
+                ];
+        return feedbackByRange[
+          Math.floor(Math.random() * feedbackByRange.length)
+        ];
+      }
+
       function showPerformerPhoneScore(songKey = performerPhoneScoreSongKey) {
         if (!songKey || performerPhoneFinalizedScoreSongKey === songKey) {
           return Promise.resolve();
@@ -1919,13 +1944,7 @@
         document.getElementById("performerPhoneScoreValue").textContent =
           score === null ? "--" : String(score);
         document.getElementById("performerPhoneScoreFeedback").textContent =
-          score === null
-            ? "Try pitch scoring on the next song!"
-            : score === 100
-              ? "Your pitch was super steady!"
-              : score >= 80
-                ? "Great pitch consistency!"
-                : "You're finding a steady pitch!";
+          getPerformerPhoneScoreFeedback(score);
         document.getElementById("performerPhoneScoreResult").hidden = false;
         return playPerformerPhoneScoreSound().finally(() => {
           performerPhoneScorePresentationActive = false;
