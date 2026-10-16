@@ -729,6 +729,16 @@ async function chooseInitialKaraokeDisplayRoomId(rooms) {
   }
 
   const requestedRoomId = KaraokeSessions.getRoomIdFromUrl();
+  const rememberedRoomId = sessionStorage.getItem("karaokeTvRoomId");
+  if (requestedRoomId && rooms.some((room) => room.id === requestedRoomId)) {
+    const memberCount =
+      await KaraokeSessions.getActiveMemberCount(requestedRoomId);
+    if (memberCount === 0) return requestedRoomId;
+  }
+  if (rooms.some((room) => room.id === rememberedRoomId)) {
+    return rememberedRoomId;
+  }
+
   const roomCounts = new Map(
     await Promise.all(
       rooms.map(async (room) => [
@@ -740,16 +750,6 @@ async function chooseInitialKaraokeDisplayRoomId(rooms) {
   const emptyRooms = rooms
     .filter((room) => (roomCounts.get(room.id) || 0) === 0)
     .sort((first, second) => (first.createdAt || 0) - (second.createdAt || 0));
-  if (
-    requestedRoomId &&
-    emptyRooms.some((room) => room.id === requestedRoomId)
-  ) {
-    return requestedRoomId;
-  }
-  const rememberedRoomId = sessionStorage.getItem("karaokeTvRoomId");
-  if (rooms.some((room) => room.id === rememberedRoomId)) {
-    return rememberedRoomId;
-  }
   return emptyRooms[0]?.id || null;
 }
 
@@ -1046,8 +1046,7 @@ async function requestKaraokeDisplayRoomApproval(anchorRoomId) {
 
 function initializeKaraokeRooms() {
   KaraokeSessions.ensureDefaultRoom()
-    .then(async () => {
-      const activeRoomId = await KaraokeSessions.getActiveRoomId();
+    .then((activeRoomId) => {
       stopListeningToRooms = KaraokeSessions.listenRooms((rooms) => {
         karaokeRooms = rooms;
         renderKaraokeRooms();

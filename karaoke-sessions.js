@@ -335,14 +335,19 @@
 
     await migrateLegacyRoomIds(db);
 
-    const roomsSnapshot = await db.ref(ROOM_LIST_PATH).once("value");
-    const rooms = roomsSnapshot.val() || {};
     const activeRef = db.ref(ACTIVE_ROOM_PATH);
-    const activeSnapshot = await activeRef.once("value");
-    if (!rooms[activeSnapshot.val()]) {
+    const [roomsSnapshot, activeSnapshot] = await Promise.all([
+      db.ref(ROOM_LIST_PATH).once("value"),
+      activeRef.once("value"),
+    ]);
+    const rooms = roomsSnapshot.val() || {};
+    const activeRoomId = activeSnapshot.val();
+    if (!rooms[activeRoomId]) {
       const firstRoomId = Object.keys(rooms)[0] || "main";
       await activeRef.set(firstRoomId);
+      return firstRoomId;
     }
+    return activeRoomId;
   }
 
   function listenRooms(callback, onError) {
