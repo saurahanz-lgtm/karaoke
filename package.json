@@ -1,6 +1,6 @@
 {
   "name": "sdkaraoke",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "SDkaraoke - Interactive karaoke application",
   "main": "index.html",
   "scripts": {
@@ -15,5 +15,8 @@
   "license": "ISC",
   "dependencies": {
     "firebase-admin": "^14.5.0"
+  },
+  "devDependencies": {
+    "@bubblewrap/cli": "^1.27.0"
   }
 }
