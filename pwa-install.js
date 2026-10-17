@@ -10,9 +10,7 @@ if (installButton) {
     (window.navigator.platform === "MacIntel" &&
       window.navigator.maxTouchPoints > 1);
 
-  if (!isStandalone && isIOS) {
-    installButton.hidden = false;
-  }
+  if (!isStandalone) installButton.hidden = false;
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -22,9 +20,14 @@ if (installButton) {
 
   installButton.addEventListener("click", async () => {
     if (!installPrompt) {
-      window.showAppToast?.(
-        "On iPhone or iPad, tap Share in Safari, then choose Add to Home Screen.",
-      );
+      const message = isIOS
+        ? "To install SD Karaoke, tap Share in Safari, then choose Add to Home Screen."
+        : "Use your browser menu and choose Install app or Add to Home Screen.";
+      if (typeof window.showAppToast === "function") {
+        window.showAppToast(message);
+      } else {
+        window.alert(message);
+      }
       return;
     }
 
