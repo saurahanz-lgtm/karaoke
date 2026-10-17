@@ -25,7 +25,7 @@ let firebaseListenersSet = false;
 let pendingSongToPlay = null;
 
 // A. GLOBAL FLAGS (REQUIRED)
-let ytReady = false;
+let ytReady = window.ytReady === true;
 let firebaseReady = false;
 let playerReady = false;
 let isLoadingSong = false;
@@ -1255,6 +1255,10 @@ function initializeKaraokeDisplay() {
     initializeFirebaseListeners();
   } catch (err) {
     console.error("❌ Error initializing Firebase listeners early:", err);
+  }
+
+  if (ytReady) {
+    createYouTubePlayer();
   }
 
   // Fallback: If YouTube API doesn't load within 3 seconds, force ytReady (reduced from 5s)
