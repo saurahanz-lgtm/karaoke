@@ -2907,6 +2907,37 @@ body.karaoke-display-page {
   outline-offset: 3px;
 }
 
+.pwa-install-button {
+  position: fixed;
+  top: max(56px, calc(env(safe-area-inset-top) + 56px));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(32, 212, 176, 0.55);
+  border-radius: 999px;
+  color: #effffb;
+  background: rgba(11, 23, 54, 0.88);
+  box-shadow: 0 5px 18px rgba(3, 8, 28, 0.3);
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pwa-install-button[hidden] {
+  display: none;
+}
+
+.pwa-install-button:focus-visible {
+  outline: 2px solid #20d4b0;
+  outline-offset: 3px;
+}
+
 .access-portal-version {
   position: fixed;
   bottom: max(14px, env(safe-area-inset-bottom));

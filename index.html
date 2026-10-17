@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1736" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="SD Karaoke" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link
+      rel="apple-touch-icon"
+      href="assets/sd-karaoke-apple-touch-icon.png"
+    />
     <title>SD Karaoke | Welcome</title>
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
@@ -10,6 +18,7 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <script src="app-dialogs.js" defer></script>
+    <script src="pwa-install.js" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -356,6 +365,15 @@
       <i class="bi bi-question-circle-fill" aria-hidden="true"></i>
       <span>User Guide</span>
     </a>
+    <button
+      class="pwa-install-button"
+      id="installAppButton"
+      type="button"
+      hidden
+    >
+      <i class="bi bi-download" aria-hidden="true"></i>
+      <span>Install app</span>
+    </button>
     <span class="access-portal-version" id="accessPortalVersion">
       Version 1.2.0
     </span>
