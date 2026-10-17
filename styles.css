@@ -2891,6 +2891,11 @@ body.karaoke-display-page {
     background-color 150ms ease;
 }
 
+.access-portal-display {
+  left: max(14px, env(safe-area-inset-left));
+  right: auto;
+}
+
 .access-portal-guide > i {
   color: #d9deff;
   font-size: 0.82rem;
