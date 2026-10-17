@@ -1,0 +1,32 @@
+const appConsoleDebugEnabled = new URLSearchParams(window.location.search).get("debug") === "1";
+if (!appConsoleDebugEnabled && window.console) {
+  ["log", "info", "debug", "warn", "error"].forEach((method) => {
+    window.console[method] = () => {
+    };
+  });
+}
+const firebaseConfig = {
+  apiKey: "AIzaSyCTZ_o87tAT4CTfqaHmwA-ou3v7XRGbkAQ",
+  authDomain: "karaoke-890dd.firebaseapp.com",
+  databaseURL: "https://karaoke-890dd-default-rtdb.firebaseio.com",
+  projectId: "karaoke-890dd",
+  storageBucket: "karaoke-890dd.firebasestorage.app",
+  messagingSenderId: "45219903707",
+  appId: "1:45219903707:web:9e5fbc1b096d0a143874fe"
+};
+if (typeof firebase !== "undefined") {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const database = firebase.database();
+    const usersRef = database.ref("users");
+    const songsRef = database.ref("songs");
+    const queueRef = database.ref("queue");
+    const reservationsRef = database.ref("reservations");
+  } catch (error) {
+    console.warn("Firebase initialization skipped or failed:", error.message);
+  }
+} else {
+  console.warn("Firebase SDK not loaded - using localStorage fallback");
+}

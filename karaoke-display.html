@@ -24,7 +24,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
-    <script src="app-dialogs.js" defer></script>
+    <script src="assets/compat/app-dialogs.js" defer></script>
 
     <!-- Firebase SDK (Compat Version) -->
     <script
@@ -35,9 +35,9 @@
       defer
       src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"
     ></script>
-    <script defer src="firebase-config.js"></script>
-    <script defer src="karaoke-sessions.js"></script>
-    <script defer src="admin-presence.js"></script>
+    <script defer src="assets/compat/firebase-config.js"></script>
+    <script defer src="assets/compat/karaoke-sessions.js"></script>
+    <script defer src="assets/compat/admin-presence.js"></script>
 
     <!-- YouTube API - Deferred loading for faster initial render -->
     <script>
@@ -1072,7 +1072,8 @@
     </div>
     <script>
       window.setTimeout(() => {
-        document.getElementById("bootupSplash")?.classList.add("hidden");
+        const splash = document.getElementById("bootupSplash");
+        if (splash) splash.classList.add("hidden");
       }, 10000);
     </script>
 
@@ -1191,7 +1192,7 @@
       </div>
     </dialog>
 
-    <script defer src="karaoke-display.js"></script>
+    <script defer src="assets/compat/karaoke-display.js"></script>
     <script
       async
       defer

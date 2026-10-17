@@ -1,5 +1,5 @@
 {
-  "buildCommand": "",
+  "buildCommand": "npm exec --yes --package=esbuild@0.25.6 -- esbuild karaoke-display.js karaoke-sessions.js admin-presence.js app-dialogs.js firebase-config.js --target=es2015 --outdir=assets/compat",
   "installCommand": "npm install",
   "outputDirectory": ".",
   "headers": [
