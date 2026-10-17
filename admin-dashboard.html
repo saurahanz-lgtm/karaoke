@@ -1503,6 +1503,63 @@
                   </div>
                 </div>
               </div>
+              <form
+                id="accountSelfServicePolicyForm"
+                class="account-self-service-settings"
+                hidden
+              >
+                <div class="account-self-service-copy">
+                  <h4>Self-service limits</h4>
+                  <p>
+                    Set how many accounts a browser/device can create and how
+                    many password changes a signed-in user can make after
+                    entering the current password. Enter 0 to always require
+                    approval. Forgot-password requests still require admin
+                    approval.
+                  </p>
+                </div>
+                <div class="account-self-service-fields">
+                  <label for="selfServiceAccountsPerDevice">
+                    Accounts per device
+                    <input
+                      id="selfServiceAccountsPerDevice"
+                      name="accountsPerDevice"
+                      class="form-control"
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="1"
+                      value="0"
+                      inputmode="numeric"
+                      required
+                    />
+                  </label>
+                  <label for="selfServicePasswordChangesPerAccount">
+                    Password changes per account
+                    <input
+                      id="selfServicePasswordChangesPerAccount"
+                      name="passwordChangesPerAccount"
+                      class="form-control"
+                      type="number"
+                      min="0"
+                      max="20"
+                      step="1"
+                      value="0"
+                      inputmode="numeric"
+                      required
+                    />
+                  </label>
+                  <button class="btn btn-primary" type="submit">
+                    Save limits
+                  </button>
+                  <p
+                    id="accountSelfServicePolicyFeedback"
+                    class="account-self-service-feedback"
+                    role="status"
+                    aria-live="polite"
+                  ></p>
+                </div>
+              </form>
               <div
                 class="history-bulk-actions"
                 id="accountHistoryBulkActions"

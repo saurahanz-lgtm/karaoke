@@ -33,6 +33,8 @@
     <script src="firebase-config.js"></script>
     <script src="karaoke-sessions.js"></script>
     <script src="admin-presence.js"></script>
+    <script src="account-requests.js"></script>
+    <script src="password-change.js" defer></script>
     <!-- YouTube IFrame API -->
     <script>
       window.performerYouTubeApiReady = false;
@@ -1285,20 +1287,111 @@
       <div class="card-ui">
         <div class="performer-player-heading">
           <div id="userDisplayName">Welcome</div>
-          <button
-            class="phone-display-toggle"
-            id="performerPhoneDisplayToggle"
-            type="button"
-            aria-pressed="false"
-            aria-expanded="false"
-            aria-label="Toggle phone display"
-            aria-controls="performerPhoneDisplay"
-            title="Open phone display and enable pitch scoring"
-            onclick="togglePerformerPhoneDisplay()"
-          >
-            <i class="bi bi-display" aria-hidden="true"></i>
-          </button>
+          <div class="performer-account-actions">
+            <button
+              class="phone-display-toggle"
+              id="performerPasswordChangeToggle"
+              type="button"
+              aria-expanded="false"
+              aria-label="Change password"
+              aria-controls="performerPasswordChangeForm"
+              title="Change password"
+            >
+              <i class="bi bi-key" aria-hidden="true"></i>
+            </button>
+            <button
+              class="phone-display-toggle"
+              id="performerPhoneDisplayToggle"
+              type="button"
+              aria-pressed="false"
+              aria-expanded="false"
+              aria-label="Toggle phone display"
+              aria-controls="performerPhoneDisplay"
+              title="Open phone display and enable pitch scoring"
+              onclick="togglePerformerPhoneDisplay()"
+            >
+              <i class="bi bi-display" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
+        <form
+          class="performer-password-change-form"
+          id="performerPasswordChangeForm"
+          hidden
+        >
+          <h2>Change password</h2>
+          <p
+            id="performerPasswordChangeAllowance"
+            class="performer-password-change-allowance"
+            role="status"
+            aria-live="polite"
+          >
+            Checking available changes...
+          </p>
+          <div class="performer-password-change-fields">
+            <label for="performerCurrentPassword">
+              Current password
+              <input
+                id="performerCurrentPassword"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+            <label for="performerNewPassword">
+              New password
+              <input
+                id="performerNewPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="6"
+                maxlength="128"
+                required
+              />
+            </label>
+            <label for="performerConfirmPassword">
+              Confirm new password
+              <input
+                id="performerConfirmPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="6"
+                maxlength="128"
+                required
+              />
+            </label>
+          </div>
+          <div class="performer-password-change-actions">
+            <button
+              id="performerPasswordChangeSubmit"
+              class="btn btn-primary"
+              type="submit"
+            >
+              Update password
+            </button>
+            <button
+              id="performerPasswordChangeClose"
+              class="btn btn-outline-light"
+              type="button"
+            >
+              Close
+            </button>
+            <button
+              id="performerPasswordChangeRequestApproval"
+              class="btn btn-outline-warning"
+              type="button"
+              hidden
+            >
+              Sign out to request approval
+            </button>
+          </div>
+          <p
+            id="performerPasswordChangeFeedback"
+            class="performer-password-change-feedback"
+            role="status"
+            aria-live="polite"
+          ></p>
+        </form>
         <section
           id="performerPhoneDisplay"
           aria-label="Phone karaoke display"

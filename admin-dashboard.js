@@ -254,6 +254,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadUsers();
   initializePresenceListener();
   initializeAccountRequestListener();
+  initializeAccountSelfServiceSettings();
   initializeRoomManagement();
   initializeRoomUsageHistory();
   if (loggedInUser?.role === "admin") initializeLoginHistory();
@@ -971,6 +972,70 @@ function initializeAccountRequestListener() {
       }
     },
   );
+}
+
+function initializeAccountSelfServiceSettings() {
+  const form = document.getElementById("accountSelfServicePolicyForm");
+  if (!form) return;
+  if (
+    loggedInUser?.role !== "admin" ||
+    typeof window.KaraokeAccountRequests?.listenSelfServicePolicy !==
+      "function" ||
+    typeof window.KaraokeAccountRequests?.updateSelfServicePolicy !== "function"
+  ) {
+    form.hidden = true;
+    return;
+  }
+
+  const accountLimitInput = document.getElementById(
+    "selfServiceAccountsPerDevice",
+  );
+  const passwordLimitInput = document.getElementById(
+    "selfServicePasswordChangesPerAccount",
+  );
+  const feedback = document.getElementById("accountSelfServicePolicyFeedback");
+  const saveButton = form.querySelector('button[type="submit"]');
+
+  form.hidden = false;
+  KaraokeAccountRequests.listenSelfServicePolicy(
+    (policy) => {
+      accountLimitInput.value = String(policy.accountsPerDevice);
+      passwordLimitInput.value = String(policy.passwordChangesPerAccount);
+    },
+    (error) => {
+      console.error("Could not load self-service limits:", error.message);
+      feedback.textContent = "Could not load limits. Check your connection.";
+      feedback.dataset.state = "error";
+    },
+  );
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+
+    saveButton.disabled = true;
+    feedback.textContent = "Saving limits...";
+    feedback.dataset.state = "pending";
+    try {
+      const policy = await KaraokeAccountRequests.updateSelfServicePolicy({
+        accountsPerDevice: accountLimitInput.valueAsNumber,
+        passwordChangesPerAccount: passwordLimitInput.valueAsNumber,
+      });
+      accountLimitInput.value = String(policy.accountsPerDevice);
+      passwordLimitInput.value = String(policy.passwordChangesPerAccount);
+      feedback.textContent = "Self-service limits saved.";
+      feedback.dataset.state = "success";
+    } catch (error) {
+      console.error("Could not save self-service limits:", error.message);
+      feedback.textContent =
+        error.message === "SELF_SERVICE_POLICY_INVALID"
+          ? "Use whole numbers within the displayed limits."
+          : "Could not save limits. Check your connection and try again.";
+      feedback.dataset.state = "error";
+    } finally {
+      saveButton.disabled = false;
+    }
+  });
 }
 
 function renderAccountRequests() {

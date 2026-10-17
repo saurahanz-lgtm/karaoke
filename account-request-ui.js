@@ -220,7 +220,9 @@ document.addEventListener("DOMContentLoaded", () => {
         usernameInput.value = request.username || usernameInput.value;
         usernameInput.disabled = true;
         submitButton.disabled = true;
-        anotherRequestButton.hidden = request.status !== "rejected";
+        anotherRequestButton.hidden = !["approved", "rejected"].includes(
+          request.status,
+        );
         if (request.status !== "rejected") {
           anotherRequestButton.disabled = false;
           anotherRequestButton.textContent = "Submit another request";
@@ -287,15 +289,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   requestForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const requestLimit = getAccountRequestLimit();
-    if (requestLimit.blocked) {
-      showFeedback(
-        `This device has reached 3 account requests. Try again in ${formatCooldown(requestLimit.blockedUntil - Date.now())}.`,
-        "error",
-      );
-      return;
-    }
-
     const requestedUsername = usernameInput.value.trim();
     if (!/^[A-Za-z0-9_.-]{3,30}$/.test(requestedUsername)) {
       showFeedback(
@@ -308,14 +301,31 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.disabled = true;
     showFeedback("Submitting your account request...", "pending");
     try {
-      if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
-        submitButton.disabled = false;
-        showFeedback("No admin is online right now.", "error");
-        accountAdminContactNotice.hidden = false;
-        return;
+      const createSelfServiceAccount =
+        window.KaraokeAccountRequests?.createSelfServiceAccount;
+      let request =
+        typeof createSelfServiceAccount === "function"
+          ? await createSelfServiceAccount(requestedUsername)
+          : null;
+      if (!request) {
+        const requestLimit = getAccountRequestLimit();
+        if (requestLimit.blocked) {
+          submitButton.disabled = false;
+          showFeedback(
+            `This device has reached 3 account requests. Try again in ${formatCooldown(requestLimit.blockedUntil - Date.now())}.`,
+            "error",
+          );
+          return;
+        }
+        if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
+          submitButton.disabled = false;
+          showFeedback("No admin is online right now.", "error");
+          accountAdminContactNotice.hidden = false;
+          return;
+        }
+        request = await KaraokeAccountRequests.create(requestedUsername);
       }
-      const request = await KaraokeAccountRequests.create(requestedUsername);
-      recordSuccessfulAccountRequest();
+      if (request.selfService !== true) recordSuccessfulAccountRequest();
       sessionStorage.setItem("karaoke_account_request_id", request.id);
       watchRequest(request.id);
     } catch (error) {
@@ -323,6 +333,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const messages = {
         ACCOUNT_ALREADY_EXISTS:
           "That username already has an account. Return to sign in instead.",
+        SELF_SERVICE_ACCOUNT_LIMIT_UNAVAILABLE:
+          "Could not check account access limits. Check your connection and try again.",
         ACCOUNT_REQUEST_ALREADY_PENDING:
           "A request for that username is already awaiting review.",
         ADMIN_PRESENCE_UNAVAILABLE:
