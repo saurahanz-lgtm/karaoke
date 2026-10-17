@@ -88,6 +88,8 @@ let scoreAudioBuffer = null;
 let scoreAudioLoadPromise = null;
 let scoreSoundVolume = 0.8;
 let micScoringEnabled = false;
+let micScoringDeclined = false;
+let micPermissionDenied = false;
 let micObservedPlayingMs = 0;
 let pitchDetectedMs = 0;
 let pitchStableMs = 0;
@@ -160,6 +162,7 @@ function unlockScoreAudio() {
 }
 
 function declineMicScoring() {
+  micScoringDeclined = true;
   unlockScoreAudio().catch((error) =>
     console.warn("Could not prepare score sound:", error.message),
   );
@@ -170,6 +173,8 @@ async function enableMicScoring() {
   const dialog = document.getElementById("micConsentDialog");
   const allowButton = document.getElementById("allowMicScoringButton");
   const status = document.getElementById("micConsentStatus");
+  micScoringDeclined = false;
+  micPermissionDenied = false;
   if (allowButton) allowButton.disabled = true;
   if (status) status.textContent = "Waiting for microphone permission...";
   unlockScoreAudio().catch((error) =>
@@ -216,6 +221,9 @@ async function enableMicScoring() {
     if (dialog?.open) dialog.close("allowed");
   } catch (error) {
     stopMicScoring();
+    micPermissionDenied = ["NotAllowedError", "PermissionDeniedError"].includes(
+      error.name,
+    );
     if (status) {
       status.textContent =
         error.message ||
@@ -2424,7 +2432,9 @@ async function showScore() {
       : 0;
   const score = micScoringEnabled
     ? 75 + Math.round(pitchSteadiness * 25)
-    : null;
+    : micScoringDeclined || micPermissionDenied
+      ? 75 + Math.floor(Math.random() * 26)
+      : null;
   const pitchSeconds = (pitchDetectedMs / 1000).toFixed(1);
   const stableSeconds = (pitchStableMs / 1000).toFixed(1);
 

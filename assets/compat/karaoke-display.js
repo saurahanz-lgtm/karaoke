@@ -113,6 +113,8 @@ let scoreAudioBuffer = null;
 let scoreAudioLoadPromise = null;
 let scoreSoundVolume = 0.8;
 let micScoringEnabled = false;
+let micScoringDeclined = false;
+let micPermissionDenied = false;
 let micObservedPlayingMs = 0;
 let pitchDetectedMs = 0;
 let pitchStableMs = 0;
@@ -169,6 +171,7 @@ function unlockScoreAudio() {
 }
 function declineMicScoring() {
   var _a;
+  micScoringDeclined = true;
   unlockScoreAudio().catch(
     (error) => console.warn("Could not prepare score sound:", error.message)
   );
@@ -180,6 +183,8 @@ function enableMicScoring() {
     const dialog = document.getElementById("micConsentDialog");
     const allowButton = document.getElementById("allowMicScoringButton");
     const status = document.getElementById("micConsentStatus");
+    micScoringDeclined = false;
+    micPermissionDenied = false;
     if (allowButton) allowButton.disabled = true;
     if (status) status.textContent = "Waiting for microphone permission...";
     unlockScoreAudio().catch(
@@ -218,6 +223,9 @@ function enableMicScoring() {
       if (dialog == null ? void 0 : dialog.open) dialog.close("allowed");
     } catch (error) {
       stopMicScoring();
+      micPermissionDenied = ["NotAllowedError", "PermissionDeniedError"].includes(
+        error.name
+      );
       if (status) {
         status.textContent = error.message || "Microphone access was denied. Karaoke will continue without scoring.";
       }
@@ -1994,7 +2002,7 @@ function showScore() {
   return __async(this, null, function* () {
     var _a;
     const pitchSteadiness = pitchDetectedMs > 0 ? Math.min(1, Math.max(0, pitchStableMs / pitchDetectedMs)) : 0;
-    const score = micScoringEnabled ? 75 + Math.round(pitchSteadiness * 25) : null;
+    const score = micScoringEnabled ? 75 + Math.round(pitchSteadiness * 25) : micScoringDeclined || micPermissionDenied ? 75 + Math.floor(Math.random() * 26) : null;
     const pitchSeconds = (pitchDetectedMs / 1e3).toFixed(1);
     const stableSeconds = (pitchStableMs / 1e3).toFixed(1);
     console.log("Mic pitch stability score:", score, {
