@@ -470,10 +470,17 @@
 
       .score-modal-overlay {
         position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
         inset: 0;
         z-index: 9999;
-        display: grid;
-        place-items: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        padding: 16px;
         padding: max(16px, env(safe-area-inset-top)) 16px
           max(16px, env(safe-area-inset-bottom));
         background: transparent;
@@ -482,9 +489,11 @@
       }
 
       .score-modal-card {
-        width: min(100%, 560px);
-        max-height: calc(100dvh - 32px);
+        width: 100%;
+        max-width: 560px;
+        max-height: calc(100vh - 32px);
         padding: 28px 32px;
+        box-sizing: border-box;
         overflow-y: auto;
         border: 0;
         border-radius: 0;
