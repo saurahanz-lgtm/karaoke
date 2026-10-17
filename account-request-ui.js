@@ -411,6 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let passwordResetState = null;
   let stopWatchingPasswordReset = null;
   let passwordResetRole = null;
+  let passwordResetSelfServiceUsername = null;
 
   function readPasswordResetState() {
     try {
@@ -446,6 +447,7 @@ document.addEventListener("DOMContentLoaded", () => {
     stopWatchingPasswordReset?.();
     stopWatchingPasswordReset = null;
     savePasswordResetState(null);
+    passwordResetSelfServiceUsername = null;
     passwordResetRequestForm.hidden = false;
     passwordResetPasswordForm.hidden = true;
     passwordResetUsername.disabled = false;
@@ -527,6 +529,50 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  async function requestPasswordResetApproval(username) {
+    try {
+      if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
+        passwordResetRequestButton.disabled = false;
+        setPasswordResetFeedback(
+          "You've reached the self-service password change limit. No admin is online right now.",
+          "error",
+        );
+        passwordResetAdminContactNotice.hidden = false;
+        return false;
+      }
+      const request = await KaraokeAccountRequests.createPasswordReset(
+        username,
+        passwordResetRole,
+      );
+      savePasswordResetState({
+        id: request.id,
+        token: request.token,
+        username: request.username,
+        role: passwordResetRole,
+      });
+      watchPasswordReset(request.id);
+      return true;
+    } catch (error) {
+      passwordResetRequestButton.disabled = false;
+      const messages = {
+        ACCOUNT_NOT_FOUND:
+          "No active account was found for that username and sign-in type.",
+        PASSWORD_RESET_ALREADY_PENDING:
+          "A password reset request is already waiting for this account.",
+        PASSWORD_RESET_UNAVAILABLE:
+          "Secure password reset is unavailable in this browser.",
+        ADMIN_PRESENCE_UNAVAILABLE:
+          "Could not check admin availability. Check your connection and try again.",
+      };
+      setPasswordResetFeedback(
+        messages[error.message] ||
+          "Could not submit the request. Check your connection and try again.",
+        "error",
+      );
+      return false;
+    }
+  }
+
   document.querySelectorAll("[data-password-reset-role]").forEach((button) => {
     button.addEventListener("click", () => {
       stopRoomQrScanner();
@@ -570,34 +616,35 @@ document.addEventListener("DOMContentLoaded", () => {
     passwordResetRequestButton.disabled = true;
     setPasswordResetFeedback("Submitting request...", "pending");
     try {
-      if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
-        passwordResetRequestButton.disabled = false;
-        setPasswordResetFeedback("No admin is online right now.", "error");
-        passwordResetAdminContactNotice.hidden = false;
-        return;
+      if (passwordResetRole === "user") {
+        const allowance =
+          await KaraokeAccountRequests.getPasswordChangeAllowance(
+            username,
+            "user",
+          );
+        if (allowance.remaining > 0) {
+          passwordResetSelfServiceUsername = username;
+          passwordResetRequestForm.hidden = true;
+          passwordResetPasswordForm.hidden = false;
+          passwordResetUsername.disabled = true;
+          passwordResetSaveButton.disabled = false;
+          passwordResetPasswordForm.reset();
+          setPasswordResetFeedback(
+            "You can reset your password now. Enter a new password.",
+            "success",
+          );
+          document.getElementById("passwordResetNewPassword").focus();
+          return;
+        }
       }
-      const request = await KaraokeAccountRequests.createPasswordReset(
-        username,
-        passwordResetRole,
-      );
-      savePasswordResetState({
-        id: request.id,
-        token: request.token,
-        username: request.username,
-        role: passwordResetRole,
-      });
-      watchPasswordReset(request.id);
+      await requestPasswordResetApproval(username);
     } catch (error) {
       passwordResetRequestButton.disabled = false;
       const messages = {
         ACCOUNT_NOT_FOUND:
           "No active account was found for that username and sign-in type.",
-        PASSWORD_RESET_ALREADY_PENDING:
-          "A password reset request is already waiting for this account.",
-        PASSWORD_RESET_UNAVAILABLE:
-          "Secure password reset is unavailable in this browser.",
-        ADMIN_PRESENCE_UNAVAILABLE:
-          "Could not check admin availability. Check your connection and try again.",
+        PASSWORD_CHANGE_LIMIT_UNAVAILABLE:
+          "Could not check your password change limit. Check your connection and try again.",
       };
       setPasswordResetFeedback(
         messages[error.message] ||
@@ -626,7 +673,10 @@ document.addEventListener("DOMContentLoaded", () => {
       setPasswordResetFeedback("The passwords do not match.", "error");
       return;
     }
-    if (!passwordResetState?.id || !passwordResetState.token) {
+    if (
+      !passwordResetSelfServiceUsername &&
+      (!passwordResetState?.id || !passwordResetState.token)
+    ) {
       setPasswordResetFeedback(
         "This reset session has expired. Submit a new request.",
         "error",
@@ -637,13 +687,45 @@ document.addEventListener("DOMContentLoaded", () => {
     passwordResetSaveButton.disabled = true;
     setPasswordResetFeedback("Saving your new password...", "pending");
     try {
-      await KaraokeAccountRequests.completePasswordReset(
-        passwordResetState.id,
-        passwordResetState.token,
-        newPassword,
-      );
+      if (passwordResetSelfServiceUsername) {
+        await KaraokeAccountRequests.resetPasswordWithinAllowance(
+          passwordResetSelfServiceUsername,
+          newPassword,
+        );
+        passwordResetSelfServiceUsername = null;
+        passwordResetPasswordForm.hidden = true;
+        setPasswordResetFeedback(
+          "Password updated. Sign in using your new password.",
+          "success",
+        );
+      } else {
+        await KaraokeAccountRequests.completePasswordReset(
+          passwordResetState.id,
+          passwordResetState.token,
+          newPassword,
+        );
+      }
       passwordResetPasswordForm.reset();
     } catch (error) {
+      if (
+        error.message === "PASSWORD_CHANGE_APPROVAL_REQUIRED" &&
+        passwordResetSelfServiceUsername
+      ) {
+        const username = passwordResetSelfServiceUsername;
+        passwordResetSelfServiceUsername = null;
+        passwordResetPasswordForm.reset();
+        passwordResetPasswordForm.hidden = true;
+        passwordResetRequestForm.hidden = false;
+        passwordResetUsername.value = username;
+        passwordResetUsername.disabled = true;
+        passwordResetRequestButton.disabled = true;
+        setPasswordResetFeedback(
+          "You've reached the self-service password change limit. Requesting administrator approval...",
+          "pending",
+        );
+        await requestPasswordResetApproval(username);
+        return;
+      }
       console.error("Could not save password reset:", {
         code: error.code || "UNKNOWN",
         message: error.message,
@@ -656,10 +738,12 @@ document.addEventListener("DOMContentLoaded", () => {
             ? "Use at least 6 characters for your new password."
             : error.message === "ACCOUNT_NOT_FOUND"
               ? "This reset request no longer matches an active account. Contact the administrator."
-              : error.code === "PERMISSION_DENIED" ||
-                  error.code === "database/permission-denied"
-                ? "Firebase blocked this password update. Ask the administrator to check the database permissions."
-                : "Could not save your password. Please try again.";
+              : error.message === "PASSWORD_CHANGE_LIMIT_UNAVAILABLE"
+                ? "Could not check your password change limit. Check your connection and try again."
+                : error.code === "PERMISSION_DENIED" ||
+                    error.code === "database/permission-denied"
+                  ? "Firebase blocked this password update. Ask the administrator to check the database permissions."
+                  : "Could not save your password. Please try again.";
       setPasswordResetFeedback(message, "error");
     }
   });

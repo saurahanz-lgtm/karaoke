@@ -374,6 +374,85 @@
     };
   }
 
+  async function resetPasswordWithinAllowance(username, newPassword) {
+    if (typeof newPassword !== "string" || newPassword.length < 6) {
+      throw new Error("PASSWORD_TOO_SHORT");
+    }
+    if (newPassword.length > 128) throw new Error("PASSWORD_TOO_LONG");
+
+    const db = database();
+    const [policy, usersSnapshot] = await Promise.all([
+      getSelfServicePolicy(),
+      db.ref(USERS_PATH).once("value"),
+    ]);
+    if (policy.passwordChangesPerAccount === 0) {
+      throw new Error("PASSWORD_CHANGE_APPROVAL_REQUIRED");
+    }
+
+    const match = findAccount(usersSnapshot, username, "user");
+    if (!match || match.account.disabled === true) {
+      throw new Error("ACCOUNT_NOT_FOUND");
+    }
+
+    const accountKey = String(match.account.id ?? match.key).replace(
+      /[^A-Za-z0-9_-]/g,
+      "_",
+    );
+    const usageRef = db.ref(
+      `${SELF_SERVICE_PASSWORD_USAGE_PATH}/${accountKey}`,
+    );
+    const reservationId = `reset_${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2, 10)}`;
+    let limitReached = false;
+    const reservation = await usageRef.transaction((current) => {
+      const changes = current?.changes || {};
+      if (Object.keys(changes).length >= policy.passwordChangesPerAccount) {
+        limitReached = true;
+        return undefined;
+      }
+      return { changes: { ...changes, [reservationId]: Date.now() } };
+    });
+    if (!reservation.committed) {
+      if (limitReached) throw new Error("PASSWORD_CHANGE_APPROVAL_REQUIRED");
+      throw new Error("PASSWORD_CHANGE_LIMIT_UNAVAILABLE");
+    }
+
+    let failure = null;
+    try {
+      const result = await db
+        .ref(`${USERS_PATH}/${match.key}`)
+        .transaction((account) => {
+          if (
+            !account ||
+            String(account.username).trim().toLowerCase() !==
+              String(username).trim().toLowerCase() ||
+            account.role !== "user" ||
+            account.disabled === true
+          ) {
+            failure = "ACCOUNT_NOT_FOUND";
+            return undefined;
+          }
+          return { ...account, password: newPassword };
+        });
+      if (!result.committed) {
+        throw new Error(failure || "PASSWORD_CHANGE_FAILED");
+      }
+
+      const used = Object.keys(
+        reservation.snapshot.val()?.changes || {},
+      ).length;
+      return {
+        limit: policy.passwordChangesPerAccount,
+        used,
+        remaining: Math.max(0, policy.passwordChangesPerAccount - used),
+      };
+    } catch (error) {
+      await releaseUsageReservation(usageRef, "changes", reservationId);
+      throw error;
+    }
+  }
+
   async function changePasswordWithCurrentPassword(
     username,
     currentPassword,
@@ -687,6 +766,7 @@
     createPasswordReset,
     completePasswordReset,
     getPasswordChangeAllowance,
+    resetPasswordWithinAllowance,
     getSelfServicePolicy,
     listen,
     listenAll,
