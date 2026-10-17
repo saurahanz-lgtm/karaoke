@@ -13,6 +13,12 @@
       ]
     }
   ],
+  "rewrites": [
+    {
+      "source": "/display",
+      "destination": "/karaoke-display.html"
+    }
+  ],
   "redirects": [
     {
       "source": "/singer.html",

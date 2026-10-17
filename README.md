@@ -53,7 +53,7 @@ Your karaoke app is live at: **https://sdkaraoke.vercel.app**
 - Fullscreen mode
 - Auto-skips to next song
 
-**Access:** https://sdkaraoke.vercel.app/karaoke-display.html
+**Access:** https://sdkaraoke.vercel.app/display
 
 ### ✅ Admin Panel (Management)
 
