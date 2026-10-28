@@ -77,8 +77,9 @@
         display: flex;
         flex-direction: column;
         height: 100vh;
+        height: 100dvh;
         width: 100vw;
-        padding: 40px;
+        padding: 0;
         position: relative;
       }
 
@@ -157,15 +158,16 @@
       .now-playing-card {
         width: 100%;
         height: 100%;
+        padding: 0 !important;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         position: relative;
         background: #000;
-        border-radius: 15px;
+        border-radius: 0;
         overflow: hidden;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+        box-shadow: none;
       }
 
       /* Video */
@@ -726,10 +728,6 @@
 
       /* Responsive */
       @media (max-width: 1024px) {
-        .display-container {
-          padding: 20px;
-        }
-
         #nextSongDisplay {
           top: 86px;
           left: 15px;
@@ -768,10 +766,6 @@
       }
 
       @media (max-width: 768px) and (orientation: portrait) {
-        .display-container {
-          padding: 12px;
-        }
-
         .button-group {
           top: 12px;
           right: 12px;
