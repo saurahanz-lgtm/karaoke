@@ -177,7 +177,7 @@
         object-fit: cover;
       }
 
-      #idleVideo {
+      #idleImage {
         position: absolute;
         inset: 0;
         z-index: 1;
@@ -191,7 +191,7 @@
         visibility: hidden;
       }
 
-      .now-playing-card.idle-mode #idleVideo {
+      .now-playing-card.idle-mode #idleImage {
         display: block;
       }
 
@@ -1123,16 +1123,13 @@
         <div id="roomTimeNotice" role="status" aria-live="polite" hidden></div>
         <div class="now-playing-card idle-mode">
           <div id="videoPlayer"></div>
-          <video
-            id="idleVideo"
-            src="assets/idle-karaoke-video.mp4?v=2"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="auto"
-            aria-hidden="true"
-          ></video>
+          <img
+            id="idleImage"
+            src="assets/idle-karaoke-background.jpg?v=1"
+            alt=""
+            fetchpriority="high"
+            decoding="async"
+          />
           <div id="noSongMessage" role="status" aria-live="polite">
             <strong>Please select a song.</strong>
           </div>
