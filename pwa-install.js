@@ -5,13 +5,13 @@ const isIOS =
   /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
   (window.navigator.platform === "MacIntel" &&
     window.navigator.maxTouchPoints > 1);
-const isKaraokeDisplay =
-  window.location.pathname.endsWith("/karaoke-display.html") ||
-  window.location.pathname === "/display";
+const isAccessPortal =
+  window.location.pathname === "/" ||
+  window.location.pathname.endsWith("/index.html");
 
 let installButton = document.getElementById("installAppButton");
 
-if (!installButton && !isKaraokeDisplay && !isStandalone) {
+if (isAccessPortal && !installButton && !isStandalone) {
   installButton = document.createElement("button");
   installButton.className = "pwa-install-button";
   installButton.id = "installAppButton";
@@ -19,6 +19,9 @@ if (!installButton && !isKaraokeDisplay && !isStandalone) {
   installButton.innerHTML =
     '<i class="bi bi-download" aria-hidden="true"></i><span>Install app</span>';
   document.body.append(installButton);
+} else if (!isAccessPortal && installButton) {
+  installButton.remove();
+  installButton = null;
 }
 
 const registerServiceWorker = async () => {
@@ -37,7 +40,7 @@ if (document.readyState === "complete") {
   window.addEventListener("load", registerServiceWorker, { once: true });
 }
 
-if (installButton) {
+if (isAccessPortal && installButton) {
   let installPrompt = null;
   if (!isStandalone) installButton.hidden = false;
 
