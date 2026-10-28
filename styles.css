@@ -25,6 +25,44 @@ body {
   pointer-events: none;
 }
 
+.score-modal-value,
+.phone-score-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.score-modal-value.is-final,
+.phone-score-value.is-final {
+  animation: karaoke-score-final 360ms ease-out both;
+}
+
+@keyframes karaoke-score-final {
+  0% {
+    transform: scale(1);
+    text-shadow:
+      0 2px 16px rgba(0, 0, 0, 0.95),
+      0 0 28px rgba(255, 209, 102, 0.32);
+  }
+  45% {
+    transform: scale(1.045);
+    text-shadow:
+      0 2px 16px rgba(0, 0, 0, 0.95),
+      0 0 38px rgba(255, 209, 102, 0.58);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow:
+      0 2px 16px rgba(0, 0, 0, 0.95),
+      0 0 28px rgba(255, 209, 102, 0.32);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score-modal-value.is-final,
+  .phone-score-value.is-final {
+    animation-duration: 1ms;
+  }
+}
+
 .app-toast {
   padding: 11px 14px;
   border: 1px solid rgba(130, 152, 255, 0.4);

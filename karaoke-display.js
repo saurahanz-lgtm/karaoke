@@ -2438,12 +2438,13 @@ async function showScore() {
     pitchSeconds,
     stableSeconds,
   });
-  displayScoreModal(score);
+  const scoreReveal = displayScoreModal(score);
 
   const soundPlayed = await playScoreSound();
   if (!soundPlayed) {
     await new Promise((resolve) => setTimeout(resolve, 2600));
   }
+  await scoreReveal;
   document.getElementById("scoreModal")?.remove();
   playNextSong();
 }
@@ -2507,7 +2508,7 @@ function displayScoreModal(score) {
 
   const value = document.createElement("div");
   value.className = "score-modal-value";
-  value.textContent = score === null ? "--" : String(score);
+  value.setAttribute("aria-live", "off");
 
   const feedback = document.createElement("p");
   feedback.className = "score-modal-feedback";
@@ -2517,6 +2518,7 @@ function displayScoreModal(score) {
 
   modal.appendChild(scoreDisplay);
   document.querySelector(".display-container")?.appendChild(modal);
+  const scoreReveal = window.SDKaraokeScoreCounter.animate(value, score);
 
   // Add CSS animations
   const style = document.createElement("style");
@@ -2586,6 +2588,7 @@ function displayScoreModal(score) {
         }
     `;
   document.head.appendChild(style);
+    return scoreReveal;
 }
 
 // Show video unavailable message

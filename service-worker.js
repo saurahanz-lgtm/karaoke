@@ -1,4 +1,4 @@
-const CACHE_NAME = "sdkaraoke-v8";
+const CACHE_NAME = "sdkaraoke-v9";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const APP_SHELL = [
   "./app-dialogs.js",
   "./pwa-install.js",
   "./onboarding-tour.js",
+  "./score-counter.js",
   "./manifest.webmanifest",
   "./firebase-config.js",
   "./karaoke-sessions.js",
