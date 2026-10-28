@@ -2886,6 +2886,7 @@ body.karaoke-display-page {
   line-height: 1;
   text-decoration: none;
   backdrop-filter: blur(8px);
+  cursor: pointer;
   transition:
     border-color 150ms ease,
     background-color 150ms ease;
@@ -2894,6 +2895,30 @@ body.karaoke-display-page {
 .access-portal-display {
   left: max(14px, env(safe-area-inset-left));
   right: auto;
+}
+
+.display-url-dialog__url {
+  display: block;
+  margin: 0 0 18px;
+  padding: 12px;
+  border: 1px solid rgba(32, 212, 176, 0.48);
+  border-radius: 7px;
+  color: #72e8d1;
+  background: rgba(32, 212, 176, 0.09);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.display-url-dialog__actions {
+  justify-content: flex-end;
+}
+
+.display-url-dialog__actions form {
+  margin: 0;
 }
 
 .access-portal-guide > i {

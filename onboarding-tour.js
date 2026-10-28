@@ -79,7 +79,7 @@
       selector: ".access-portal-display",
       title: "Open the shared display",
       description:
-        "Open Karaoke Display on the TV or shared screen so performers can scan its room QR code.",
+        "Click here to see the Karaoke Display address. Type that address into a browser on the TV or shared screen.",
     },
     {
       selector: 'a.access-portal-guide[href="user-guide.html"]',
