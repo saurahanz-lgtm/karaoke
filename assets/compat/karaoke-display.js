@@ -86,6 +86,7 @@ let roomTimeExpired = false;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
 let activeRoomDeviceCount = 0;
+let lastConnectionStatus = null;
 let roomPlaybackActivityTimer = null;
 let roomPlaybackPositionTimer = null;
 const ROOM_PLAYBACK_ACTIVITY_INTERVAL_MS = 15e3;
@@ -360,6 +361,20 @@ function renderKaraokeRoomDeviceCount(roomId) {
   const room = karaokeRooms.find((item) => item.id === roomId);
   memberCount.textContent = `${activeRoomDeviceCount} / ${KaraokeSessions.getRoomDeviceLimit(room)} phones`;
 }
+function updatePhoneConnectionStatus(roomId, memberCount) {
+  if (activeKaraokeRoomId !== roomId) return;
+  const isConnected = memberCount > 0;
+  if (lastConnectionStatus === isConnected) return;
+  const wasConnected = lastConnectionStatus;
+  lastConnectionStatus = isConnected;
+  if (wasConnected !== null) {
+    showNotification(
+      isConnected ? "\u2705 Phone Connected!" : "\u274C Phone Disconnected"
+    );
+  } else if (isConnected) {
+    showNotification("\u2705 Phone Connected!");
+  }
+}
 function startRoomPlaybackActivityHeartbeat(roomId) {
   if (roomPlaybackActivityTimer !== null) {
     clearInterval(roomPlaybackActivityTimer);
@@ -406,6 +421,7 @@ function activateKaraokeRoom(roomId) {
   stopListeningToRoomUsage == null ? void 0 : stopListeningToRoomUsage();
   stopListeningToRoomUsage = null;
   activeKaraokeRoomId = roomId;
+  lastConnectionStatus = null;
   startRoomPlaybackActivityHeartbeat(roomId);
   activeRoomDeviceCount = 0;
   roomDisplayEnabled = true;
@@ -479,6 +495,7 @@ function activateKaraokeRoom(roomId) {
   stopListeningToMembers = KaraokeSessions.listenMembers(roomId, (count) => {
     activeRoomDeviceCount = count;
     renderKaraokeRoomDeviceCount(roomId);
+    updatePhoneConnectionStatus(roomId, count);
   });
   stopListeningToRoomDisplayStatus = KaraokeSessions.listenRoomDisplayStatus(
     roomId,
@@ -1125,9 +1142,6 @@ function initializeKaraokeDisplay() {
       clearInterval(bootupCheckInterval);
     }
   }, 300);
-  checkPhoneConnection();
-  console.log("\u2705 Initial connection check done");
-  setInterval(checkPhoneConnection, 2e3);
   if (typeof firebase !== "undefined" && firebase.database) {
     try {
       firebase.database().ref("tvControl").on("value", (snapshot) => {
@@ -1759,35 +1773,6 @@ function loadSong(song, startSeconds = 0, shouldPlay = true) {
     }
   }
   console.log(`\u{1F4FA} Now playing: ${song.title}`);
-}
-let lastConnectionStatus = null;
-function checkPhoneConnection() {
-  try {
-    firebase.database().ref("activity").once("value", (snapshot) => {
-      const activity = snapshot.val();
-      const lastActivity = (activity == null ? void 0 : activity.timestamp) || 0;
-      const now = Date.now();
-      const isConnected = now - lastActivity < 3e4;
-      if (isConnected) {
-        console.log("\u2705 Phone connected");
-      } else {
-        console.log("\u274C Phone disconnected");
-      }
-      if (lastConnectionStatus !== isConnected) {
-        lastConnectionStatus = isConnected;
-        const message = isConnected ? "\u2705 Phone Connected!" : "\u274C Phone Disconnected";
-        showNotification(message);
-      }
-      console.log(
-        "\u{1F4F1} Phone connection status:",
-        isConnected ? "Connected" : "Disconnected"
-      );
-    }).catch((err) => {
-      console.warn("Firebase activity read failed:", err.message);
-    });
-  } catch (error) {
-    console.error("\u274C Error in checkPhoneConnection:", error.message);
-  }
 }
 function showNotification(message) {
   const notif = document.createElement("div");
