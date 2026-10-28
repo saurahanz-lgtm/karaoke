@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="SD Karaoke" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="assets/sd-karaoke-apple-touch-icon.png" />
-    <title>SDKaraoke - Admin Panel</title>
+    <title>SD Karaoke | Administration</title>
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
       rel="stylesheet"
@@ -534,11 +534,11 @@
     <main id="roomRequestConfirmation" class="admin-container" hidden>
       <section class="display-control-card" role="status">
         <div class="display-control-info">
-          <h1>Room request sent</h1>
+          <h1>Room request submitted</h1>
           <p id="roomRequestConfirmationStatus" aria-live="polite">
-            The User Management team has been notified. Waiting for approval...
+            Your request has been sent to the administrator for review.
           </p>
-          <a class="btn btn-success mt-3" href="index.html">Back to karaoke</a>
+          <a class="btn btn-success mt-3" href="index.html">Return to portal</a>
         </div>
       </section>
     </main>
@@ -557,7 +557,7 @@
           <span class="brand-mark"><i class="bi bi-music-note-list"></i></span>
           <span class="brand-copy"
             ><strong>SD<span>KARAOKE</span></strong
-            ><small>ADMIN PANEL</small></span
+            ><small>ADMINISTRATION</small></span
           >
         </a>
         <nav class="admin-nav" aria-label="Main navigation">
@@ -584,7 +584,7 @@
             data-admin-view-target="display"
             aria-controls="displayControlSection"
           >
-            <i class="bi bi-display"></i><span>Karaoke Display Control</span>
+            <i class="bi bi-display"></i><span>Display settings</span>
           </button>
           <button
             class="admin-nav-link"
@@ -621,7 +621,7 @@
         </nav>
         <div class="sidebar-note">
           <i class="bi bi-soundwave"></i
-          ><span>Good Music<br />Brings People<br />Together</span>
+          ><span>One platform<br />for every<br />karaoke room</span>
         </div>
       </aside>
       <button
@@ -716,7 +716,7 @@
             </div>
             <div>
               <h1 id="viewHeading">Dashboard</h1>
-              <p id="viewSubheading">A live overview of your karaoke system.</p>
+              <p id="viewSubheading">An overview of system activity and status.</p>
             </div>
             <div class="today-chip">
               <i class="bi bi-calendar3"></i><span id="todayDate"></span>
@@ -733,9 +733,9 @@
               <article class="dashboard-stat stat-users">
                 <span class="stat-icon"><i class="bi bi-people-fill"></i></span>
                 <div>
-                  <p>Total Accounts</p>
+                  <p>Registered accounts</p>
                   <strong id="dashboardTotalUsers">0</strong
-                  ><small>Registered accounts</small>
+                  ><small>Accounts created</small>
                 </div>
                 <i class="stat-watermark bi bi-people"></i>
               </article>
@@ -744,18 +744,18 @@
                   ><i class="bi bi-person-check-fill"></i
                 ></span>
                 <div>
-                  <p>Online Users</p>
+                  <p>Active users</p>
                   <strong id="dashboardOnlineUsers">0</strong
-                  ><small>Currently connected</small>
+                  ><small>Active sessions</small>
                 </div>
                 <i class="stat-watermark bi bi-wifi"></i>
               </article>
               <article class="dashboard-stat stat-active">
                 <span class="stat-icon"><i class="bi bi-mic-fill"></i></span>
                 <div>
-                  <p>Active Rooms</p>
+                  <p>Occupied rooms</p>
                   <strong id="dashboardActiveRooms">0</strong
-                  ><small>With connected performers</small>
+                  ><small>With active performers</small>
                 </div>
                 <i class="stat-watermark bi bi-music-note-beamed"></i>
               </article>
@@ -764,9 +764,9 @@
                   ><i class="bi bi-door-open-fill"></i
                 ></span>
                 <div>
-                  <p>Available Rooms</p>
+                  <p>Available rooms</p>
                   <strong id="dashboardAvailableRooms">0</strong
-                  ><small>Ready for performers</small>
+                  ><small>Ready to join</small>
                 </div>
                 <i class="stat-watermark bi bi-grid"></i>
               </article>
@@ -775,15 +775,15 @@
               <section class="dashboard-panel room-panel">
                 <div class="panel-heading">
                   <div>
-                    <h2><i class="bi bi-grid-1x2"></i> Karaoke Room Status</h2>
-                    <p>Live occupancy across your rooms</p>
+                    <h2><i class="bi bi-grid-1x2"></i> Room status</h2>
+                    <p>Current occupancy across all rooms</p>
                   </div>
                   <button
                     class="text-action"
                     type="button"
                     data-admin-view-target="rooms"
                   >
-                    View all <i class="bi bi-arrow-right"></i>
+                    View rooms <i class="bi bi-arrow-right"></i>
                   </button>
                 </div>
                 <ul class="dashboard-room-list" id="dashboardRoomStatus">
@@ -794,9 +794,9 @@
                 <div class="panel-heading">
                   <div>
                     <h2>
-                      <i class="bi bi-lightning-charge"></i> Recent Activity
+                      <i class="bi bi-lightning-charge"></i> Recent activity
                     </h2>
-                    <p>Latest recorded account activity</p>
+                    <p>Most recent account activity</p>
                   </div>
                   <button
                     class="text-action"
@@ -818,7 +818,7 @@
               <div class="panel-heading">
                 <div>
                   <h2>Quick Actions</h2>
-                  <p>Common administration tasks</p>
+                  <p>Frequently used administration tools</p>
                 </div>
               </div>
               <div class="quick-actions-grid">
@@ -828,8 +828,8 @@
                   data-admin-view-target="users"
                 >
                   <span><i class="bi bi-people-fill"></i></span
-                  ><strong>Manage Users</strong
-                  ><small>View and manage accounts</small
+                  >                  <strong>Manage accounts</strong
+                  >                  <small>Review roles and account access</small
                   ><i class="bi bi-arrow-up-right action-arrow"></i>
                 </button>
                 <button
@@ -848,8 +848,8 @@
                   data-admin-view-target="display"
                 >
                   <span><i class="bi bi-display"></i></span
-                  ><strong>Karaoke Display Control</strong
-                  ><small>Manage the shared screen</small
+                  >                  <strong>Display settings</strong
+                  ><small>Manage shared-screen availability</small
                   ><i class="bi bi-arrow-up-right action-arrow"></i>
                 </button>
                 <button
@@ -875,14 +875,14 @@
           >
             <div class="display-control-card">
               <div class="display-control-info">
-                <h3 id="displayControlHeading">📺 KARAOKE DISPLAY CONTROL</h3>
-                <p>Manage karaoke display status and availability</p>
+                <h3 id="displayControlHeading">Karaoke display settings</h3>
+                <p>Manage display availability and room access.</p>
                 <div style="margin-top: 12px">
                   <span class="display-status" id="displayStatus">🟢 ENABLED</span>
                 </div>
                 <div class="display-announcement-control">
                   <label class="form-label" for="displayAnnouncementTemplate">
-                    Message shown while the display is unavailable
+                    Message displayed while the screen is unavailable
                   </label>
                   <select
                     class="form-select display-control-select"
@@ -906,7 +906,7 @@
                     id="displayAnnouncementCustom"
                     maxlength="180"
                     rows="2"
-                    placeholder="Write a short message for the karaoke display"
+                    placeholder="Enter a brief message for the display"
                     hidden
                   ></textarea>
                   <p
@@ -922,14 +922,14 @@
                   onclick="enableKaraokeDisplay()"
                   id="enableDisplayBtn"
                 >
-                  🟢 Enable Display
+                  Enable display
                 </button>
                 <button
                   class="display-btn display-btn-disable"
                   onclick="disableKaraokeDisplay()"
                   id="disableDisplayBtn"
                 >
-                  🔴 Disable Display
+                  Disable display
                 </button>
               </div>
             </div>
@@ -964,15 +964,15 @@
             >
               <div class="display-control-info">
                 <h3 id="globalPerformerScreensHeading">
-                  GLOBAL PERFORMER SCREEN CONTROL
+                  Performer screen availability
                 </h3>
-                <p>Enable or disable performer screens in every room.</p>
+                <p>Set performer-screen availability for all rooms.</p>
                 <div style="margin-top: 12px">
                   <span
                     class="display-status"
                     id="globalPerformerScreensStatus"
                     aria-live="polite"
-                  >Loading...</span>
+                  >Loading status…</span>
                 </div>
               </div>
               <div class="display-control-buttons">
@@ -983,7 +983,7 @@
                   onclick="setGlobalPerformerScreensEnabled(true)"
                   disabled
                 >
-                  Enable All
+                  Enable all screens
                 </button>
                 <button
                   class="display-btn display-btn-disable"
@@ -992,14 +992,14 @@
                   onclick="setGlobalPerformerScreensEnabled(false)"
                   disabled
                 >
-                  Disable All
+                  Disable all screens
                 </button>
               </div>
             </div>
             <div class="display-control-card">
               <div class="display-control-info">
-                <h3>ROOM-SPECIFIC DISPLAY CONTROL</h3>
-                <p>Change availability for one room without affecting other rooms.</p>
+                <h3>Room-specific display settings</h3>
+                <p>Change availability for one room without affecting others.</p>
                 <div class="display-room-control">
                   <label class="form-label" for="roomDisplayControlSelect">
                     Select room
@@ -1015,7 +1015,7 @@
                   <span
                     class="display-status display-status-enabled"
                     id="roomDisplayStatus"
-                  >Select a room</span>
+                  >Select a room to view its status</span>
                 </div>
                 <div class="performer-screen-admin-control">
                   <div class="performer-screen-admin-label">
@@ -1023,7 +1023,7 @@
                     <span
                       class="display-status display-status-enabled"
                       id="performerScreenStatus"
-                    >Select a room</span>
+                    >Select a room to view its status</span>
                   </div>
                   <div class="display-control-buttons">
                     <button
@@ -1083,10 +1083,10 @@
                 id="roomsHeading"
                 style="color: #20c997; font-weight: 700"
               >
-                🎛️ KARAOKE ROOMS
+                Karaoke rooms
               </h2>
               <span class="text-white-50" id="roomMonitorStatus" role="status"
-                >Connecting to rooms...</span
+                >Loading room status…</span
               >
             </div>
             <div class="stats-grid">
@@ -1095,7 +1095,7 @@
                 <p class="stat-number" id="totalKaraokeRooms">0</p>
               </div>
               <div class="stat-card">
-                <h3 class="text-white mb-2">Connected Phones</h3>
+                <h3 class="text-white mb-2">Connected devices</h3>
                 <p
                   class="stat-number"
                   id="totalRoomDevices"
@@ -1141,9 +1141,9 @@
                   <tr>
                     <th>Room</th>
                     <th>Room Code</th>
-                    <th>Connected Phones</th>
+                    <th>Connected devices</th>
                     <th>Status</th>
-                    <th>Room Time / Used</th>
+                    <th>Room time / usage</th>
                     <th>Queue Cleanup</th>
                     <th>Action</th>
                   </tr>
@@ -1593,8 +1593,8 @@
                           aria-label="Select all account request history on this page"
                         />
                       </th>
-                      <th>Requested Username</th>
-                      <th>Submitted</th>
+                      <th>Username</th>
+                      <th>Date submitted</th>
                       <th>Status</th>
                       <th>Action</th>
                     </tr>
@@ -1649,10 +1649,10 @@
                 <span>Total Accounts</span><strong id="totalUsers">0</strong>
               </article>
               <article>
-                <span>Online</span><strong id="totalRegularUsers">0</strong>
+                <span>Active</span><strong id="totalRegularUsers">0</strong>
               </article>
               <article>
-                <span>Offline</span><strong id="totalAdmins">0</strong>
+                <span>Inactive</span><strong id="totalAdmins">0</strong>
               </article>
             </div>
             <div class="account-table-panel">
@@ -1675,7 +1675,7 @@
                     id="filterOnline"
                     aria-pressed="false"
                   >
-                    Online
+                    Active
                   </button>
                   <button
                     class="performer-filter"
@@ -1683,7 +1683,7 @@
                     id="filterOffline"
                     aria-pressed="false"
                   >
-                    Offline
+                    Inactive
                   </button>
                 </div>
                 <label class="account-search"
@@ -1692,7 +1692,7 @@
                   ><input
                     id="userSearch"
                     type="search"
-                    placeholder="Search username"
+                    placeholder="Search by username"
                     autocomplete="off"
                 /></label>
               </div>

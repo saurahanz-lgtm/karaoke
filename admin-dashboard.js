@@ -482,11 +482,11 @@ function setAdminView(viewName) {
   const heading = document.getElementById("viewHeading");
   const subheading = document.getElementById("viewSubheading");
   const viewCopy = {
-    dashboard: ["Dashboard", "A live overview of your karaoke system."],
+    dashboard: ["Dashboard", "An overview of system activity and status."],
     users: ["User Management", "Manage registered accounts and access."],
-    display: ["Karaoke Display Control", "Manage the shared display."],
-    rooms: ["Karaoke Rooms", "Monitor rooms and connected performers."],
-    requests: ["Room Requests", "Review requests waiting for approval."],
+    display: ["Display settings", "Manage shared-screen availability."],
+    rooms: ["Karaoke rooms", "Monitor rooms and connected performers."],
+    requests: ["Room requests", "Review requests awaiting approval."],
     "room-usage-history": [
       "Room Usage History",
       "Review completed room sessions and performers.",
@@ -505,7 +505,7 @@ function setAdminView(viewName) {
 function initializeRoomUsageHistory() {
   const status = document.getElementById("roomUsageHistoryStatus");
   if (typeof firebase === "undefined" || !firebase.database) {
-    if (status) status.textContent = "Room usage history is unavailable.";
+    if (status) status.textContent = "Room usage history is currently unavailable.";
     return;
   }
 
@@ -524,7 +524,7 @@ function initializeRoomUsageHistory() {
         renderRoomUsageHistory();
       },
       (error) => {
-        if (status) status.textContent = "Could not load room usage history.";
+        if (status) status.textContent = "Unable to load room usage history. Please try again.";
         console.warn("Could not load room usage history:", error.message);
       },
     );
@@ -533,7 +533,7 @@ function initializeRoomUsageHistory() {
 function initializeLoginHistory() {
   const status = document.getElementById("loginHistoryStatus");
   if (typeof firebase === "undefined" || !firebase.database) {
-    if (status) status.textContent = "Login history is unavailable.";
+    if (status) status.textContent = "Login history is currently unavailable.";
     return;
   }
 
@@ -553,7 +553,7 @@ function initializeLoginHistory() {
         renderLoginHistory();
       },
       (error) => {
-        if (status) status.textContent = "Could not load login history.";
+        if (status) status.textContent = "Unable to load login history. Please try again.";
         console.warn("Could not load login history:", error.message);
       },
     );
@@ -768,15 +768,15 @@ async function saveQueueCleanupDelay() {
   }
   input.setCustomValidity("");
   saveButton.disabled = true;
-  status.textContent = "Saving global cleanup delay...";
+  status.textContent = "Saving queue cleanup settings…";
   try {
     await KaraokeSessions.setQueueCleanupDelayMinutes(minutes);
-    status.textContent = `Global cleanup delay set to ${minutes} minutes.`;
+    status.textContent = `Queue cleanup delay set to ${minutes} minutes.`;
     updateRoomIdleCountdowns();
     showAppToast(`Queue cleanup delay set to ${minutes} minutes.`, "success");
     closeQueueCleanupSettings();
   } catch (error) {
-    status.textContent = "Could not save the global cleanup delay.";
+    status.textContent = "Unable to save the queue cleanup settings.";
     console.error("Could not save queue cleanup delay:", error.message);
   } finally {
     saveButton.disabled = false;
@@ -3636,19 +3636,19 @@ function verifyAndSyncAllUsers() {
 // Force sync users from localStorage to Firebase (admin command)
 function forceSyncAllUsersToFirebase() {
   console.log("🔄 FORCE SYNCING all users to Firebase...");
-  showNotification("🔄 Syncing all users to Firebase...", "info");
+  showNotification("Syncing accounts…", "info");
 
   verifyAndSyncAllUsers()
     .then((result) => {
       console.log("✅ SYNC SUCCESSFUL:", result);
       showNotification(
-        "✅ Successfully synced " + result.userCount + " users to Firebase!",
+        `${result.userCount} accounts synced successfully.`,
         "success",
       );
     })
     .catch((error) => {
       console.error("❌ SYNC FAILED:", error);
-      showNotification("❌ Sync failed: " + error, "danger");
+      showNotification("Unable to sync accounts. Please try again.", "danger");
     });
 }
 
@@ -3711,7 +3711,7 @@ function continueAddUser(username, password, role) {
   // Check if user already exists
   if (users.some((u) => u.username === username)) {
     showNotification(
-      "❌ Username already exists! Use a different name.",
+      "This username is already in use. Choose another username.",
       "danger",
     );
     return;
@@ -3764,7 +3764,7 @@ function continueAddUser(username, password, role) {
 
   toggleAddUserPanel();
 
-  showNotification(`✅ User "${username}" added successfully!`, "success");
+  showNotification(`Account "${username}" created successfully.`, "success");
   displayUsers();
   updateStats();
 }
@@ -3794,7 +3794,7 @@ async function handleAddUser(e) {
   const role = document.getElementById("userRole").value;
 
   if (!username || !password || !role) {
-    showNotification("Please fill in all fields", "warning");
+    showNotification("Complete all required fields.", "warning");
     return;
   }
 
@@ -3803,18 +3803,18 @@ async function handleAddUser(e) {
       (user) => user.username.trim().toLowerCase() === username.toLowerCase(),
     )
   ) {
-    showNotification("Username already exists", "danger");
+    showNotification("This username is already in use.", "danger");
     return;
   }
 
   if (isRoomManager() && role !== "user") {
-    showNotification("Room managers can only create user accounts.", "danger");
+    showNotification("Room managers can create user accounts only.", "danger");
     return;
   }
 
   if (role === "admin" && loggedInUser?.role !== "admin") {
     showNotification(
-      "Only administrators can create admin accounts.",
+      "Only administrators can create administrator accounts.",
       "danger",
     );
     return;
@@ -4701,25 +4701,25 @@ function enableKaraokeDisplay() {
         console.log("✅ Karaoke Display Enabled via Firebase");
         setKaraokeDisplayAnnouncementControls("");
         updateKaraokeDisplayStatusUI(true);
-        showNotification("✅ Karaoke Display has been ENABLED", "success");
+        showNotification("Karaoke display enabled.", "success");
       })
       .catch((err) => {
         console.error("❌ Error enabling TV:", err.message);
         if (err.code === "PERMISSION_DENIED") {
           showNotification(
-            "❌ Firebase Permission Denied - Check database rules",
+            "Permission denied. Contact an administrator for assistance.",
             "danger",
           );
         } else {
           showNotification(
-            "❌ Failed to enable Karaoke Display: " + err.message,
+            "Unable to enable the karaoke display. Please try again.",
             "danger",
           );
         }
       });
   } catch (e) {
     console.error("Firebase exception:", e.message);
-    showNotification("❌ Error: " + e.message, "danger");
+    showNotification("Unable to enable the karaoke display. Please try again.", "danger");
   }
 }
 
@@ -4728,7 +4728,7 @@ function disableKaraokeDisplay() {
   console.log("🔴 Disabling Karaoke Display...");
 
   if (typeof firebase === "undefined" || !firebase.database) {
-    showAppToast("❌ Firebase not available. Please check your connection.");
+    showAppToast("The service is unavailable. Check your connection and try again.");
     console.error("Firebase not initialized");
     return;
   }
@@ -4742,25 +4742,25 @@ function disableKaraokeDisplay() {
       .then(() => {
         console.log("✅ Karaoke Display Disabled via Firebase");
         updateKaraokeDisplayStatusUI(false);
-        showNotification("✅ Karaoke Display has been DISABLED", "warning");
+        showNotification("Karaoke display disabled.", "warning");
       })
       .catch((err) => {
         console.error("❌ Error disabling TV:", err.message);
         if (err.code === "PERMISSION_DENIED") {
           showNotification(
-            "❌ Firebase Permission Denied - Check database rules",
+            "Permission denied. Contact an administrator for assistance.",
             "danger",
           );
         } else {
           showNotification(
-            "❌ Failed to disable Karaoke Display: " + err.message,
+            "Unable to disable the karaoke display. Please try again.",
             "danger",
           );
         }
       });
   } catch (e) {
     console.error("Firebase exception:", e.message);
-    showNotification("❌ Error: " + e.message, "danger");
+    showNotification("Unable to disable the karaoke display. Please try again.", "danger");
   }
 }
 
@@ -4960,7 +4960,7 @@ function disableSelectedPerformerScreen() {
 function updateSelectedPerformerScreenAvailability(enabled) {
   const roomId = document.getElementById("roomDisplayControlSelect").value;
   if (!roomId) {
-    showNotification("Select a room first.", "warning");
+    showNotification("Select a room to continue.", "warning");
     return;
   }
   KaraokeSessions.setRoomPerformerAvailability(roomId, enabled)
@@ -4985,7 +4985,7 @@ function updateSelectedPerformerScreenAvailability(enabled) {
 function updateSelectedKaraokeRoomDisplayAvailability(enabled, announcement) {
   const roomId = document.getElementById("roomDisplayControlSelect").value;
   if (!roomId) {
-    showNotification("Select a room first.", "warning");
+    showNotification("Select a room to continue.", "warning");
     return;
   }
   KaraokeSessions.setRoomDisplayAvailability(roomId, enabled, announcement)

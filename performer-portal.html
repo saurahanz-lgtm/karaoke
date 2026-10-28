@@ -1238,7 +1238,7 @@
   <body class="performer-page">
     <main id="roomUnavailablePage" class="container-main" hidden>
       <section class="card-ui" role="status">
-        <h2 id="roomUnavailableTitle">Room is full</h2>
+        <h2 id="roomUnavailableTitle">Room capacity reached</h2>
         <p id="roomFullMessage"></p>
         <button
           class="searchbtn"
@@ -1246,7 +1246,7 @@
           type="button"
           onclick="submitRoomRequest()"
         >
-          Request another room
+          Request access to another room
         </button>
         <p id="roomRequestStatus" aria-live="polite"></p>
         <div
@@ -1255,7 +1255,7 @@
           role="status"
           hidden
         >
-          <span>Message us on Facebook for help with your request.</span>
+          <span>Contact support on Facebook for assistance with your request.</span>
           <a
             class="admin-contact-link"
             href="https://www.facebook.com/profile.php?id=61580750922961"
@@ -1263,13 +1263,13 @@
             rel="noopener noreferrer"
           >
             <i class="bi bi-facebook" aria-hidden="true"></i>
-            Contact on Facebook
+            Contact support
           </a>
         </div>
         <section id="roomTimeExtensionPanel" hidden>
           <p id="roomTimeExpiredMessage">
-            This room's time limit has expired. Request additional time from the
-            administrator.
+            This room's time limit has expired. Submit a request for additional
+            time.
           </p>
           <div class="d-flex gap-3 flex-wrap">
             <label>
@@ -1301,7 +1301,7 @@
             type="button"
             onclick="submitRoomExtensionRequest()"
           >
-            Request Additional Time
+            Request additional time
           </button>
           <p id="roomExtensionStatus" aria-live="polite"></p>
         </section>
@@ -1311,8 +1311,8 @@
       <!-- HEADER -->
       <div class="header">
         <h1><span class="sd-text">SD</span>karaoke</h1>
-        <button class="disconnect" onclick="disconnectPerformer()">
-          DISCONNECT
+        <button class="disconnect" type="button" onclick="disconnectPerformer()">
+          Leave room
         </button>
       </div>
 
@@ -1352,7 +1352,7 @@
               aria-expanded="false"
               aria-label="Toggle phone display"
               aria-controls="performerPhoneDisplay"
-              title="Open phone display and enable pitch scoring"
+              title="Open the performer display and enable pitch scoring"
               onclick="togglePerformerPhoneDisplay()"
             >
               <i class="bi bi-display" aria-hidden="true"></i>
@@ -1361,7 +1361,7 @@
         </div>
         <section
           id="performerPhoneDisplay"
-          aria-label="Phone karaoke display"
+          aria-label="Performer karaoke display"
           hidden
         >
           <div class="phone-display-frame">
@@ -1388,17 +1388,17 @@
               role="status"
               aria-live="polite"
             >
-              Please select a song.
+              No song is currently playing.
             </div>
             <section
               class="phone-score-result"
               id="performerPhoneScoreResult"
-              aria-label="Song pitch score"
+              aria-label="Performance score"
               aria-live="polite"
               hidden
             >
               <div class="phone-score-copy">
-                <p class="phone-score-label">Your score is</p>
+                <p class="phone-score-label">Performance score</p>
                 <div
                   class="phone-score-value"
                   id="performerPhoneScoreValue"
@@ -1435,7 +1435,7 @@
             hidden
           ></p>
         </section>
-        <div id="karaokeRoomStatus" class="room-status">Joining room...</div>
+        <div id="karaokeRoomStatus" class="room-status">Joining room…</div>
         <div
           id="roomIdleNotice"
           class="room-idle-notice"
@@ -1460,7 +1460,7 @@
             "
             id="roomCapacityRequestButton"
           >
-            Request another room
+            Request access to another room
           </button>
           <p id="roomCapacityRequestStatus" aria-live="polite"></p>
         </div>
@@ -1470,16 +1470,16 @@
         </div>
 
         <div class="controls">
-          <button class="gray" id="muteBtn" onclick="toggleMute()">🔊</button>
-          <button class="play" id="playPauseBtn" onclick="togglePlayPause()">
+          <button class="gray" id="muteBtn" type="button" aria-label="Mute room audio" onclick="toggleMute()">🔊</button>
+          <button class="play" id="playPauseBtn" type="button" aria-label="Play or pause" onclick="togglePlayPause()">
             ▶
           </button>
-          <button class="stop" onclick="stopPlayer()">■</button>
+          <button class="stop" type="button" aria-label="Skip to next song" onclick="stopPlayer()">■</button>
         </div>
 
         <!-- Volume Control -->
         <div class="volume-control">
-          <span class="volume-icon">🔉</span>
+          <span class="volume-icon" aria-hidden="true">🔉</span>
           <input
             type="range"
             id="volumeSlider"
@@ -1497,7 +1497,7 @@
           role="status"
           hidden
         >
-          Use the device volume buttons to adjust performer playback.
+          Use your device's volume buttons to adjust playback.
         </p>
 
         <!-- Hidden audio player for preview -->
@@ -1506,14 +1506,14 @@
 
       <!-- SEARCH & RESERVE -->
       <div class="card-ui">
-        <h3>Search & Reserve</h3>
+        <h3>Find and reserve songs</h3>
         <form id="searchForm">
           <div class="searchbox">
             <input
               id="searchInput"
               type="search"
               enterkeyhint="search"
-              placeholder="Search..."
+              placeholder="Search by song title or artist"
             />
             <button type="submit" class="searchbtn">🔍</button>
           </div>
@@ -1532,7 +1532,7 @@
       <!-- RESERVED -->
       <div class="card-ui">
         <div class="reserved-songs-heading">
-          <h3>Reserved Songs</h3>
+          <h3>Room queue</h3>
           <span
             id="reservedSongCount"
             class="reserved-song-count"
@@ -1827,13 +1827,13 @@
         if (!navigator.mediaDevices?.getUserMedia) {
           status.hidden = false;
           status.textContent =
-            "Microphone scoring requires HTTPS or localhost. Video playback is still available.";
+            "Pitch scoring requires a secure connection. Video playback remains available.";
           return;
         }
 
         status.hidden = false;
         status.textContent =
-          "Allow microphone access for local pitch scoring. Audio is not recorded or sent.";
+          "Enable microphone access for on-device pitch scoring. Audio is not recorded or transmitted.";
 
         let microphoneRequest;
         try {
@@ -1846,7 +1846,8 @@
             video: false,
           });
         } catch (error) {
-          status.textContent = `${error.message} Video playback is still available.`;
+          status.textContent =
+            "Microphone access is unavailable. Video playback remains available without pitch scoring.";
           return;
         }
 
@@ -1896,12 +1897,13 @@
                 100,
               );
               status.textContent =
-                "Pitch scoring is on. Microphone audio stays on this device and is not recorded or sent.";
+                "Pitch scoring is enabled. Audio is processed on this device and is not recorded or transmitted.";
             });
           })
           .catch((error) => {
             stopPerformerPhoneMicScoring();
-            status.textContent = `${error.message || "Microphone access was denied."} Video playback is still available without scoring.`;
+            status.textContent =
+              "Microphone access was not granted. Video playback remains available; pitch scoring is disabled.";
           })
           .finally(() => {
             performerPhoneMicRequestPromise = null;
@@ -1989,24 +1991,29 @@
       }
 
       function getPerformerPhoneScoreFeedback(score) {
-        if (score === null) return "Try pitch scoring on the next song!";
+        if (score === null) return "Enable pitch scoring for a detailed result.";
 
         const feedbackByRange =
           score >= 95
             ? [
-                "Perfect!",
-                "Excellent!",
-                "Professional!",
-                "Superstar!",
-                "Great Job!",
+                "Outstanding performance.",
+                "Excellent pitch control.",
+                "Exceptional consistency.",
+                "Impressive performance.",
+                "Well performed.",
               ]
             : score >= 80
-              ? ["Good Job!", "Nice Try!", "Keep It Up!", "Not Bad!"]
+              ? [
+                  "Strong performance.",
+                  "Good pitch consistency.",
+                  "Well done.",
+                  "Keep building on this.",
+                ]
               : [
-                  "Try Again!",
-                  "More Practice!",
-                  "Cheer Up!",
-                  "Better Luck Next Time!",
+                  "Keep practicing to improve your pitch consistency.",
+                  "A little more practice will help.",
+                  "Continue working on pitch control.",
+                  "Try again on your next performance.",
                 ];
         return feedbackByRange[
           Math.floor(Math.random() * feedbackByRange.length)
@@ -2116,7 +2123,10 @@
             "Could not advance after performer playback:",
             error.message,
           );
-          showAlert("Could not continue to the next song", "warning");
+          showAlert(
+            "Unable to continue to the next song. Please try again.",
+            "warning",
+          );
         }
       }
 
@@ -2293,7 +2303,7 @@
         const message = document.getElementById("performerPhoneDisplayMessage");
         if (message) {
           message.textContent =
-            "Video unavailable here. Skipping to next song...";
+            "This video is unavailable. Moving to the next song…";
           message.hidden = false;
         }
         if (!songKey || !activeKaraokeRoomId || !usePerformerFirebase) return;
@@ -2317,7 +2327,7 @@
             );
             if (message) {
               message.textContent =
-                "This video cannot be played here. Please request another song.";
+                "This video cannot be played. Select another song to continue.";
             }
           }
         }, 1200);
@@ -2347,7 +2357,7 @@
 
         performerPhoneRetryCount += 1;
         if (message) {
-          message.textContent = "Retrying video playback...";
+          message.textContent = "Reconnecting to video playback…";
           message.hidden = false;
         }
         window.setTimeout(() => {
@@ -2515,7 +2525,7 @@
           }
         }
         if (!videoId) {
-          setPerformerPhoneIdleState(true, "Please select a song.");
+          setPerformerPhoneIdleState(true, "No song is currently playing.");
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
           return;
@@ -3135,7 +3145,7 @@
             const roomIsFull = roomDeviceCount >= roomDeviceLimit;
             document.getElementById("roomCapacityNotice").hidden = !roomIsFull;
             document.getElementById("roomCapacityMessage").textContent =
-              `This room has reached its ${roomDeviceLimit}-device limit.`;
+              `This room has reached its maximum of ${roomDeviceLimit} connected devices.`;
             if (roomIsFull) roomRequestRoomId = connectedRoomId;
           };
           if (membership.autoAssigned) {
@@ -3243,7 +3253,7 @@
             (error) => console.warn("Room sync failed:", error.message),
           );
           document.getElementById("karaokeRoomStatus").textContent =
-            `${membership.room.name} · connected`;
+            `${membership.room.name} · Connected`;
         } catch (error) {
           if (
             error.message === "ROOM_FULL" ||
@@ -3252,8 +3262,8 @@
             roomRequestRoomId = requestedRoomId;
             document.getElementById("roomFullMessage").textContent =
               error.message === "NO_AVAILABLE_ROOMS"
-                ? "No room is available right now. Send a request to User Management to open another room."
-                : "This room is full. You cannot join until a device disconnects or an administrator assigns another room.";
+                ? "No rooms are currently available. Submit a request for access to another room."
+                : "This room has reached its device limit. Wait for a device to disconnect or request access to another room.";
             document.getElementById("singerApp").hidden = true;
             document.getElementById("roomUnavailablePage").hidden = false;
             return;
@@ -3267,8 +3277,8 @@
 
           const message =
             error.message === "ROOM_NOT_FOUND"
-              ? "This karaoke room no longer exists. Scan the QR code on the Karaoke Display again."
-              : "No active karaoke room found. Scan the QR code on the TV to join.";
+              ? "This room is no longer available. Scan the QR code on the karaoke display to join another room."
+              : "No active room was found. Scan the QR code on the karaoke display to join.";
           showAppToast(message);
           window.location.href = "index.html";
           return;
@@ -3454,8 +3464,8 @@
         if (loggedInUser) {
           const userDisplayName = document.getElementById("userDisplayName");
           if (userDisplayName) {
-            userDisplayName.textContent = `Welcome, ${loggedInUser.username}!`;
-            userDisplayName.style.color = "#f093fb";
+            userDisplayName.textContent = `Welcome, ${loggedInUser.username}`;
+            userDisplayName.style.color = "#9bdfd1";
           }
           localStorage.setItem("karaoke_user_name", loggedInUser.username);
         }
@@ -3537,19 +3547,19 @@
         notice.hidden = false;
         if (state.inUse) {
           notice.textContent =
-            "Room in use. Reserved songs are protected from idle cleanup.";
+            "This room is active. Reserved songs will not be cleared.";
         } else if (!state.expiresAt) {
-          notice.textContent = "Idle cleanup countdown starting...";
+          notice.textContent = "Room inactivity countdown is starting…";
         } else {
           const remainingMs = state.expiresAt - Date.now();
           if (remainingMs <= 0) {
             notice.textContent =
-              "Room idle limit reached. Clearing reserved songs...";
+              "The room inactivity limit has been reached. Clearing reserved songs…";
           } else {
             const totalSeconds = Math.ceil(remainingMs / 1000);
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
-            notice.textContent = `Reserved songs clear in ${minutes}:${String(seconds).padStart(2, "0")} if the room stays idle.`;
+            notice.textContent = `Reserved songs will be cleared in ${minutes}:${String(seconds).padStart(2, "0")} if the room remains inactive.`;
           }
         }
       }
@@ -3597,7 +3607,7 @@
         notice.hidden = remainingMs > warningWindow;
         if (!notice.hidden) {
           const remainingMinutes = Math.ceil(remainingMs / 60000);
-          notice.textContent = `Room time is almost up. ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} remaining. Ask the administrator to approve more time.`;
+          notice.textContent = `Room time is nearly over. ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"} remaining. Request an extension from the administrator.`;
         }
       }
 
@@ -3610,7 +3620,7 @@
         document.getElementById("requestAnotherRoomButton").hidden = false;
         document.getElementById("roomExtensionButton").disabled = false;
         document.getElementById("roomExtensionStatus").textContent =
-          "Extension approved. You are still connected to your room.";
+          "Extension approved. Your room connection has been restored.";
       }
 
       async function submitRoomExtensionRequest() {
@@ -3639,7 +3649,7 @@
         }
 
         button.disabled = true;
-        status.textContent = "Sending request to the administrator...";
+        status.textContent = "Submitting your request…";
         try {
           const request = await KaraokeSessions.createRoomExtensionRequest(
             loggedInUser?.username,
@@ -3653,8 +3663,8 @@
             (updatedRequest) => {
               if (updatedRequest?.status === "approved") {
                 status.textContent = activeKaraokeRoomId
-                  ? "Extension approved. Resuming your room..."
-                  : "Extension approved. Reconnecting to your room...";
+                  ? "Extension approved. Reconnecting to your room…"
+                  : "Extension approved. Restoring your room…";
                 if (activeKaraokeRoomId) {
                   renderPerformerRoomTime();
                 } else {
@@ -3662,10 +3672,10 @@
                 }
               } else if (updatedRequest?.status === "rejected") {
                 status.textContent =
-                  "Extension request declined. You can request a different duration.";
+                  "Extension request declined. You may submit a new request.";
                 button.disabled = false;
               } else {
-                status.textContent = "Waiting for administrator approval...";
+                status.textContent = "Awaiting administrator review…";
               }
             },
             (error) => {
@@ -3674,7 +3684,7 @@
                 error.message,
               );
               status.textContent =
-                "Request sent, but its status cannot be checked right now.";
+                "Your request was submitted, but its status is temporarily unavailable.";
               button.disabled = false;
             },
           );
@@ -3683,7 +3693,7 @@
           status.textContent =
             error.message === "ROOM_TIME_LIMIT_NOT_SET"
               ? "This room does not have a time limit configured. Contact the administrator."
-              : "Could not send the extension request. Check your connection and try again.";
+              : "Unable to submit the extension request. Check your connection and try again.";
           button.disabled = false;
         }
       }
@@ -3696,16 +3706,16 @@
         const status = document.getElementById(statusId);
         if (!roomRequestRoomId || !loggedInUser?.username) {
           status.textContent =
-            "Could not identify your room. Scan its QR code again.";
+            "Unable to identify your room. Scan its QR code again.";
           return;
         }
 
         document.getElementById("roomAdminContactNotice").hidden = true;
         button.disabled = true;
-        status.textContent = "Sending request...";
+        status.textContent = "Submitting your request…";
         try {
           if (!(await KaraokeAdminPresence.hasActiveAdmin())) {
-            status.textContent = "No admin is online right now.";
+            status.textContent = "No administrator is currently available.";
             document.getElementById("roomAdminContactNotice").hidden = false;
             button.disabled = false;
             return;
@@ -3728,10 +3738,10 @@
           console.error("Could not send room request:", error.message);
           status.textContent =
             error.message === "ADMIN_PRESENCE_UNAVAILABLE"
-              ? "Could not check admin availability. Check your connection and try again."
+              ? "Unable to check administrator availability. Check your connection and try again."
               : error.code === "PERMISSION_DENIED"
                 ? "Firebase blocked the request. Contact the administrator to enable room request access."
-                : `Could not send request: ${error.message || "Check your connection and try again."}`;
+                : "Unable to submit your request. Check your connection and try again.";
           button.disabled = false;
         }
       }
@@ -3840,9 +3850,9 @@
 
       async function disconnectPerformer() {
         if (
-          await showAppConfirm("Are you sure you want to disconnect?", {
-            title: "Disconnect from room",
-            confirmLabel: "Disconnect",
+          await showAppConfirm("Leave this room and return to the access portal?", {
+            title: "Leave this room?",
+            confirmLabel: "Leave room",
           })
         ) {
           await logoutFromPerformerSession();
@@ -3859,14 +3869,14 @@
         const searchQuery = searchInput ? searchInput.value.trim() : "";
 
         if (!searchQuery) {
-          showAppToast("Please enter a song name");
+          showAppToast("Enter a song title or artist to search.");
           return;
         }
 
         const searchBtn = document.querySelector("#searchForm .searchbtn");
         if (searchBtn) {
           searchBtn.disabled = true;
-          searchBtn.textContent = "⏳ Searching...";
+          searchBtn.textContent = "Searching…";
         }
 
         try {
@@ -3877,7 +3887,10 @@
           displaySearchResults(searchResults, userName);
         } catch (error) {
           console.error("Search error:", error);
-          showAlert("Error searching for songs. Please try again.", "danger");
+          showAlert(
+            "Song search could not be completed. Please try again.",
+            "danger",
+          );
         } finally {
           if (searchBtn) {
             searchBtn.disabled = false;
@@ -3990,14 +4003,14 @@
         if (results.length === 0) {
           const searchInput = document.getElementById("searchInput");
           const query = searchInput ? searchInput.value : "";
-          container.innerHTML = `<div class="alert alert-custom">❌ No results found for "${query}"</div>`;
+          container.innerHTML = `<div class="alert alert-custom">No songs found for "${query}". Try a different title or artist.</div>`;
           return;
         }
 
         let html = searchFallbackMessage
           ? `<div class="alert alert-custom" role="status">${searchFallbackMessage}</div>`
           : "";
-        html += `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3>`;
+        html += `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">Search results (${results.length})</h3>`;
 
         results.forEach((song) => {
           const thumbnailMarkup = getSearchResultThumbnailMarkup(song);
@@ -4006,7 +4019,7 @@
                         ${thumbnailMarkup}
                         <div class="song-info">
                     <div class="song-title">${escapeHTML(song.title)}</div>
-                    <div class="song-artist">🎤 ${escapeHTML(song.artist)}</div>
+                    <div class="song-artist">${escapeHTML(song.artist)}</div>
                     ${createSongActionsMarkup(song)}
                         </div>
                     </div>
@@ -4100,7 +4113,7 @@
                   saveOfflineSongRequests(currentRequests, roomId);
                 }
                 showAlert(
-                  `Could not sync "${escapeHTML(request.song.title)}": ${escapeHTML(error.message)}. Remove it from the offline list or try again after fixing the room issue.`,
+                  `Unable to sync "${escapeHTML(request.song.title)}": ${escapeHTML(error.message)}. Remove it from the offline list or try again after resolving the room issue.`,
                   "warning",
                 );
                 continue;
@@ -4111,7 +4124,7 @@
                 error.message,
               );
               showAlert(
-                `Could not sync "${escapeHTML(request.song.title)}" yet. The request remains saved on this device and will be retried.`,
+                `Unable to sync "${escapeHTML(request.song.title)}" yet. The request remains saved on this device and will be retried.`,
                 "warning",
               );
               break;
@@ -4129,7 +4142,7 @@
             error,
           );
           showAlert(
-            "Could not finish syncing saved song requests. Check the room queue before retrying.",
+            "Unable to finish syncing saved song requests. Check the room queue before retrying.",
             "warning",
           );
         } finally {
@@ -4148,12 +4161,12 @@
           return;
         }
         if (!userName.trim()) {
-          showAppToast("Please enter your name first");
+          showAppToast("Enter your performer name before reserving a song.");
           return;
         }
 
         btn.disabled = true;
-        btn.textContent = "⏳ Adding...";
+        btn.textContent = "Adding…";
 
         try {
           const newSong = {
@@ -4173,7 +4186,7 @@
             btn.disabled = false;
             btn.textContent = "Reserve";
             showAlert(
-              `"${escapeHTML(title)}" is saved on this device and will sync when you're back online. It is not in the shared room queue yet.`,
+              `"${escapeHTML(title)}" was saved on this device and will sync when your connection is restored. It has not been added to the shared room queue yet.`,
               "info",
             );
             return;
@@ -4193,8 +4206,8 @@
             error.message === "KARAOKE_DISPLAY_DISABLED"
               ? `${error.announcement || tvDisabledAnnouncement} Song reservations are temporarily disabled.`
               : error.message === "ROOM_FULL"
-                ? "This room is full. Join another room from the TV."
-                : "Error adding song. Check your connection and try again.",
+                ? "This room has reached its device limit. Join another room from the karaoke display."
+                : "The song could not be added. Check your connection and try again.",
             "danger",
           );
           btn.disabled = false;
@@ -4278,7 +4291,7 @@
       // Helper function for successful request
       function successCallback(btn, title) {
         setTimeout(() => {
-          showAlert(`✅ "${title}" added to Reserved Songs!`, "success");
+          showAlert(`"${title}" was added to the room queue.`, "success");
           btn.disabled = false;
           btn.textContent = "Reserve";
           if (!showingFavoriteSongs) {
@@ -4520,8 +4533,8 @@
         const userDisplayName = document.getElementById("userDisplayName");
 
         if (userDisplayName && loggedInUser) {
-          userDisplayName.textContent = `Welcome, ${loggedInUser.username}!`;
-          userDisplayName.style.color = "#f093fb";
+          userDisplayName.textContent = `Welcome, ${loggedInUser.username}`;
+          userDisplayName.style.color = "#9bdfd1";
           localStorage.setItem("karaoke_user_name", loggedInUser.username);
         }
       }
@@ -4566,18 +4579,18 @@
             firebase.database();
             KaraokeSessions.sendControl(activeKaraokeRoomId, "restart")
               .then(() =>
-                showAlert("Restarting current song on karaoke display", "info"),
+                showAlert("Restarting the current song on the karaoke display.", "info"),
               )
               .catch((error) => {
                 console.warn("Firebase control error:", error.message);
-                showAlert("Could not send restart command", "warning");
+                showAlert("Unable to restart the song. Please try again.", "warning");
               });
           } catch (err) {
             console.warn("Firebase control error:", err.message);
-            showAlert("Could not send restart command", "warning");
+            showAlert("Unable to restart the song. Please try again.", "warning");
           }
         } else {
-          showAlert("Firebase not available - controls disabled", "warning");
+          showAlert("Room controls are unavailable while the service is offline.", "warning");
         }
       }
 
@@ -4631,18 +4644,18 @@
             firebase.database();
             KaraokeSessions.sendControl(activeKaraokeRoomId, "togglePlay")
               .then(() =>
-                showAlert("Sent play/pause command to karaoke display", "info"),
+                showAlert("Playback command sent to the karaoke display.", "info"),
               )
               .catch((error) => {
                 console.warn("Firebase control error:", error.message);
-                showAlert("Could not send play/pause command", "warning");
+                showAlert("Unable to update playback. Please try again.", "warning");
               });
           } catch (err) {
             console.warn("Firebase control error:", err.message);
-            showAlert("Could not send play/pause command", "warning");
+            showAlert("Unable to update playback. Please try again.", "warning");
           }
         } else {
-          showAlert("Firebase not available - controls disabled", "warning");
+          showAlert("Room controls are unavailable while the service is offline.", "warning");
         }
       }
 
@@ -4662,7 +4675,7 @@
 
         if (performerPhoneDisplayActive) {
           if (!activeKaraokeRoomId || !usePerformerFirebase) {
-            showAlert("Firebase not available - controls disabled", "warning");
+            showAlert("Room controls are unavailable while the service is offline.", "warning");
             return;
           }
           KaraokeSessions.advanceToNextSong(activeKaraokeRoomId, {
@@ -4679,7 +4692,7 @@
             })
             .catch((error) => {
               console.warn("Could not skip to the next song:", error.message);
-              showAlert("Could not skip to the next song", "warning");
+              showAlert("Unable to skip to the next song. Please try again.", "warning");
             });
           return;
         }
@@ -4697,18 +4710,18 @@
             firebase.database();
             KaraokeSessions.sendControl(activeKaraokeRoomId, "skip")
               .then(() =>
-                showAlert("Skipping to next song on karaoke display", "info"),
+                showAlert("Skipping to the next song on the karaoke display.", "info"),
               )
               .catch((error) => {
                 console.warn("Firebase control error:", error.message);
-                showAlert("Could not send skip command", "warning");
+                showAlert("Unable to skip the song. Please try again.", "warning");
               });
           } catch (err) {
             console.warn("Firebase control error:", err.message);
-            showAlert("Could not send skip command", "warning");
+            showAlert("Unable to skip the song. Please try again.", "warning");
           }
         } else {
-          showAlert("Firebase not available - controls disabled", "warning");
+          showAlert("Room controls are unavailable while the service is offline.", "warning");
         }
       }
 
@@ -4728,14 +4741,14 @@
           return;
         }
         if (!activeKaraokeRoomId || !usePerformerFirebase) {
-          showAlert("Firebase not available - controls disabled", "warning");
+          showAlert("Room controls are unavailable while the service is offline.", "warning");
           return;
         }
 
         KaraokeSessions.setRoomMuted(activeKaraokeRoomId, nextMuted).catch(
           (error) => {
             console.warn("Room mute update failed:", error.message);
-            showAlert("Could not update room mute state", "warning");
+            showAlert("Unable to update the room audio settings. Please try again.", "warning");
           },
         );
       }

@@ -8,49 +8,49 @@
       selector: "#userDisplayName",
       title: "Your performer account",
       description:
-        "Your signed-in name appears here. Use Disconnect when you are finished.",
+        "Your signed-in account appears here. Select Leave room when you have finished.",
     },
     {
       selector: "#karaokeRoomStatus",
       title: "Your karaoke room",
       description:
-        "Check the room connection status here. Your song requests go to this room's shared queue.",
+        "Review your room connection here. Song reservations are added to this room's shared queue.",
     },
     {
       selector: ".controls",
       title: "Playback controls",
       description:
-        "Control playback on the shared display. These controls need an active connection to the room.",
+        "Control playback on the shared display. An active room connection is required.",
     },
     {
       selector: "#volumeSlider",
       title: "Room volume",
       description:
-        "Adjust the shared display's volume here. You can also use the device's own volume buttons.",
+        "Adjust the shared display volume here, or use the device's volume controls.",
     },
     {
       selector: "#searchForm",
       title: "Find a karaoke song",
       description:
-        "Search by song title or artist. Choose Reserve on a result to add it to the room queue.",
+        "Search by song title or artist, then select Reserve to add a song to the room queue.",
     },
     {
       selector: "#favoritesToggleButton",
       title: "Saved favorites",
       description:
-        "Save songs you like and return to them quickly from this button.",
+        "Save frequently requested songs and access them from this section.",
     },
     {
       selector: "#reservedSongs",
       title: "Your room's reserved songs",
       description:
-        "See the current and upcoming songs reserved for everyone in this room.",
+        "Review the song currently playing and upcoming reservations for this room.",
     },
     {
       selector: "#performerPhoneDisplayToggle",
       title: "Performer phone display",
       description:
-        "Open the karaoke display on your phone. This is separate from the shared TV display.",
+        "Open the performer display on this device. It operates independently of the shared screen.",
     },
   ];
 
@@ -59,19 +59,19 @@
       selector: ".home-container",
       title: "Choose your portal",
       description:
-        "Welcome to SD Karaoke. This page is where performers and administrators begin.",
+        "Use this page to access the administration tools or join a karaoke room as a performer.",
     },
     {
       selector: ".role-container",
       title: "Select your role",
       description:
-        "Choose System Administration to manage the system, or Karaoke Performer to join a room and reserve songs.",
+        "Choose Administrator Portal to manage the system, or Performer Portal to join a room and reserve songs.",
     },
     {
       selector: ".performer-room-status",
       title: "Check room availability",
       description:
-        "Performers can scan the room QR code or enter its Room ID here, then check room availability before joining.",
+        "Scan a room QR code or enter its room ID, then review availability before joining.",
       onEnter: () => window.openPerformerLogin(),
       onExit: () => window.closeLoginModal(),
     },
@@ -79,13 +79,13 @@
       selector: ".access-portal-display",
       title: "Open the shared display",
       description:
-        "Click here to see the Karaoke Display address. Type that address into a browser on the TV or shared screen.",
+        "View the display address here, then enter it in a browser on the TV or shared screen.",
     },
     {
       selector: 'a.access-portal-guide[href="user-guide.html"]',
       title: "Find the user guide",
       description:
-        "Open the quick guide any time for step-by-step help with joining a room, reserving songs, and using the display.",
+        "Consult the user guide for instructions on joining a room, reserving songs, and using the display.",
     },
   ];
 
@@ -94,42 +94,42 @@
       selector: "#dashboardSection .dashboard-stats",
       title: "System overview",
       description:
-        "The dashboard summarizes accounts, online users, active rooms, and available rooms.",
+        "Review account totals, active sessions, occupied rooms, and room availability.",
       view: "dashboard",
     },
     {
       selector: "#dashboardRoomStatus",
       title: "Room status",
       description:
-        "See room occupancy at a glance. Use View all or the sidebar to open room management.",
+        "Review current room occupancy. Select View all or use the sidebar to manage rooms.",
       view: "dashboard",
     },
     {
       selector: "#accountRequestsPanel",
       title: "Account management",
       description:
-        "Review account requests and manage user accounts from this section.",
+        "Review account requests and manage account access from this section.",
       view: "users",
     },
     {
       selector: "#roomsSection .stats-grid",
       title: "Karaoke rooms",
       description:
-        "Monitor rooms and connected devices. Admins can add rooms; managers can monitor and manage the rooms they are allowed to access.",
+        "Monitor rooms and connected devices. Administrators can add rooms; room managers can manage their assigned rooms.",
       view: "rooms",
     },
     {
       selector: "#roomRequestsSection .account-request-filters",
       title: "Room requests",
       description:
-        "Review room requests and time-extension requests, then switch between pending items and request history.",
+        "Review room and time-extension requests, and switch between pending requests and request history.",
       view: "requests",
     },
     {
       selector: "#displayControlSection .display-control-card",
       title: "Display controls",
       description:
-        "Admins can manage overall and room-specific karaoke display availability here.",
+        "Manage global and room-specific display availability here.",
       view: "display",
       adminOnly: true,
     },
@@ -137,7 +137,7 @@
       selector: "#adminProfileToggle",
       title: "Your account",
       description:
-        "Open your account menu here when you need to log out. You can return to the dashboard from the sidebar.",
+        "Open your account menu to sign out. Use the sidebar to return to the dashboard.",
       view: "dashboard",
     },
   ];
@@ -276,24 +276,24 @@
       const eyebrow = createElement(
         "p",
         "onboarding-tour__eyebrow",
-        "FIRST-TIME GUIDE",
+        "GETTING STARTED",
       );
-      const title = createElement("h2", "", "Welcome to SD Karaoke!");
+      const title = createElement("h2", "", "Welcome to SD Karaoke");
       title.id = "onboardingTourTitle";
       const description = createElement(
         "p",
         "onboarding-tour__description",
-        "Let's take a quick tour to help you learn how to use the system.",
+        "Explore the main features and learn how to use the system.",
       );
       description.id = "onboardingTourDescription";
       const actions = createElement("div", "onboarding-tour__actions");
       actions.append(
         addAction(
-          "Skip Tour",
+          "Skip tour",
           "onboarding-tour__button onboarding-tour__button--quiet",
           () => closeTour(true),
         ),
-        addAction("Start Tour", "onboarding-tour__button", () => showStep(0)),
+        addAction("Start tour", "onboarding-tour__button", () => showStep(0)),
       );
       dialog.append(eyebrow, title, description, actions);
       dialog.focus();
@@ -371,14 +371,14 @@
       }
       navigation.append(
         addAction(
-          stepIndex === steps.length - 1 ? "Finish" : "Next",
+          stepIndex === steps.length - 1 ? "Finish tour" : "Next",
           "onboarding-tour__button",
           showNext,
         ),
       );
       actions.append(
         addAction(
-          "Skip Tour",
+          "Skip tour",
           "onboarding-tour__button onboarding-tour__button--quiet",
           () => closeTour(true),
         ),

@@ -11,7 +11,7 @@
       rel="apple-touch-icon"
       href="assets/sd-karaoke-apple-touch-icon.png"
     />
-    <title>SD Karaoke | Welcome</title>
+    <title>SD Karaoke | Access Portal</title>
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
       rel="stylesheet"
@@ -337,27 +337,29 @@
       </style>
 
       <div class="home-container">
-        <p class="home-eyebrow">Smart karaoke platform</p>
+        <p class="home-eyebrow">Karaoke management platform</p>
         <h1 class="title-glow">SD Karaoke</h1>
 
-        <p class="subtitle">Select an access portal to continue.</p>
+        <p class="subtitle">
+          Select a portal to manage the system or join a karaoke room.
+        </p>
         <div class="role-container">
           <button class="role-btn" onclick="openAdminLogin()">
             <span class="role-icon" aria-hidden="true"
               ><i class="bi bi-shield-lock"></i
             ></span>
-            <span class="role-label">System Administration</span>
+            <span class="role-label">Administrator Portal</span>
             <span class="role-desc"
-              >Manage accounts, rooms, and display settings</span
+              >Manage accounts, karaoke rooms, and display availability</span
             >
           </button>
           <button class="role-btn" onclick="openPerformerLogin()">
             <span class="role-icon" aria-hidden="true"
               ><i class="bi bi-music-note-list"></i
             ></span>
-            <span class="role-label">Karaoke Performer</span>
+            <span class="role-label">Performer Portal</span>
             <span class="role-desc"
-              >Search songs and manage your room queue</span
+              >Join a room, find songs, and manage your queue</span
             >
           </button>
         </div>
@@ -379,11 +381,11 @@
       aria-labelledby="displayUrlTitle"
     >
       <h2 class="app-action-dialog__title" id="displayUrlTitle">
-        Open Karaoke Display on your screen
+        Set up the shared karaoke display
       </h2>
       <p class="app-action-dialog__message">
-        On your TV or any device you want to use as the karaoke screen, open a
-        browser and type this address:
+        On the TV or device you want to use as the shared screen, open a browser
+        and enter this address:
       </p>
       <strong class="display-url-dialog__url" id="displayUrlText"></strong>
       <div class="app-action-dialog__actions">
@@ -392,7 +394,7 @@
             class="app-action-dialog__button app-action-dialog__button--primary"
             type="submit"
           >
-            Got it
+            Close
           </button>
         </form>
       </div>
@@ -419,14 +421,14 @@
 
     <!-- Admin Login Modal -->
     <div id="adminLoginModal" class="login-modal-custom">
-      <div class="login-title">System Administration Sign In</div>
+      <div class="login-title">Administrator Sign In</div>
       <form onsubmit="validateAdminLogin(event)">
         <div class="login-form-group">
           <label for="adminName">Username</label>
           <input
             type="text"
             id="adminName"
-            placeholder="Enter administrator username"
+            placeholder="Enter your username"
             required
           />
         </div>
@@ -448,7 +450,7 @@
         </button>
         <div class="login-buttons">
           <button type="submit" class="login-btn login-btn-submit">
-            Sign In
+            Sign in
           </button>
           <button
             type="button"
@@ -473,8 +475,8 @@
               id="scanRoomQrButton"
               onclick="startRoomQrScanner()"
             >
-              <i class="bi bi-qr-code-scan" aria-hidden="true"></i> Scan Room QR
-              Code
+              <i class="bi bi-qr-code-scan" aria-hidden="true"></i> Scan room
+              QR code
             </button>
             <button
               type="button"
@@ -482,7 +484,7 @@
               id="enterRoomIdButton"
               onclick="showManualRoomEntry()"
             >
-              Enter Room ID
+              Enter room ID
             </button>
           </div>
           <div id="roomQrReader" hidden></div>
@@ -492,7 +494,7 @@
               <input
                 type="text"
                 id="manualRoomId"
-                placeholder="Enter the Room ID shown on the Karaoke Display"
+                placeholder="Enter the room ID shown on the karaoke display"
                 autocomplete="off"
               />
             </div>
@@ -506,7 +508,7 @@
             </button>
           </div>
           <p id="roomQrStatus" role="status" aria-live="polite">
-            Scan the room QR code to connect to a karaoke room.
+            Scan a room QR code to view available rooms and join.
           </p>
         </div>
         <form
@@ -546,7 +548,7 @@
               id="singerLoginSubmit"
               disabled
             >
-              Sign In
+              Sign in
             </button>
             <button
               type="button"
@@ -573,7 +575,7 @@
         <div class="performer-room-status-heading">
           <h2 id="performerRoomStatusTitle">Room availability</h2>
           <span id="performerRoomStatusSummary" aria-live="polite"
-            >Checking rooms...</span
+            >Checking room availability…</span
           >
         </div>
         <ul
@@ -617,11 +619,11 @@
       </section>
       <form id="accountRequestPanel" class="account-request-form" hidden>
         <div>
-          <h2>Request an Account</h2>
-          <p>Choose a username and submit it for administrator review.</p>
+          <h2>Request an account</h2>
+          <p>Choose a username and submit your request for administrator review.</p>
         </div>
         <div class="login-form-group">
-          <label for="requestedAccountUsername">Requested username</label>
+          <label for="requestedAccountUsername">Username</label>
           <input
             id="requestedAccountUsername"
             name="username"
@@ -653,7 +655,7 @@
           role="status"
           hidden
         >
-          <span>Message us on Facebook for help with your request.</span>
+          <span>Contact support on Facebook for assistance with your request.</span>
           <a
             class="admin-contact-link"
             href="https://www.facebook.com/profile.php?id=61580750922961"
@@ -661,7 +663,7 @@
             rel="noopener noreferrer"
           >
             <i class="bi bi-facebook" aria-hidden="true"></i>
-            Contact on Facebook
+            Contact support
           </a>
         </div>
         <section
@@ -670,7 +672,7 @@
           hidden
         >
           <h3>Account approved</h3>
-          <p>Your account is ready. Use these credentials to sign in.</p>
+          <p>Your account is ready. Use the credentials below to sign in.</p>
           <dl>
             <dt>Username</dt>
             <dd id="approvedAccountUsername"></dd>
@@ -703,9 +705,9 @@
       aria-modal="true"
       aria-labelledby="passwordResetTitle"
     >
-      <div class="login-title" id="passwordResetTitle">Reset password</div>
+      <div class="login-title" id="passwordResetTitle">Password reset</div>
       <p class="password-reset-intro" id="passwordResetIntro">
-        Send a request to the administrator for approval.
+        Submit a request for administrator approval.
       </p>
       <form id="passwordResetRequestForm">
         <div class="login-form-group">
@@ -723,7 +725,7 @@
           class="login-btn login-btn-submit"
           type="submit"
         >
-          Request approval
+          Submit request
         </button>
       </form>
       <form id="passwordResetNewPasswordForm" hidden>
@@ -769,7 +771,7 @@
         role="status"
         hidden
       >
-        <span>Message us on Facebook for help with your request.</span>
+        <span>Contact support on Facebook for assistance with your request.</span>
         <a
           class="admin-contact-link"
           href="https://www.facebook.com/profile.php?id=61580750922961"
@@ -777,7 +779,7 @@
           rel="noopener noreferrer"
         >
           <i class="bi bi-facebook" aria-hidden="true"></i>
-          Contact on Facebook
+          Contact support
         </a>
       </div>
       <div class="password-reset-modal-actions">
@@ -801,7 +803,7 @@
 
     <!-- Performer portal is served from performer-portal.html. -->
     <script>
-      document.title = "SD Karaoke | Welcome";
+      document.title = "SD Karaoke | Access Portal";
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -849,14 +851,14 @@
         const searchQuery = searchInput ? searchInput.value.trim() : "";
 
         if (!searchQuery) {
-          showAppToast("Please enter a song name");
+          showAppToast("Enter a song title or artist to search.");
           return;
         }
 
         const searchBtn = document.querySelector("#searchForm .searchbtn");
         if (searchBtn) {
           searchBtn.disabled = true;
-          searchBtn.textContent = "⏳ Searching...";
+          searchBtn.textContent = "Searching…";
         }
 
         try {
@@ -865,7 +867,10 @@
           displaySearchResults(searchResults, userName);
         } catch (error) {
           console.error("Search error:", error);
-          showAlert("Error searching for songs. Please try again.", "danger");
+          showAlert(
+            "Song search could not be completed. Please try again.",
+            "danger",
+          );
         } finally {
           if (searchBtn) {
             searchBtn.disabled = false;
@@ -958,18 +963,18 @@
         if (results.length === 0) {
           const searchInput = document.getElementById("searchInput");
           const query = searchInput ? searchInput.value : "";
-          container.innerHTML = `<div class="alert alert-custom">❌ No results found for "${query}"</div>`;
+          container.innerHTML = `<div class="alert alert-custom">No songs found for "${query}". Try a different title or artist.</div>`;
           return;
         }
 
-        let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">📌 Results (${results.length})</h3>`;
+        let html = `<h3 style="color: white; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">Search results (${results.length})</h3>`;
 
         results.forEach((song) => {
           const thumbnailUrl = `https://i.ytimg.com/vi/${song.videoId}/maxresdefault.jpg`;
           html += `
                     <div class="song-item">
                         <div style="font-weight: 600; margin-bottom: 5px;">${song.title}</div>
-                        <div style="font-size: 0.9rem; opacity: 0.8;">🎤 ${song.artist}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">${song.artist}</div>
                         <button class="song-item-btn" onclick="requestSong('${song.title.replace(/'/g, "\\'")}', '${song.artist.replace(/'/g, "\\'")}', '${song.videoId}', '${userName}', this)">
                             ✓ Select
                         </button>
@@ -983,12 +988,12 @@
       // Request song
       function requestSong(title, artist, videoId, userName, btn) {
         if (!userName.trim()) {
-          showAppToast("Enter your username before selecting a song.");
+          showAppToast("Enter your performer name before reserving a song.");
           return;
         }
 
         btn.disabled = true;
-        btn.textContent = "⏳ Adding...";
+        btn.textContent = "Adding…";
 
         try {
           let queue = JSON.parse(localStorage.getItem("karaoke_queue") || "[]");
@@ -1015,7 +1020,7 @@
           }
 
           setTimeout(() => {
-            showAlert(`✅ "${title}" added to Reserved Songs!`, "success");
+            showAlert(`"${title}" was added to the room queue.`, "success");
             document.getElementById("searchInput").value = "";
             document.getElementById("resultsContainer").innerHTML = "";
             btn.disabled = false;
@@ -1023,7 +1028,7 @@
           }, 500);
         } catch (error) {
           console.error("Error requesting song:", error);
-          showAlert("Error adding song", "danger");
+          showAlert("The song could not be added. Please try again.", "danger");
           btn.disabled = false;
           btn.textContent = "✓ Select";
         }
@@ -1080,7 +1085,7 @@
 
         if (reservedSongs.length === 0) {
           container.innerHTML =
-            '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem; font-style: italic;">No reserved songs yet. Search and request songs!</div>';
+            '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem;">No songs are currently reserved. Search for a song to add it to the queue.</div>';
           return;
         }
 
@@ -1089,7 +1094,7 @@
           html += `
                     <div class="song-item">
                         <div style="font-weight: 600; margin-bottom: 5px;">${song.title}</div>
-                        <div style="font-size: 0.9rem; opacity: 0.8;">🎤 ${song.artist}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">${song.artist}</div>
                     </div>
                 `;
         });
@@ -1154,7 +1159,7 @@
       function togglePlayPause() {
         const btn = document.getElementById("playPauseBtn");
         if (!audioPlayer.src) {
-          showAppToast("No song loaded. Please search for a song first.");
+          showAppToast("No song is selected. Search for a song to continue.");
           return;
         }
 
@@ -1378,7 +1383,7 @@
         }
 
         button.disabled = true;
-        status.textContent = "Checking Room ID...";
+        status.textContent = "Checking room ID…";
         try {
           const snapshot = await firebase
             .database()
@@ -1907,7 +1912,7 @@
               adminLoginInProgress = false;
               console.log("❌ Admin user is disabled:", adminUser.username);
               showAppToast(
-                "❌ This admin account has been disabled.\n\nPlease contact another administrator.",
+                "This account is currently disabled. Contact another administrator for assistance.",
               );
               document.getElementById("adminName").focus();
               return;
@@ -1923,7 +1928,7 @@
                   "❌ Login blocked - user already logged in elsewhere",
                 );
                 showAppToast(
-                  "❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.",
+                  "This account is already signed in on another device. Sign out there before signing in here.",
                 );
                 return; // BLOCK the login
               }
@@ -2016,7 +2021,7 @@
                 singerUser.username,
               );
               showAppToast(
-                "❌ Your account has been disabled.\n\nPlease contact an administrator.",
+                "Your account is currently disabled. Contact an administrator for assistance.",
               );
               document.getElementById("singerUsername").focus();
               return;
@@ -2034,7 +2039,7 @@
                     "❌ Login blocked - user already logged in elsewhere",
                   );
                   showAppToast(
-                    "❌ This account is already logged in on another device.\n\nPlease logout from the other device first before logging in here.",
+                    "This account is already signed in on another device. Sign out there before signing in here.",
                   );
                   return; // BLOCK the login
                 }

@@ -1178,7 +1178,7 @@
             aria-hidden="true"
           ></video>
           <div id="noSongMessage" role="status" aria-live="polite">
-            <strong>Please select a song.</strong>
+            <strong>No song is currently playing.</strong>
           </div>
           <div
             id="performerScreenNotice"
@@ -1186,8 +1186,8 @@
             aria-live="polite"
             hidden
           >
-            <strong>Karaoke screen moved to the Performer Portal</strong>
-            <span>Close the performer screen to return the display here.</span>
+            <strong>The karaoke display is active on a performer device.</strong>
+            <span>Close the performer display to return to this screen.</span>
           </div>
           <div id="centerPerformerName" class="center-singer-name"></div>
         </div>
@@ -1201,7 +1201,7 @@
       <!-- Buttons (Top Right) -->
       <div class="button-group">
         <div class="active-room-display" aria-live="polite">
-          <strong id="activeRoomName">Loading room...</strong>
+          <strong id="activeRoomName">Connecting to room…</strong>
           <time
             id="displayClock"
             class="display-clock"
@@ -1210,10 +1210,10 @@
           ></time>
         </div>
         <button id="fullscreenBtn" onclick="toggleFullscreen()">
-          ⛶ Full Screen
+          ⛶ Enter full screen
         </button>
         <button id="clearQueueBtn" onclick="deleteQueue()">
-          🗑️ Clear Queue
+          🗑️ Clear queue
         </button>
       </div>
 
@@ -1228,15 +1228,15 @@
 
       <!-- Footer Text -->
       <div id="connectionStatus" class="disconnected">
-        <span id="connectionText">Maintained by Shan Denver</span>
+        <span id="connectionText">SD Karaoke</span>
       </div>
 
       <!-- QR Code -->
       <div id="qrcode-container">
         <div id="qrcode"></div>
-        <div id="roomCodeLabel">Scan to Join Room</div>
+        <div id="roomCodeLabel">Scan to join this room</div>
         <div id="roomIdLabel"></div>
-        <div id="roomMemberCount">0 / 3 phones</div>
+        <div id="roomMemberCount">0 / 3 devices</div>
       </div>
     </div>
 
@@ -1245,7 +1245,7 @@
       aria-labelledby="micConsentTitle"
       aria-describedby="micConsentDescription micConsentStatus"
     >
-      <h2 id="micConsentTitle">Enable pitch stability scoring?</h2>
+      <h2 id="micConsentTitle">Enable pitch scoring?</h2>
       <p id="micConsentDescription">
         A free pitch detector estimates how steady your voiced notes are.
         Microphone audio is processed locally, not recorded or sent. This does
@@ -1266,7 +1266,7 @@
           type="button"
           onclick="enableMicScoring()"
         >
-          Allow
+          Enable scoring
         </button>
       </div>
     </dialog>

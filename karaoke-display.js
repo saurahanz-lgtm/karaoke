@@ -396,7 +396,7 @@ function renderKaraokeRoomDeviceCount(roomId) {
   const memberCount = document.getElementById("roomMemberCount");
   if (!memberCount) return;
   const room = karaokeRooms.find((item) => item.id === roomId);
-  memberCount.textContent = `${activeRoomDeviceCount} / ${KaraokeSessions.getRoomDeviceLimit(room)} phones`;
+  memberCount.textContent = `${activeRoomDeviceCount} / ${KaraokeSessions.getRoomDeviceLimit(room)} devices`;
 }
 
 function updatePhoneConnectionStatus(roomId, memberCount) {
@@ -407,10 +407,10 @@ function updatePhoneConnectionStatus(roomId, memberCount) {
   lastConnectionStatus = isConnected;
   if (wasConnected !== null) {
     showNotification(
-      isConnected ? "✅ Phone Connected!" : "❌ Phone Disconnected",
+      isConnected ? "Performer connected" : "No performers connected",
     );
   } else if (isConnected) {
-    showNotification("✅ Phone Connected!");
+    showNotification("Performer connected");
   }
 }
 
@@ -2502,7 +2502,7 @@ function displayScoreModal(score) {
   scoreDisplay.className = "score-modal-card";
 
   const title = document.createElement("h2");
-  title.textContent = "Your score is";
+  title.textContent = "Performance score";
 
   const value = document.createElement("div");
   value.className = "score-modal-value";
