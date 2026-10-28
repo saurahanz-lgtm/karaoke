@@ -6063,3 +6063,167 @@ body.admin-page {
     width: 100%;
   }
 }
+
+.home-page .access-portal-display {
+  border-color: rgba(192, 132, 252, 0.42);
+  color: #f1e7ff;
+  background: rgba(35, 23, 53, 0.94);
+}
+
+.home-page .access-portal-display > i {
+  color: #c4b5fd;
+}
+
+.home-page .access-portal-display:hover,
+.home-page .access-portal-display:focus-visible {
+  border-color: #c084fc;
+  background: rgba(75, 43, 116, 0.96);
+}
+
+.home-page .access-portal-display:focus-visible {
+  outline: 2px solid #c084fc;
+  outline-offset: 3px;
+}
+
+.home-page .display-url-dialog {
+  border-color: rgba(167, 139, 250, 0.48);
+  background: linear-gradient(145deg, #1b1429, #100b19);
+}
+
+.home-page .display-url-dialog::backdrop {
+  background: rgba(7, 4, 12, 0.78);
+}
+
+.home-page .display-url-dialog__url {
+  border-color: rgba(192, 132, 252, 0.56);
+  color: #e4ceff;
+  background: rgba(139, 92, 246, 0.16);
+  text-align: center;
+}
+
+.home-page .display-url-dialog__actions .app-action-dialog__button--primary {
+  border-color: #a78bfa;
+  background: linear-gradient(120deg, #8b5cf6, #6d5bd0);
+}
+
+.guide-page {
+  --guide-ink: #f1eaff;
+  --guide-muted: #b6a9c9;
+  --guide-line: rgba(167, 139, 250, 0.24);
+  --guide-paper: #100b19;
+  --guide-teal: #c084fc;
+  --guide-coral: #d8b4fe;
+  --guide-blue: #b6a4ff;
+  color: var(--guide-ink);
+  background-color: #100b19;
+  background-image:
+    linear-gradient(rgba(167, 139, 250, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167, 139, 250, 0.035) 1px, transparent 1px);
+}
+
+.guide-skip-link {
+  background: #6d4bb8;
+}
+
+.guide-topbar {
+  background: rgba(16, 11, 25, 0.96);
+}
+
+.guide-brand-mark,
+.guide-quick-links a:first-child,
+.guide-step-number {
+  background: linear-gradient(135deg, #8b5cf6, #6d5bd0);
+}
+
+.guide-index nav a,
+.guide-index-home,
+.guide-faq summary {
+  color: #ded4ee;
+}
+
+.guide-index nav a:hover,
+.guide-index-home:hover {
+  color: #f4eaff;
+  background: rgba(139, 92, 246, 0.16);
+}
+
+.guide-quick-links a,
+.guide-inline-link {
+  border-color: rgba(167, 139, 250, 0.38);
+  color: #e4d8f5;
+  background: rgba(31, 22, 46, 0.9);
+}
+
+.guide-quick-links a:first-child {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(120deg, #8b5cf6, #6d5bd0);
+}
+
+.guide-note,
+.guide-note--teal {
+  color: #ddd1ef;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.guide-section-number,
+.guide-section-number--coral,
+.guide-section-number--blue,
+.guide-section-number--gold {
+  border-color: rgba(192, 132, 252, 0.42);
+  color: #eadbff;
+  background: rgba(139, 92, 246, 0.18);
+}
+
+.guide-steps li {
+  border-top-color: rgba(167, 139, 250, 0.18);
+}
+
+.guide-steps p,
+.guide-faq details p {
+  color: var(--guide-muted);
+}
+
+.guide-section strong {
+  color: #fff;
+}
+
+.guide-footer a {
+  color: #d0b8ff;
+}
+
+.guide-entry,
+.guide-language-control {
+  border-color: var(--guide-line);
+  color: #e4d8f5;
+  background: rgba(31, 22, 46, 0.9);
+}
+
+.guide-entry:hover {
+  border-color: rgba(192, 132, 252, 0.7);
+  color: #fff;
+  background: rgba(139, 92, 246, 0.22);
+}
+
+.guide-page a:focus-visible,
+.guide-page summary:focus-visible,
+.guide-language-control:focus-within {
+  outline-color: #c084fc;
+}
+
+.guide-language-control option {
+  background: #171122;
+}
+
+.guide-tab:hover {
+  background: rgba(139, 92, 246, 0.16);
+}
+
+.guide-tab.is-active {
+  border-color: rgba(192, 132, 252, 0.38);
+  background: linear-gradient(
+    120deg,
+    rgba(139, 92, 246, 0.32),
+    rgba(109, 91, 208, 0.3)
+  );
+}
