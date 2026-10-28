@@ -1398,7 +1398,13 @@
             ▶
           </button>
           <button class="stop" onclick="stopPlayer()">■</button>
+          <button class="gray" id="midiConnectBtn" type="button" onclick="requestMidiAccess()">
+            🎛 MIDI
+          </button>
         </div>
+        <p id="midiStatus" class="performer-volume-notice" role="status">
+          MIDI waiting for a controller.
+        </p>
 
         <!-- Volume Control -->
         <div class="volume-control">
@@ -4518,6 +4524,116 @@
             "Could not sync performer playback state:",
             error.message,
           );
+        });
+      }
+
+      const MIDI_NOTE_ACTIONS = Object.freeze({
+        60: "togglePlayPause",
+        61: "stopPlayer",
+        62: "reloadPlayer",
+        63: "toggleMute",
+      });
+      let midiControllerAccess = null;
+      let midiControllerLastTriggerAt = new Map();
+
+      function updateMidiStatus(message, isError = false) {
+        const statusEl = document.getElementById("midiStatus");
+        if (!statusEl) return;
+        statusEl.textContent = message;
+        statusEl.dataset.state = isError ? "error" : "ok";
+      }
+
+      function handleMidiMessage(event) {
+        const data = event?.data || [];
+        const [statusByte, noteNumber, velocity] = data;
+        if (
+          typeof statusByte !== "number" ||
+          typeof noteNumber !== "number" ||
+          !Number.isInteger(noteNumber)
+        ) {
+          return;
+        }
+
+        const messageType = statusByte & 0xf0;
+        const isNoteOn = messageType === 0x90 && velocity > 0;
+        const isNoteOff = messageType === 0x80 || (messageType === 0x90 && velocity === 0);
+        const actionName = MIDI_NOTE_ACTIONS[noteNumber];
+
+        if (!actionName || (!isNoteOn && !isNoteOff)) return;
+
+        const now = Date.now();
+        const lastTriggerAt = midiControllerLastTriggerAt.get(noteNumber) || 0;
+        if (now - lastTriggerAt < 180) return;
+        midiControllerLastTriggerAt.set(noteNumber, now);
+
+        const fn = window[actionName];
+        if (typeof fn !== "function") return;
+
+        try {
+          fn.call(window);
+          updateMidiStatus(`MIDI mapped: ${actionName}`);
+        } catch (error) {
+          console.warn("MIDI action failed:", error);
+          updateMidiStatus(`MIDI action failed: ${actionName}`, true);
+        }
+      }
+
+      function attachMidiInput(input) {
+        if (!input || input._sdkaraokeMidiAttached) return;
+        input._sdkaraokeMidiAttached = true;
+        input.onmidimessage = handleMidiMessage;
+      }
+
+      function initializeMidiAccess(access) {
+        if (!access) return;
+        midiControllerAccess = access;
+        access.inputs.forEach((input) => attachMidiInput(input));
+        access.onstatechange = () => {
+          access.inputs.forEach((input) => attachMidiInput(input));
+          const deviceCount = access.inputs.size;
+          updateMidiStatus(
+            deviceCount > 0
+              ? `MIDI ready (${deviceCount} device${deviceCount === 1 ? "" : "s"})`
+              : "MIDI ready (no device connected)",
+          );
+        };
+        const deviceCount = access.inputs.size;
+        updateMidiStatus(
+          deviceCount > 0
+            ? `MIDI ready (${deviceCount} device${deviceCount === 1 ? "" : "s"})`
+            : "MIDI ready (no device connected)",
+        );
+      }
+
+      function requestMidiAccess() {
+        if (!navigator.requestMIDIAccess) {
+          updateMidiStatus("Web MIDI is not supported in this browser.", true);
+          return Promise.resolve(null);
+        }
+
+        if (midiControllerAccess) {
+          initializeMidiAccess(midiControllerAccess);
+          return Promise.resolve(midiControllerAccess);
+        }
+
+        return navigator
+          .requestMIDIAccess()
+          .then((access) => {
+            initializeMidiAccess(access);
+            return access;
+          })
+          .catch((error) => {
+            console.warn("MIDI access was not granted:", error);
+            updateMidiStatus("MIDI access denied by browser.", true);
+            return null;
+          });
+      }
+
+      if (document.readyState === "complete" || document.readyState === "interactive") {
+        requestMidiAccess();
+      } else {
+        window.addEventListener("DOMContentLoaded", requestMidiAccess, {
+          once: true,
         });
       }
 
