@@ -24,6 +24,7 @@ const YOUTUBE_RATE_LIMIT_COOLDOWN_MS = 60000;
 const YOUTUBE_RATE_LIMIT_STORAGE_KEY = "youtubeSearchRateLimitUntil";
 const YOUTUBE_SEARCH_CACHE_PREFIX = "youtubeSearchCache:";
 const YOUTUBE_SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+const YOUTUBE_SEARCH_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 let youtubeRateLimitUntil = 0;
 
 function readYouTubeStorage(key) {
@@ -42,14 +43,27 @@ function writeYouTubeStorage(key, value) {
   }
 }
 
-function getCachedYouTubeSearch(query) {
+function getCachedYouTubeSearch(query, allowExpired = false) {
   const cacheKey = `${YOUTUBE_SEARCH_CACHE_PREFIX}${encodeURIComponent(
     query.toLowerCase(),
   )}`;
   try {
     const cached = JSON.parse(readYouTubeStorage(cacheKey) || "null");
-    if (cached?.expiresAt > Date.now() && Array.isArray(cached.results)) {
-      return cached.results;
+    if (Array.isArray(cached?.results)) {
+      const cachedAt =
+        cached.cachedAt || cached.expiresAt - YOUTUBE_SEARCH_CACHE_TTL_MS;
+      if (Date.now() - cachedAt > YOUTUBE_SEARCH_CACHE_MAX_AGE_MS) {
+        globalThis.localStorage?.removeItem(cacheKey);
+        return null;
+      }
+      if (
+        cached.expiresAt > Date.now() ||
+        allowExpired ||
+        globalThis.navigator?.onLine === false
+      ) {
+        return cached.results;
+      }
+      return null;
     }
     globalThis.localStorage?.removeItem(cacheKey);
   } catch {
@@ -65,6 +79,7 @@ function cacheYouTubeSearch(query, results) {
   writeYouTubeStorage(
     cacheKey,
     JSON.stringify({
+      cachedAt: Date.now(),
       expiresAt: Date.now() + YOUTUBE_SEARCH_CACHE_TTL_MS,
       results,
     }),
@@ -161,6 +176,10 @@ async function searchYouTubeKaraoke(query) {
     cacheYouTubeSearch(searchQuery, results);
     return results;
   } catch (error) {
+    if (error instanceof TypeError || globalThis.navigator?.onLine === false) {
+      const staleResults = getCachedYouTubeSearch(searchQuery, true);
+      if (staleResults) return staleResults;
+    }
     if (error.code === "YOUTUBE_RATE_LIMIT") {
       console.warn("YouTube Search Rate Limit:", error.message);
     } else {

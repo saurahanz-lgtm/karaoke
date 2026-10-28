@@ -1,11 +1,31 @@
+const isStandalone =
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.navigator.standalone === true;
+const isIOS =
+  /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
+  (window.navigator.platform === "MacIntel" &&
+    window.navigator.maxTouchPoints > 1);
+const isKaraokeDisplay =
+  window.location.pathname.endsWith("/karaoke-display.html") ||
+  window.location.pathname === "/display";
+
+let installButton = document.getElementById("installAppButton");
+
+if (!installButton && !isKaraokeDisplay && !isStandalone) {
+  installButton = document.createElement("button");
+  installButton.className = "pwa-install-button";
+  installButton.id = "installAppButton";
+  installButton.type = "button";
+  installButton.innerHTML =
+    '<i class="bi bi-download" aria-hidden="true"></i><span>Install app</span>';
+  document.body.append(installButton);
+}
+
 const registerServiceWorker = async () => {
   if (!("serviceWorker" in navigator)) return;
 
   try {
-    const registration = await navigator.serviceWorker.register("./service-worker.js");
-    if (registration.waiting) {
-      registration.waiting.postMessage({ type: "SKIP_WAITING" });
-    }
+    await navigator.serviceWorker.register("./service-worker.js");
   } catch (error) {
     console.warn("Service worker registration failed:", error);
   }
@@ -17,18 +37,8 @@ if (document.readyState === "complete") {
   window.addEventListener("load", registerServiceWorker, { once: true });
 }
 
-const installButton = document.getElementById("installAppButton");
-
 if (installButton) {
   let installPrompt = null;
-  const isStandalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true;
-  const isIOS =
-    /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
-    (window.navigator.platform === "MacIntel" &&
-      window.navigator.maxTouchPoints > 1);
-
   if (!isStandalone) installButton.hidden = false;
 
   window.addEventListener("beforeinstallprompt", (event) => {

@@ -880,6 +880,26 @@
         white-space: nowrap;
       }
 
+      .reserved-song-offline-actions {
+        grid-column: 2 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .reserved-song-offline-actions span {
+        color: #ffd28b;
+        font-size: 0.68rem;
+        font-weight: 700;
+      }
+
+      .reserved-song-offline-actions button {
+        min-height: 28px;
+        padding: 2px 8px;
+        font-size: 0.7rem;
+      }
+
       .reserved-song-empty {
         padding: 16px 10px;
         color: #9aabd0;
@@ -1653,6 +1673,7 @@
       let roomMuted = false;
       let roomCurrentSong = null;
       let roomQueue = [];
+      let offlineSongSyncInProgress = false;
       let karaokeDisplayEnabled = true;
       let globalKaraokeDisplayEnabled = true;
       let roomKaraokeDisplayEnabled = true;
@@ -3069,6 +3090,9 @@
           }
           const connectedRoomId = membership.room.id;
           activeKaraokeRoomId = connectedRoomId;
+          if (navigator.onLine) {
+            window.setTimeout(syncPendingOfflineSongRequests, 0);
+          }
           stopListeningToPerformerRoomDisplayStatus?.();
           stopListeningToPerformerRoomDisplayStatus =
             KaraokeSessions.listenRoomDisplayStatus(
@@ -3968,6 +3992,127 @@
       }
 
       // Request song
+      const OFFLINE_SONG_REQUESTS_PREFIX = "karaoke_offline_song_requests_";
+
+      function getOfflineSongRequests(roomId = activeKaraokeRoomId) {
+        if (!roomId) return [];
+        try {
+          const value = JSON.parse(
+            localStorage.getItem(`${OFFLINE_SONG_REQUESTS_PREFIX}${roomId}`) ||
+              "[]",
+          );
+          return Array.isArray(value) ? value : [];
+        } catch (error) {
+          console.warn("Could not read offline song requests:", error.message);
+          return [];
+        }
+      }
+
+      function saveOfflineSongRequests(requests, roomId = activeKaraokeRoomId) {
+        if (!roomId) throw new Error("No karaoke room joined");
+        localStorage.setItem(
+          `${OFFLINE_SONG_REQUESTS_PREFIX}${roomId}`,
+          JSON.stringify(requests),
+        );
+      }
+
+      function queueOfflineSongRequest(roomId, song) {
+        const requests = getOfflineSongRequests(roomId);
+        if (requests.some((request) => request.song?.id === song.id)) return;
+        requests.push({
+          song,
+          status: "pending",
+          queuedAt: Date.now(),
+        });
+        saveOfflineSongRequests(requests, roomId);
+        updateReservedSongsFromRoom();
+      }
+
+      async function syncPendingOfflineSongRequests() {
+        if (
+          offlineSongSyncInProgress ||
+          !navigator.onLine ||
+          !activeKaraokeRoomId
+        ) {
+          return;
+        }
+
+        const roomId = activeKaraokeRoomId;
+        const requests = getOfflineSongRequests(roomId);
+        if (!requests.some((request) => request.status === "pending")) return;
+
+        offlineSongSyncInProgress = true;
+        let syncedCount = 0;
+        try {
+          for (const request of requests) {
+            if (request.status !== "pending") continue;
+            try {
+              await KaraokeSessions.addSong(roomId, request.song);
+              saveOfflineSongRequests(
+                getOfflineSongRequests(roomId).filter(
+                  (item) => item.song?.id !== request.song.id,
+                ),
+                roomId,
+              );
+              addToLocalQueue(request.song);
+              syncedCount += 1;
+            } catch (error) {
+              const permanentErrors = new Set([
+                "KARAOKE_DISPLAY_DISABLED",
+                "ROOM_FULL",
+                "ROOM_NOT_FOUND",
+                "ROOM_TIME_EXPIRED",
+              ]);
+              if (permanentErrors.has(error.message)) {
+                const currentRequests = getOfflineSongRequests(roomId);
+                const failedRequest = currentRequests.find(
+                  (item) => item.song?.id === request.song.id,
+                );
+                if (failedRequest) {
+                  failedRequest.status = "failed";
+                  failedRequest.error = error.message;
+                  saveOfflineSongRequests(currentRequests, roomId);
+                }
+                showAlert(
+                  `Could not sync "${escapeHTML(request.song.title)}": ${escapeHTML(error.message)}. Remove it from the offline list or try again after fixing the room issue.`,
+                  "warning",
+                );
+                continue;
+              }
+
+              console.warn(
+                "Offline song request sync will retry:",
+                error.message,
+              );
+              showAlert(
+                `Could not sync "${escapeHTML(request.song.title)}" yet. The request remains saved on this device and will be retried.`,
+                "warning",
+              );
+              break;
+            }
+          }
+          if (syncedCount > 0) {
+            showAppToast(
+              `${syncedCount} offline ${syncedCount === 1 ? "song request" : "song requests"} synced.`,
+            );
+          }
+          updateReservedSongsFromRoom();
+        } catch (error) {
+          console.error(
+            "Could not complete offline song request synchronization:",
+            error,
+          );
+          showAlert(
+            "Could not finish syncing saved song requests. Check the room queue before retrying.",
+            "warning",
+          );
+        } finally {
+          offlineSongSyncInProgress = false;
+        }
+      }
+
+      window.addEventListener("online", syncPendingOfflineSongRequests);
+
       async function requestSong(title, artist, videoId, userName, btn) {
         if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
           showAlert(
@@ -3986,7 +4131,9 @@
 
         try {
           const newSong = {
-            id: Date.now().toString(),
+            id:
+              globalThis.crypto?.randomUUID?.() ||
+              `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
             title,
             artist,
             videoId,
@@ -3995,6 +4142,16 @@
           };
 
           if (!activeKaraokeRoomId) throw new Error("No karaoke room joined");
+          if (!navigator.onLine) {
+            queueOfflineSongRequest(activeKaraokeRoomId, newSong);
+            btn.disabled = false;
+            btn.textContent = "Reserve";
+            showAlert(
+              `"${escapeHTML(title)}" is saved on this device and will sync when you're back online. It is not in the shared room queue yet.`,
+              "info",
+            );
+            return;
+          }
           await KaraokeSessions.addSong(activeKaraokeRoomId, newSong);
           addToLocalQueue(newSong);
           successCallback(btn, title);
@@ -4229,6 +4386,20 @@
               roomCurrentSong?.videoId &&
               roomCurrentSong.videoId === song.videoId,
             );
+            let syncStatus = "";
+            if (song.syncStatus === "pending") {
+              syncStatus =
+                '<span class="reserved-song-playing">WAITING TO SYNC</span>';
+            } else if (song.syncStatus === "failed") {
+              const songId = escapeHTML(song.id);
+              syncStatus = `
+                <div class="reserved-song-offline-actions">
+                  <span role="status" title="${escapeHTML(song.error || "Retry after fixing the room issue")}">SYNC FAILED</span>
+                  <button type="button" class="btn btn-sm btn-outline-light" onclick="retryOfflineSongRequest('${songId}')">Retry</button>
+                  <button type="button" class="btn btn-sm btn-outline-light" onclick="removeOfflineSongRequest('${songId}')">Remove</button>
+                </div>
+              `;
+            }
             return `
               <div class="reserved-song-row">
                 <span class="reserved-song-index">${index + 1}</span>
@@ -4237,15 +4408,34 @@
                   <p class="reserved-song-meta">${escapeHTML(song.artist || "Unknown artist")} · ${escapeHTML(song.requestedBy || "Unknown")}</p>
                 </div>
                 ${isPlaying ? '<span class="reserved-song-playing">NOW PLAYING</span>' : ""}
+                ${syncStatus}
               </div>
             `;
           })
           .join("");
       }
 
+      function retryOfflineSongRequest(songId) {
+        const requests = getOfflineSongRequests();
+        const request = requests.find((item) => item.song?.id === songId);
+        if (!request) return;
+        request.status = "pending";
+        delete request.error;
+        saveOfflineSongRequests(requests);
+        updateReservedSongsFromRoom();
+        syncPendingOfflineSongRequests();
+      }
+
+      function removeOfflineSongRequest(songId) {
+        saveOfflineSongRequests(
+          getOfflineSongRequests().filter((item) => item.song?.id !== songId),
+        );
+        updateReservedSongsFromRoom();
+      }
+
       function updateReservedSongsFromRoom() {
         const seenSongs = new Set();
-        reservedSongs = [roomCurrentSong, ...roomQueue]
+        const roomSongs = [roomCurrentSong, ...roomQueue]
           .filter((song) => song?.videoId)
           .filter((song) => {
             const key = song.id || `${song.videoId}:${song.requestedBy || ""}`;
@@ -4260,6 +4450,17 @@
             videoId: song.videoId,
             requestedBy: song.requestedBy || song.singer,
           }));
+        const roomSongIds = new Set(roomSongs.map((song) => song.id));
+        const pendingSongs = getOfflineSongRequests()
+          .filter(
+            (request) =>
+              request.song?.videoId && !roomSongIds.has(request.song.id),
+          )
+          .map((request) => ({
+            ...request.song,
+            syncStatus: request.status,
+          }));
+        reservedSongs = [...roomSongs, ...pendingSongs];
         localStorage.setItem(
           `karaoke_reserved_songs_${activeKaraokeRoomId}`,
           JSON.stringify(reservedSongs),
