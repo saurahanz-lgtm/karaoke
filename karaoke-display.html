@@ -181,6 +181,16 @@
         position: absolute;
         inset: 0;
         z-index: 1;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      #idleVideo {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
         display: none;
         width: 100%;
         height: 100%;
@@ -191,7 +201,7 @@
         visibility: hidden;
       }
 
-      .now-playing-card.idle-mode #idleImage {
+      .now-playing-card.idle-mode #idleVideo {
         display: block;
       }
 
@@ -1131,6 +1141,17 @@
             fetchpriority="high"
             decoding="async"
           />
+          <video
+            id="idleVideo"
+            src="assets/idle-karaoke-video.mp4?v=1"
+            poster="assets/idle-karaoke-background.jpg?v=1"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="auto"
+            aria-hidden="true"
+          ></video>
           <div id="noSongMessage" role="status" aria-live="polite">
             <strong>Please select a song.</strong>
           </div>

@@ -2256,8 +2256,24 @@ function checkAndPlayCurrentSong() {
 function setNoSongMessage(visible) {
   const card = document.querySelector(".now-playing-card");
   const message = document.getElementById("noSongMessage");
+  const idleVideo = document.getElementById("idleVideo");
   card?.classList.toggle("idle-mode", visible);
   if (message) message.style.display = visible ? "flex" : "none";
+  if (!idleVideo) return;
+
+  if (visible) {
+    idleVideo.muted = true;
+    idleVideo.defaultMuted = true;
+    idleVideo.volume = 0;
+    const playPromise = idleVideo.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch((error) => {
+        console.warn("Could not start the idle video:", error.message);
+      });
+    }
+  } else {
+    idleVideo.pause();
+  }
 }
 
 function clearCurrentSongPlayback() {
