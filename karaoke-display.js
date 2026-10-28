@@ -2268,17 +2268,64 @@ function setNoSongMessage(visible) {
   if (!idleVideo) return;
 
   if (visible) {
-    idleVideo.muted = true;
-    idleVideo.defaultMuted = true;
-    idleVideo.volume = 0;
-    const playPromise = idleVideo.play();
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch((error) => {
-        console.warn("Could not start the idle video:", error.message);
-      });
-    }
+    startIdleVideoFromOffset();
   } else {
     idleVideo.pause();
+  }
+}
+
+const IDLE_VIDEO_START_SECONDS = 38;
+let idleVideoSeekingToOffset = false;
+
+function startIdleVideoFromOffset() {
+  const idleVideo = document.getElementById("idleVideo");
+  if (!idleVideo || idleVideo.readyState < 1) return;
+
+  if (idleVideo.currentTime < IDLE_VIDEO_START_SECONDS || idleVideo.ended) {
+    if (idleVideoSeekingToOffset) return;
+    idleVideoSeekingToOffset = true;
+    idleVideo.addEventListener(
+      "seeked",
+      () => {
+        idleVideoSeekingToOffset = false;
+        const card = document.querySelector(".now-playing-card");
+        if (card?.classList.contains("idle-mode")) {
+          startIdleVideoPlayback(idleVideo);
+        }
+      },
+      { once: true },
+    );
+    idleVideo.currentTime = IDLE_VIDEO_START_SECONDS;
+    return;
+  }
+
+  startIdleVideoPlayback(idleVideo);
+}
+
+function startIdleVideoPlayback(idleVideo) {
+  idleVideo.muted = true;
+  idleVideo.defaultMuted = true;
+  idleVideo.volume = 0;
+  const playPromise = idleVideo.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch((error) => {
+      console.warn("Could not start the idle video:", error.message);
+    });
+  }
+}
+
+const idleVideo = document.getElementById("idleVideo");
+if (idleVideo) {
+  idleVideo.addEventListener("ended", () => {
+    idleVideoSeekingToOffset = false;
+    startIdleVideoFromOffset();
+  });
+  if (idleVideo.readyState >= 1) {
+    startIdleVideoFromOffset();
+  } else {
+    idleVideo.addEventListener("loadedmetadata", startIdleVideoFromOffset, {
+      once: true,
+    });
   }
 }
 
