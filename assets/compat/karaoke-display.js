@@ -2007,7 +2007,7 @@ function showScore() {
   return __async(this, null, function* () {
     var _a;
     const pitchSteadiness = pitchDetectedMs > 0 ? Math.min(1, Math.max(0, pitchStableMs / pitchDetectedMs)) : 0;
-    const score = micScoringEnabled ? 75 + Math.round(pitchSteadiness * 25) : micScoringDeclined || micPermissionDenied ? 75 + Math.floor(Math.random() * 26) : null;
+    const score = micScoringEnabled ? 75 + Math.round(pitchSteadiness * 25) : null;
     const pitchSeconds = (pitchDetectedMs / 1e3).toFixed(1);
     const stableSeconds = (pitchStableMs / 1e3).toFixed(1);
     console.log("Mic pitch stability score:", score, {

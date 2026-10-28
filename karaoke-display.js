@@ -2428,9 +2428,7 @@ async function showScore() {
       : 0;
   const score = micScoringEnabled
     ? 75 + Math.round(pitchSteadiness * 25)
-    : micScoringDeclined || micPermissionDenied
-      ? 75 + Math.floor(Math.random() * 26)
-      : null;
+    : null;
   const pitchSeconds = (pitchDetectedMs / 1000).toFixed(1);
   const stableSeconds = (pitchStableMs / 1000).toFixed(1);
 
