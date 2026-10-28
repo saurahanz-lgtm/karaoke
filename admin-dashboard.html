@@ -1451,6 +1451,21 @@
                   <p>
                     Review new account requests and issue approved credentials.
                   </p>
+                  <button
+                    class="account-self-service-toggle"
+                    id="accountSelfServiceToggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="accountSelfServicePolicyForm"
+                    hidden
+                  >
+                    <i class="bi bi-sliders2" aria-hidden="true"></i>
+                    <span>Self-service limits</span>
+                    <i
+                      class="bi bi-chevron-down account-self-service-toggle-icon"
+                      aria-hidden="true"
+                    ></i>
+                  </button>
                 </div>
                 <div class="account-request-controls">
                   <span
@@ -1552,6 +1567,7 @@
                     />
                   </label>
                   <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-check2" aria-hidden="true"></i>
                     Save limits
                   </button>
                   <p

@@ -6064,6 +6064,52 @@ body.admin-page {
   }
 }
 
+.account-self-service-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin-top: 10px;
+  padding: 0 12px;
+  border: 1px solid rgba(192, 132, 252, 0.34);
+  border-radius: 7px;
+  color: #e7d8ff;
+  background: rgba(139, 92, 246, 0.12);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.account-self-service-toggle:hover,
+.account-self-service-toggle[aria-expanded="true"] {
+  border-color: rgba(192, 132, 252, 0.68);
+  background: rgba(139, 92, 246, 0.22);
+}
+
+.account-self-service-toggle:focus-visible {
+  outline: 2px solid #c084fc;
+  outline-offset: 3px;
+}
+
+.account-self-service-toggle[hidden] {
+  display: none;
+}
+
+.account-self-service-toggle-icon {
+  margin-left: 2px;
+  color: #c4b5fd;
+  transition: transform 150ms ease;
+}
+
+.account-self-service-toggle[aria-expanded="true"]
+  .account-self-service-toggle-icon {
+  transform: rotate(180deg);
+}
+
 .home-page .access-portal-display {
   border-color: rgba(192, 132, 252, 0.42);
   color: #f1e7ff;
@@ -6226,4 +6272,122 @@ body.admin-page {
     rgba(139, 92, 246, 0.32),
     rgba(109, 91, 208, 0.3)
   );
+}
+
+.account-self-service-settings {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin: 0 0 14px;
+  padding: 18px;
+  border-color: rgba(192, 132, 252, 0.3);
+  border-radius: 10px;
+  background:
+    radial-gradient(
+      ellipse at 0% 0%,
+      rgba(139, 92, 246, 0.13),
+      transparent 55%
+    ),
+    #171122;
+}
+
+.account-self-service-settings[hidden] {
+  display: none;
+}
+
+.account-self-service-copy h4 {
+  color: #f1eaff;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.95rem;
+}
+
+.account-self-service-copy p {
+  max-width: 820px;
+  margin-top: 6px;
+  color: #b6a9c9;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.account-self-service-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.account-self-service-fields label {
+  gap: 7px;
+  color: #e4d8f5;
+  font-size: 0.76rem;
+}
+
+.account-self-service-fields input {
+  min-height: 44px;
+  border-color: rgba(181, 160, 219, 0.26);
+  color: #f1eaff;
+  background: #100b19;
+}
+
+.account-self-service-fields input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
+}
+
+.account-self-service-fields button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding-inline: 16px;
+  border: 0;
+  border-radius: 7px;
+  color: #fff;
+  background: linear-gradient(120deg, #8b5cf6, #6d5bd0);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.account-self-service-fields button:hover {
+  filter: brightness(1.1);
+}
+
+.account-self-service-feedback {
+  margin: 0;
+  color: #c4b5fd;
+  font-size: 0.76rem;
+}
+
+.account-self-service-feedback[data-state="success"] {
+  color: #d7b8ff;
+}
+
+.account-self-service-feedback[data-state="error"] {
+  color: #ff9da8;
+}
+
+@media (max-width: 720px) {
+  .account-self-service-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-self-service-fields button,
+  .account-self-service-feedback {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .account-self-service-settings {
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .account-self-service-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-self-service-fields button,
+  .account-self-service-feedback {
+    grid-column: auto;
+  }
 }

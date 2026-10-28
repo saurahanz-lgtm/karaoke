@@ -980,14 +980,17 @@ function initializeAccountRequestListener() {
 
 function initializeAccountSelfServiceSettings() {
   const form = document.getElementById("accountSelfServicePolicyForm");
+  const toggleButton = document.getElementById("accountSelfServiceToggle");
   if (!form) return;
+  form.hidden = true;
+  if (!toggleButton) return;
   if (
     loggedInUser?.role !== "admin" ||
     typeof window.KaraokeAccountRequests?.listenSelfServicePolicy !==
       "function" ||
     typeof window.KaraokeAccountRequests?.updateSelfServicePolicy !== "function"
   ) {
-    form.hidden = true;
+    toggleButton.hidden = true;
     return;
   }
 
@@ -1000,7 +1003,14 @@ function initializeAccountSelfServiceSettings() {
   const feedback = document.getElementById("accountSelfServicePolicyFeedback");
   const saveButton = form.querySelector('button[type="submit"]');
 
-  form.hidden = false;
+  toggleButton.hidden = false;
+  toggleButton.addEventListener("click", () => {
+    const isExpanded = toggleButton.getAttribute("aria-expanded") === "true";
+    toggleButton.setAttribute("aria-expanded", String(!isExpanded));
+    form.hidden = isExpanded;
+    if (!isExpanded) accountLimitInput.focus();
+  });
+
   KaraokeAccountRequests.listenSelfServicePolicy(
     (policy) => {
       accountLimitInput.value = String(policy.accountsPerDevice);
