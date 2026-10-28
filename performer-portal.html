@@ -130,6 +130,8 @@
         background: #000;
       }
 
+      #performerPhoneIdleImage,
+      #performerPhoneIdleVideo,
       #performerPhoneVideo,
       #performerPhoneVideo iframe {
         position: absolute;
@@ -139,14 +141,45 @@
         border: 0;
       }
 
+      #performerPhoneIdleImage,
+      #performerPhoneIdleVideo {
+        display: none;
+        object-fit: cover;
+      }
+
+      #performerPhoneIdleImage {
+        z-index: 0;
+      }
+
+      #performerPhoneIdleVideo {
+        z-index: 1;
+      }
+
+      #performerPhoneVideo {
+        z-index: 2;
+      }
+
+      .phone-display-frame.idle-mode #performerPhoneIdleImage,
+      .phone-display-frame.idle-mode #performerPhoneIdleVideo {
+        display: block;
+      }
+
+      .phone-display-frame.idle-mode #performerPhoneVideo {
+        visibility: hidden;
+      }
+
       .phone-display-empty {
         position: absolute;
+        z-index: 3;
         inset: 0;
         display: grid;
         place-items: center;
-        padding: 24px;
-        color: rgba(255, 255, 255, 0.76);
-        font-size: 1rem;
+        padding: 12px;
+        background: transparent !important;
+        color: #fff;
+        font-size: clamp(0.9rem, 3.5vw, 1.5rem);
+        font-weight: 700;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
         text-align: center;
       }
 
@@ -1308,6 +1341,22 @@
           hidden
         >
           <div class="phone-display-frame">
+            <img
+              id="performerPhoneIdleImage"
+              src="assets/idle-karaoke-background.jpg?v=1"
+              alt=""
+              loading="lazy"
+            />
+            <video
+              id="performerPhoneIdleVideo"
+              src="assets/idle-karaoke-video.mp4?v=1"
+              poster="assets/idle-karaoke-background.jpg?v=1"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-hidden="true"
+            ></video>
             <div id="performerPhoneVideo"></div>
             <div
               class="phone-display-empty"
@@ -1315,7 +1364,7 @@
               role="status"
               aria-live="polite"
             >
-              No song is playing.
+              Please select a song.
             </div>
             <section
               class="phone-score-result"
@@ -2134,6 +2183,7 @@
           updatePerformerPhoneDisplaySong();
           document.getElementById("performerPhoneDisplayClose").focus();
         } else {
+          setPerformerPhoneIdleState(false);
           clearInterval(performerPhonePlaybackPositionTimer);
           performerPhonePlaybackPositionTimer = null;
           const position = Number(
@@ -2171,6 +2221,35 @@
             error.message,
           ),
         );
+      }
+
+      function setPerformerPhoneIdleState(idle, messageText = "") {
+        const frame = document.querySelector(".phone-display-frame");
+        const video = document.getElementById("performerPhoneIdleVideo");
+        const message = document.getElementById("performerPhoneDisplayMessage");
+        frame?.classList.toggle("idle-mode", idle);
+        if (message) {
+          if (messageText) message.textContent = messageText;
+          message.hidden = !messageText;
+        }
+        if (!video) return;
+
+        if (idle && performerPhoneDisplayActive) {
+          video.muted = true;
+          video.defaultMuted = true;
+          video.volume = 0;
+          const playPromise = video.play();
+          if (playPromise && typeof playPromise.catch === "function") {
+            playPromise.catch((error) =>
+              console.warn(
+                "Could not start performer idle video:",
+                error.message,
+              ),
+            );
+          }
+        } else {
+          video.pause();
+        }
       }
 
       function skipUnavailablePerformerPhoneVideo(songKey, errorCode) {
@@ -2295,8 +2374,15 @@
             onStateChange: (event) => {
               if (event.data === window.YT?.PlayerState?.PLAYING) {
                 performerPhoneDisplayPlayerReady = true;
-                message.hidden = true;
-                applyPerformerPhoneVolume();
+                if (
+                  performerPhoneDisplayActive &&
+                  performerScreenEnabled &&
+                  karaokeDisplayEnabled &&
+                  roomCurrentSong?.videoId
+                ) {
+                  setPerformerPhoneIdleState(false);
+                  applyPerformerPhoneVolume();
+                }
               }
               if (event.data === window.YT?.PlayerState?.ENDED) {
                 const position = Number(
@@ -2360,12 +2446,12 @@
         if (!performerScreenEnabled || !karaokeDisplayEnabled) {
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
-          if (message) {
-            message.textContent = !karaokeDisplayEnabled
+          setPerformerPhoneIdleState(
+            false,
+            !karaokeDisplayEnabled
               ? tvDisabledAnnouncement
-              : performerScreenAnnouncement;
-            message.hidden = false;
-          }
+              : performerScreenAnnouncement,
+          );
           return;
         }
 
@@ -2382,20 +2468,21 @@
           }
         }
         if (!videoId) {
-          message.textContent = "No song is playing.";
-          message.hidden = false;
+          setPerformerPhoneIdleState(true, "Please select a song.");
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
           return;
         }
 
-        message.hidden = true;
+        setPerformerPhoneIdleState(false);
         if (!performerPhoneDisplayPlayer) {
           if (window.performerYouTubeApiReady && window.YT?.Player) {
             initializePerformerPhonePlayer();
           } else {
-            message.textContent = "Connecting to the video player...";
-            message.hidden = false;
+            setPerformerPhoneIdleState(
+              false,
+              "Connecting to the video player...",
+            );
           }
           return;
         }
