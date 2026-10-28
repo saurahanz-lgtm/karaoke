@@ -54,6 +54,41 @@
     },
   ];
 
+  const indexSteps = [
+    {
+      selector: ".home-container",
+      title: "Choose your portal",
+      description:
+        "Welcome to SD Karaoke. This page is where performers and administrators begin.",
+    },
+    {
+      selector: ".role-container",
+      title: "Select your role",
+      description:
+        "Choose System Administration to manage the system, or Karaoke Performer to join a room and reserve songs.",
+    },
+    {
+      selector: ".performer-room-status",
+      title: "Check room availability",
+      description:
+        "Performers can scan the room QR code or enter its Room ID here, then check room availability before joining.",
+      onEnter: () => window.openPerformerLogin(),
+      onExit: () => window.closeLoginModal(),
+    },
+    {
+      selector: ".access-portal-display",
+      title: "Open the shared display",
+      description:
+        "Open Karaoke Display on the TV or shared screen so performers can scan its room QR code.",
+    },
+    {
+      selector: 'a.access-portal-guide[href="user-guide.html"]',
+      title: "Find the user guide",
+      description:
+        "Open the quick guide any time for step-by-step help with joining a room, reserving songs, and using the display.",
+    },
+  ];
+
   const adminSteps = [
     {
       selector: "#dashboardSection .dashboard-stats",
@@ -166,6 +201,7 @@
     let stepIndex = -1;
     let currentTarget = null;
     let currentView = "";
+    let activeStepCleanup = null;
 
     const closeTour = (completed) => {
       document.removeEventListener("click", blockOutsideClick, true);
@@ -173,6 +209,7 @@
       document.removeEventListener("keydown", handleKeydown, true);
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
+      activeStepCleanup?.();
       root.remove();
       activeTour = null;
       if (completed) setTourCompleted(storageKey);
@@ -264,9 +301,15 @@
     };
 
     async function showStep(requestedIndex) {
+      activeStepCleanup?.();
+      activeStepCleanup = null;
       let nextIndex = requestedIndex;
       while (nextIndex < steps.length) {
         const step = steps[nextIndex];
+        if (step.onEnter) {
+          step.onEnter();
+          activeStepCleanup = step.onExit || null;
+        }
         if (step.view && step.view !== currentView) {
           window.setAdminView?.(step.view);
           currentView = step.view;
@@ -289,6 +332,8 @@
           dialog.querySelector("button:last-child").focus();
           return;
         }
+        activeStepCleanup?.();
+        activeStepCleanup = null;
         console.warn("Onboarding tour target unavailable:", step.selector);
         nextIndex += 1;
       }
@@ -437,5 +482,29 @@
     createTour(steps, storageKey);
   }
 
-  window.SDKaraokeOnboarding = { start };
+  function startIndex() {
+    if (activeTour) return;
+    const storageKey = `${STORAGE_PREFIX}index`;
+    if (initializedUsers.has(storageKey)) return;
+    initializedUsers.add(storageKey);
+
+    try {
+      if (localStorage.getItem(storageKey)) return;
+    } catch (error) {
+      console.warn("Could not read onboarding completion:", error.message);
+    }
+
+    const steps = indexSteps.filter((step) => canUseStep(step, "index"));
+    if (steps.length === 0) {
+      console.warn("Index onboarding tour not started: no steps available.");
+      return;
+    }
+    createTour(steps, storageKey);
+  }
+
+  window.SDKaraokeOnboarding = { start, startIndex };
+
+  if (document.body.classList.contains("home-page")) {
+    startIndex();
+  }
 })();
