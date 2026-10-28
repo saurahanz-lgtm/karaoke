@@ -59,6 +59,7 @@ let roomTimeExpired = false;
 let activeRoomVolume = 70;
 let activeRoomMuted = false;
 let activeRoomDeviceCount = 0;
+let lastConnectionStatus = null;
 let roomPlaybackActivityTimer = null;
 let roomPlaybackPositionTimer = null;
 const ROOM_PLAYBACK_ACTIVITY_INTERVAL_MS = 15000;
@@ -398,6 +399,21 @@ function renderKaraokeRoomDeviceCount(roomId) {
   memberCount.textContent = `${activeRoomDeviceCount} / ${KaraokeSessions.getRoomDeviceLimit(room)} phones`;
 }
 
+function updatePhoneConnectionStatus(roomId, memberCount) {
+  if (activeKaraokeRoomId !== roomId) return;
+  const isConnected = memberCount > 0;
+  if (lastConnectionStatus === isConnected) return;
+  const wasConnected = lastConnectionStatus;
+  lastConnectionStatus = isConnected;
+  if (wasConnected !== null) {
+    showNotification(
+      isConnected ? "✅ Phone Connected!" : "❌ Phone Disconnected",
+    );
+  } else if (isConnected) {
+    showNotification("✅ Phone Connected!");
+  }
+}
+
 function startRoomPlaybackActivityHeartbeat(roomId) {
   if (roomPlaybackActivityTimer !== null) {
     clearInterval(roomPlaybackActivityTimer);
@@ -461,6 +477,7 @@ function activateKaraokeRoom(roomId) {
   stopListeningToRoomUsage?.();
   stopListeningToRoomUsage = null;
   activeKaraokeRoomId = roomId;
+  lastConnectionStatus = null;
   startRoomPlaybackActivityHeartbeat(roomId);
   activeRoomDeviceCount = 0;
   roomDisplayEnabled = true;
@@ -539,6 +556,7 @@ function activateKaraokeRoom(roomId) {
   stopListeningToMembers = KaraokeSessions.listenMembers(roomId, (count) => {
     activeRoomDeviceCount = count;
     renderKaraokeRoomDeviceCount(roomId);
+    updatePhoneConnectionStatus(roomId, count);
   });
 
   stopListeningToRoomDisplayStatus = KaraokeSessions.listenRoomDisplayStatus(
@@ -1289,13 +1307,6 @@ function initializeKaraokeDisplay() {
       clearInterval(bootupCheckInterval);
     }
   }, 300);
-
-  // Now check connection status
-  checkPhoneConnection();
-  console.log("✅ Initial connection check done");
-
-  // Check connection status every 2 seconds (less frequent)
-  setInterval(checkPhoneConnection, 2000);
 
   // Listen for TV disable status changes in real-time
   if (typeof firebase !== "undefined" && firebase.database) {
@@ -2105,51 +2116,6 @@ function loadSong(song, startSeconds = 0, shouldPlay = true) {
   }
 
   console.log(`📺 Now playing: ${song.title}`);
-}
-
-// Check if phone/performer portal is connected
-let lastConnectionStatus = null;
-
-function checkPhoneConnection() {
-  try {
-    // Check if activity was updated in the last 30 seconds
-    firebase
-      .database()
-      .ref("activity")
-      .once("value", (snapshot) => {
-        const activity = snapshot.val();
-        const lastActivity = activity?.timestamp || 0;
-        const now = Date.now();
-        const isConnected = now - lastActivity < 30000;
-
-        if (isConnected) {
-          // Phone connected
-          console.log("✅ Phone connected");
-        } else {
-          // Phone disconnected (no activity for 30 seconds)
-          console.log("❌ Phone disconnected");
-        }
-
-        // Show pop-up message on status change
-        if (lastConnectionStatus !== isConnected) {
-          lastConnectionStatus = isConnected;
-          const message = isConnected
-            ? "✅ Phone Connected!"
-            : "❌ Phone Disconnected";
-          showNotification(message);
-        }
-
-        console.log(
-          "📱 Phone connection status:",
-          isConnected ? "Connected" : "Disconnected",
-        );
-      })
-      .catch((err) => {
-        console.warn("Firebase activity read failed:", err.message);
-      });
-  } catch (error) {
-    console.error("❌ Error in checkPhoneConnection:", error.message);
-  }
 }
 
 // Show temporary notification
