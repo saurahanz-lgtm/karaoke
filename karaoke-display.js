@@ -502,6 +502,7 @@ function activateKaraokeRoom(roomId) {
       onQueue: (queue) => {
         if (!karaokeDisplayEnabled) return;
         tvQueue = queue;
+        updateIdleScreen();
         firebaseReady = true;
         if (queue.length && (!currentSong || !currentSong.videoId)) {
           const firstSong = queue[0];
@@ -1445,6 +1446,8 @@ function initializeLegacyFirebaseListeners() {
         }
       }
 
+      updateIdleScreen();
+
       // Always update display when queue changes
       console.log(
         "📺 Updating karaoke display - Queue has",
@@ -2276,6 +2279,13 @@ function setNoSongMessage(visible) {
   }
 }
 
+function updateIdleScreen() {
+  const hasReservedSong =
+    Boolean(currentSong?.videoId) ||
+    tvQueue.some((song) => Boolean(song?.videoId));
+  setNoSongMessage(!hasReservedSong);
+}
+
 function clearCurrentSongPlayback() {
   currentSong = null;
   currentVideoId = null;
@@ -2294,7 +2304,7 @@ function clearCurrentSongPlayback() {
     }
   }
 
-  setNoSongMessage(true);
+  updateIdleScreen();
   displayQueue();
   updateNextSongDisplay();
 }
