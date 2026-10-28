@@ -1,3 +1,22 @@
+const registerServiceWorker = async () => {
+  if (!("serviceWorker" in navigator)) return;
+
+  try {
+    const registration = await navigator.serviceWorker.register("./service-worker.js");
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    }
+  } catch (error) {
+    console.warn("Service worker registration failed:", error);
+  }
+};
+
+if (document.readyState === "complete") {
+  registerServiceWorker();
+} else {
+  window.addEventListener("load", registerServiceWorker, { once: true });
+}
+
 const installButton = document.getElementById("installAppButton");
 
 if (installButton) {
