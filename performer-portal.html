@@ -2035,7 +2035,7 @@
             : 0;
         const score = hasPitchScore
           ? 75 + Math.round(pitchSteadiness * 25)
-          : null;
+          : 75 + Math.floor(Math.random() * 26);
         const scoreReveal = window.SDKaraokeScoreCounter.animate(
           document.getElementById("performerPhoneScoreValue"),
           score,
@@ -2495,6 +2495,15 @@
 
         const videoId = roomCurrentSong?.videoId;
         const songKey = getPerformerPhoneSongKey();
+        if (
+          !songKey &&
+          !performerPhoneScorePresentationActive &&
+          performerPhoneFinalizedScoreSongKey
+        ) {
+          document.getElementById("performerPhoneScoreResult").hidden = true;
+          performerPhoneScoreSongKey = null;
+          performerPhoneFinalizedScoreSongKey = null;
+        }
         if (
           songKey &&
           performerPhoneScoreSongKey !== songKey &&
