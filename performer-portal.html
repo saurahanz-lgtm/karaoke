@@ -159,6 +159,7 @@
 
       #performerPhoneVideo {
         z-index: 2;
+        pointer-events: none;
       }
 
       .phone-display-frame.idle-mode #performerPhoneIdleImage,
@@ -2377,7 +2378,8 @@
           height: "100%",
           playerVars: {
             autoplay: 0,
-            controls: performerPhoneNeedsDeviceVolumeControl() ? 1 : 0,
+            controls: 0,
+            disablekb: 1,
             enablejsapi: 1,
             fs: 0,
             modestbranding: 1,
