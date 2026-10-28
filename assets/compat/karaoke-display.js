@@ -1866,8 +1866,62 @@ function checkAndPlayCurrentSong() {
   isLoadingSong = false;
 }
 function setNoSongMessage(visible) {
+  const card = document.querySelector(".now-playing-card");
   const message = document.getElementById("noSongMessage");
+  card == null ? void 0 : card.classList.toggle("idle-mode", visible);
   if (message) message.style.display = visible ? "flex" : "none";
+  if (visible) {
+    startIdleVideoFromOffset();
+  } else {
+    const idleVideo = document.getElementById("idleVideo");
+    idleVideo == null ? void 0 : idleVideo.pause();
+  }
+}
+const IDLE_VIDEO_START_SECONDS = 38;
+let idleVideoSeekingToOffset = false;
+function startIdleVideoFromOffset() {
+  const idleVideo = document.getElementById("idleVideo");
+  if (!idleVideo || idleVideo.readyState < 1) return;
+
+  if (idleVideo.currentTime < IDLE_VIDEO_START_SECONDS || idleVideo.ended) {
+    if (idleVideoSeekingToOffset) return;
+    idleVideoSeekingToOffset = true;
+    idleVideo.addEventListener("seeked", () => {
+      idleVideoSeekingToOffset = false;
+      const card = document.querySelector(".now-playing-card");
+      if (card == null ? void 0 : card.classList.contains("idle-mode")) {
+        startIdleVideoPlayback(idleVideo);
+      }
+    }, { once: true });
+    idleVideo.currentTime = IDLE_VIDEO_START_SECONDS;
+    return;
+  }
+  startIdleVideoPlayback(idleVideo);
+}
+function startIdleVideoPlayback(idleVideo) {
+  idleVideo.muted = true;
+  idleVideo.defaultMuted = true;
+  idleVideo.volume = 0;
+  const playPromise = idleVideo.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch((error) => {
+      console.warn("Could not start the idle video:", error.message);
+    });
+  }
+}
+const idleVideo = document.getElementById("idleVideo");
+if (idleVideo) {
+  idleVideo.addEventListener("ended", () => {
+    idleVideoSeekingToOffset = false;
+    startIdleVideoFromOffset();
+  });
+  if (idleVideo.readyState >= 1) {
+    startIdleVideoFromOffset();
+  } else {
+    idleVideo.addEventListener("loadedmetadata", startIdleVideoFromOffset, {
+      once: true
+    });
+  }
 }
 function clearCurrentSongPlayback() {
   var _a, _b;
