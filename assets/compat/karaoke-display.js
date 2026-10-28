@@ -1665,9 +1665,12 @@ function loadSong(song, startSeconds = 0, shouldPlay = true) {
       playerVars: {
         autoplay: shouldPlay && !performerScreenModeActive ? 1 : 0,
         controls: 0,
+        disablekb: 1,
         enablejsapi: 1,
-        modestbranding: 1,
         fs: 0,
+        iv_load_policy: 3,
+        playsinline: 1,
+        rel: 0,
         start: Math.floor(Math.max(0, startSeconds))
       },
       events: {
@@ -1905,14 +1908,13 @@ function playVideo(videoId, title, artist, singer) {
     videoId,
     playerVars: {
       autoplay: 1,
-      controls: 1,
-      modestbranding: 1,
-      rel: 0,
-      showinfo: 0,
+      controls: 0,
+      disablekb: 1,
+      enablejsapi: 1,
+      fs: 0,
       iv_load_policy: 3,
-      fs: 1,
       playsinline: 1,
-      enablejsapi: 1
+      rel: 0,
     },
     events: {
       onReady: function(event) {
