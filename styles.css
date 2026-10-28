@@ -2943,6 +2943,127 @@ body.karaoke-display-page {
   outline-offset: 3px;
 }
 
+.onboarding-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 13000;
+  pointer-events: none;
+}
+
+.onboarding-tour__shade {
+  position: fixed;
+  z-index: 1;
+  background: rgba(3, 8, 24, 0.78);
+  pointer-events: auto;
+}
+
+.onboarding-tour__highlight {
+  position: fixed;
+  z-index: 2;
+  border: 2px solid #20d4b0;
+  box-shadow: 0 0 0 2px rgba(32, 212, 176, 0.2);
+  pointer-events: none;
+  transition:
+    left 180ms ease,
+    top 180ms ease,
+    width 180ms ease,
+    height 180ms ease;
+}
+
+.onboarding-tour__dialog {
+  position: fixed;
+  z-index: 3;
+  width: min(400px, calc(100vw - 32px));
+  padding: 22px;
+  border: 1px solid rgba(32, 212, 176, 0.58);
+  border-radius: 16px;
+  color: #edf2ff;
+  background: linear-gradient(145deg, #121d3c, #10152b);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.48);
+  font-family: "DM Sans", sans-serif;
+  pointer-events: auto;
+}
+
+.onboarding-tour__dialog--welcome {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.onboarding-tour__eyebrow {
+  margin: 0 0 8px;
+  color: #72e8d1;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.onboarding-tour__dialog h2 {
+  margin: 0 0 9px;
+  color: #fff;
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+  font-size: clamp(1.2rem, 5vw, 1.55rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.onboarding-tour__description {
+  margin: 0;
+  color: #c4cde1;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.onboarding-tour__actions,
+.onboarding-tour__navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.onboarding-tour__actions {
+  margin-top: 20px;
+}
+
+.onboarding-tour__navigation {
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.onboarding-tour__button {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid #20d4b0;
+  border-radius: 8px;
+  color: #081b2c;
+  background: #20d4b0;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.onboarding-tour__button:hover {
+  background: #72e8d1;
+}
+
+.onboarding-tour__button--quiet {
+  border-color: rgba(194, 205, 230, 0.26);
+  color: #d3dbed;
+  background: transparent;
+}
+
+.onboarding-tour__button--quiet:hover {
+  color: #fff;
+  background: rgba(194, 205, 230, 0.12);
+}
+
+.onboarding-tour__button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
 .access-portal-version {
   position: fixed;
   bottom: max(14px, env(safe-area-inset-bottom));

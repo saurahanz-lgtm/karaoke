@@ -449,6 +449,10 @@ document.addEventListener("DOMContentLoaded", function () {
   initializeKaraokeDisplayAnnouncementControls();
   initializeScoreSoundVolumeControl();
   loadKaraokeDisplayStatus();
+  window.setTimeout(
+    () => window.SDKaraokeOnboarding.start(loggedInUser, "admin"),
+    250,
+  );
 });
 
 function setAdminView(viewName) {

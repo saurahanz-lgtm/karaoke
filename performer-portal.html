@@ -23,6 +23,7 @@
     />
     <script src="app-dialogs.js" defer></script>
     <script src="pwa-install.js" defer></script>
+    <script src="onboarding-tour.js" defer></script>
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b1736'/%3E%3Ctext x='50' y='64' fill='%23edf2ff' font-family='Arial,sans-serif' font-size='35' font-weight='700' text-anchor='middle'%3ESD%3C/text%3E%3C/svg%3E"
@@ -3460,6 +3461,7 @@
         displayReservedSongs();
         updateUserDisplay();
         updatePerformerActivity();
+        window.SDKaraokeOnboarding.start(loggedInUser, "performer");
 
         // Auto-refresh activity every 30 seconds
         setInterval(updatePerformerActivity, 30000);
