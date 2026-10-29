@@ -1966,6 +1966,9 @@ function onPlayerStateChange(e) {
     3: "BUFFERING"
   };
   console.log(`\u{1F4CA} Player state changed to: ${states[e.data]}`);
+  if (e.data === YT.PlayerState.PLAYING) {
+    scorePresentationPromise = null;
+  }
   if (performerScreenModeActive) return;
   if (activeKaraokeRoomId && [
     YT.PlayerState.PLAYING,
@@ -2025,9 +2028,7 @@ function showScore() {
     (_a = document.getElementById("scoreModal")) == null ? void 0 : _a.remove();
     playNextSong();
   });
-  scorePresentationPromise = presentation.finally(() => {
-    scorePresentationPromise = null;
-  });
+  scorePresentationPromise = presentation;
   return scorePresentationPromise;
 }
 function playScoreSound() {
