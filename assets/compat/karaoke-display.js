@@ -112,6 +112,7 @@ let pitchDetectorPromise = null;
 let scoreAudioContext = null;
 let scoreAudioBuffer = null;
 let scoreAudioLoadPromise = null;
+let scorePresentationPromise = null;
 let scoreSoundVolume = 0.8;
 let micScoringEnabled = false;
 let micScoringDeclined = false;
@@ -2004,7 +2005,8 @@ function onPlayerStateChange(e) {
   }
 }
 function showScore() {
-  return __async(this, null, function* () {
+  if (scorePresentationPromise) return scorePresentationPromise;
+  const presentation = __async(this, null, function* () {
     var _a;
     const pitchSteadiness = pitchDetectedMs > 0 ? Math.min(1, Math.max(0, pitchStableMs / pitchDetectedMs)) : 0;
     const score = micScoringEnabled ? 75 + Math.round(pitchSteadiness * 25) : null;
@@ -2023,6 +2025,10 @@ function showScore() {
     (_a = document.getElementById("scoreModal")) == null ? void 0 : _a.remove();
     playNextSong();
   });
+  scorePresentationPromise = presentation.finally(() => {
+    scorePresentationPromise = null;
+  });
+  return scorePresentationPromise;
 }
 function playScoreSound() {
   return unlockScoreAudio().then(
