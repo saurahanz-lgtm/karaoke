@@ -1357,10 +1357,16 @@
       function updatePerformerRoomLoginState(roomId) {
         const selectedRoomId = roomId ?? KaraokeSessions.getRoomIdFromUrl();
         const hasRoom = Boolean(selectedRoomId);
+        const roomStatusTitle = document.getElementById(
+          "performerRoomStatusTitle",
+        );
+        const roomStatus = document.getElementById("performerRoomStatus");
         document.getElementById("singerLoginForm").hidden = !hasRoom;
         document.getElementById("singerLoginSubmit").disabled = !hasRoom;
         document.getElementById("roomJoinChoices").hidden = hasRoom;
         document.getElementById("manualRoomEntry").hidden = true;
+        roomStatusTitle.textContent = "Room availability";
+        roomStatus.classList.remove("is-selecting-room-id");
         restorePerformerRoomStatus();
         document.getElementById("roomQrStatus").textContent = hasRoom
           ? `Room ${selectedRoomId} selected. Sign in to join.`
@@ -1381,6 +1387,11 @@
       function showManualRoomEntry() {
         stopRoomQrScanner();
         const manualEntry = document.getElementById("manualRoomEntry");
+        document.getElementById("performerRoomStatusTitle").textContent =
+          "Select room ID";
+        document
+          .getElementById("performerRoomStatus")
+          .classList.add("is-selecting-room-id");
         manualEntry.hidden = false;
         manualEntry.insertBefore(
           document.getElementById("performerRoomStatus"),

@@ -3683,11 +3683,21 @@ body.karaoke-display-page {
   line-height: 1.3;
 }
 
+.performer-room-status.is-selecting-room-id .performer-room-name {
+  color: var(--karaoke-muted);
+  font-weight: 400;
+}
+
 .performer-room-id {
   overflow-wrap: anywhere;
   color: var(--karaoke-muted);
   font-size: 10px;
   line-height: 1.3;
+}
+
+.performer-room-status.is-selecting-room-id .performer-room-id {
+  color: var(--karaoke-text);
+  font-weight: 700;
 }
 
 .performer-room-indicator {
