@@ -2239,10 +2239,10 @@
           const isPlaying =
             performerPhoneDisplayPlayer?.getPlayerState?.() ===
             window.YT?.PlayerState?.PLAYING;
-          syncPerformerPhonePlaybackState(
+          const playbackSync = syncPerformerPhonePlaybackState(
             isPlaying,
             Number.isFinite(position) ? position : 0,
-          ).finally(() => setRoomPerformerScreenActive(false));
+          );
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
           stopPerformerPhoneMicScoring();
@@ -2252,6 +2252,7 @@
             micStatus.hidden = false;
           }
           toggle?.focus();
+          return playbackSync.finally(() => setRoomPerformerScreenActive(false));
         }
       }
 
@@ -3751,6 +3752,9 @@
         const username = loggedInUser?.username;
         let clearSessionPromise = Promise.resolve();
         try {
+          if (performerPhoneDisplayActive) {
+            await togglePerformerPhoneDisplay(false);
+          }
           stopListeningToActiveLogin?.();
           stopListeningToActiveLogin = null;
           stopListeningToPerformerAccount?.();
