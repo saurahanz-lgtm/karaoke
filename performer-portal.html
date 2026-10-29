@@ -2069,31 +2069,7 @@
           source.connect(gain);
           gain.connect(performerPhoneScoreAudioContext.destination);
           await new Promise((resolve) => {
-            let completed = false;
-            const finish = () => {
-              if (completed) return;
-              completed = true;
-              window.clearTimeout(fallbackTimer);
-              resolve();
-            };
-            const fallbackTimer = window.setTimeout(
-              () => {
-                try {
-                  source.stop();
-                } catch (error) {
-                  console.warn(
-                    "Could not stop the performer score sound:",
-                    error.message,
-                  );
-                }
-                finish();
-              },
-              Math.min(
-                (performerPhoneScoreAudioBuffer.duration + 1) * 1000,
-                5000,
-              ),
-            );
-            source.addEventListener("ended", finish, { once: true });
+            source.addEventListener("ended", resolve, { once: true });
             source.start();
           });
         } catch (error) {
