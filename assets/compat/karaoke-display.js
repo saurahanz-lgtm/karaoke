@@ -484,6 +484,7 @@ function activateKaraokeRoom(roomId) {
           return;
         }
         currentSong = song;
+        firebaseReady = true;
         setNoSongMessage(false);
         displayQueue();
         updateNextSongDisplay();
@@ -1517,6 +1518,7 @@ function createYouTubePlayer() {
     console.log("\u2705 Firebase listeners already initialized");
   }
   checkBootupCompletion();
+  tryInitPlayback();
 }
 function tryInitPlayback() {
   var _a, _b;

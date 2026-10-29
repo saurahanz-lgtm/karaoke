@@ -543,6 +543,7 @@ function activateKaraokeRoom(roomId) {
           return;
         }
         currentSong = song;
+        firebaseReady = true;
         setNoSongMessage(false);
         displayQueue();
         updateNextSongDisplay();
@@ -1792,6 +1793,7 @@ function createYouTubePlayer() {
 
   // Check if bootup splash should be hidden
   checkBootupCompletion();
+  tryInitPlayback();
 }
 
 // D. SINGLE ENTRY POINT (MOST IMPORTANT)
