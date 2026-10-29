@@ -72,8 +72,16 @@ document.addEventListener("DOMContentLoaded", () => {
     pagination.hidden = pageCount <= 1;
     previousPageButton.disabled = currentPage <= 1;
     nextPageButton.disabled = currentPage >= pageCount;
-    pageInfo.textContent = `${currentPage} / ${pageCount}`;
-    pageInfo.setAttribute("aria-label", `Page ${currentPage} of ${pageCount}`);
+    const firstRoomNumber = (currentPage - 1) * ROOMS_PER_PAGE + 1;
+    const lastRoomNumber = Math.min(
+      currentPage * ROOMS_PER_PAGE,
+      currentRooms.length,
+    );
+    pageInfo.textContent = `${firstRoomNumber}-${lastRoomNumber} of ${currentRooms.length}`;
+    pageInfo.setAttribute(
+      "aria-label",
+      `Rooms ${firstRoomNumber} through ${lastRoomNumber} of ${currentRooms.length}`,
+    );
 
     const pageStart = (currentPage - 1) * ROOMS_PER_PAGE;
     currentRooms

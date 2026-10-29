@@ -16,7 +16,7 @@ const APP_SHELL = [
   "./karaoke-sessions.js",
   "./account-requests.js",
   "./account-request-ui.js",
-  "./performer-room-status.js?v=22",
+  "./performer-room-status.js?v=23",
   "./admin-dashboard.js",
   "./youtube-api.js",
   "./assets/compat/app-dialogs.js",
