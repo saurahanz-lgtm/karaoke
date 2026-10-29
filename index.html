@@ -43,7 +43,7 @@
     <script src="admin-presence.js"></script>
     <script src="account-requests.js"></script>
     <script src="account-request-ui.js" defer></script>
-    <script src="performer-room-status.js?v=23" defer></script>
+    <script src="performer-room-status.js?v=24" defer></script>
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="youtube-api.js"></script>
@@ -487,6 +487,9 @@
               Enter room ID
             </button>
           </div>
+          <p id="roomQrStatus" role="status" aria-live="polite">
+            Scan a room QR code to view available rooms and join.
+          </p>
           <div id="roomQrReader" hidden></div>
           <div id="manualRoomEntry" hidden>
             <div class="login-form-group">
@@ -507,9 +510,6 @@
               Continue
             </button>
           </div>
-          <p id="roomQrStatus" role="status" aria-live="polite">
-            Scan a room QR code to view available rooms and join.
-          </p>
         </div>
         <form
           id="singerLoginForm"
@@ -1405,7 +1405,7 @@
         manualEntry.hidden = false;
         manualEntry.insertBefore(
           document.getElementById("performerRoomStatus"),
-          document.getElementById("useRoomIdButton"),
+          document.getElementById("manualRoomId").parentElement,
         );
         document.getElementById("roomQrStatus").textContent =
           "Choose a room below or enter its Room ID.";
