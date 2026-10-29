@@ -2012,7 +2012,7 @@ function showScore() {
   const presentation = __async(this, null, function* () {
     var _a;
     const pitchSteadiness = pitchDetectedMs > 0 ? Math.min(1, Math.max(0, pitchStableMs / pitchDetectedMs)) : 0;
-    const score = micScoringEnabled ? 75 + Math.round(pitchSteadiness * 25) : null;
+    const score = micScoringEnabled ? 75 + Math.round(pitchSteadiness * 25) : 75;
     const pitchSeconds = (pitchDetectedMs / 1e3).toFixed(1);
     const stableSeconds = (pitchStableMs / 1e3).toFixed(1);
     console.log("Mic pitch stability score:", score, {
@@ -2051,7 +2051,9 @@ function playScoreSound() {
   });
 }
 function getScoreFeedback(score) {
-  if (score === null) return "Try pitch scoring on the next song!";
+  if (!micScoringEnabled) {
+    return "Pitch scoring was off; enable it next time for a measured score.";
+  }
   const feedbackByRange = score >= 95 ? ["Perfect!", "Excellent!", "Professional!", "Superstar!", "Great Job!"] : score >= 80 ? ["Good Job!", "Nice Try!", "Keep It Up!", "Not Bad!"] : [
     "Try Again!",
     "More Practice!",
@@ -2072,7 +2074,7 @@ function displayScoreModal(score) {
   const scoreDisplay = document.createElement("div");
   scoreDisplay.className = "score-modal-card";
   const title = document.createElement("h2");
-  title.textContent = "Your score is";
+  title.textContent = "Your score";
   const value = document.createElement("div");
   value.className = "score-modal-value";
   value.setAttribute("aria-live", "off");

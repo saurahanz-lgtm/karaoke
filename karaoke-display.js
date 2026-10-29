@@ -2428,7 +2428,7 @@ async function showScore() {
       : 0;
   const score = micScoringEnabled
     ? 75 + Math.round(pitchSteadiness * 25)
-    : null;
+    : 75;
   const pitchSeconds = (pitchDetectedMs / 1000).toFixed(1);
   const stableSeconds = (pitchStableMs / 1000).toFixed(1);
 
@@ -2471,7 +2471,9 @@ function playScoreSound() {
 }
 
 function getScoreFeedback(score) {
-  if (score === null) return "Try pitch scoring on the next song!";
+  if (!micScoringEnabled) {
+    return "Pitch scoring was off; enable it next time for a measured score.";
+  }
 
   const feedbackByRange =
     score >= 95
@@ -2502,7 +2504,7 @@ function displayScoreModal(score) {
   scoreDisplay.className = "score-modal-card";
 
   const title = document.createElement("h2");
-  title.textContent = "Performance score";
+  title.textContent = "Your score";
 
   const value = document.createElement("div");
   value.className = "score-modal-value";
