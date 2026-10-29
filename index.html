@@ -43,7 +43,7 @@
     <script src="admin-presence.js"></script>
     <script src="account-requests.js"></script>
     <script src="account-request-ui.js" defer></script>
-    <script src="performer-room-status.js?v=20" defer></script>
+    <script src="performer-room-status.js?v=22" defer></script>
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="youtube-api.js"></script>
@@ -1367,6 +1367,11 @@
         document.getElementById("manualRoomEntry").hidden = true;
         roomStatusTitle.textContent = "Room availability";
         roomStatus.classList.remove("is-selecting-room-id");
+        document
+          .querySelectorAll("#performerRoomList .performer-room-id")
+          .forEach((button) => {
+            button.disabled = true;
+          });
         restorePerformerRoomStatus();
         document.getElementById("roomQrStatus").textContent = hasRoom
           ? `Room ${selectedRoomId} selected. Sign in to join.`
@@ -1392,6 +1397,11 @@
         document
           .getElementById("performerRoomStatus")
           .classList.add("is-selecting-room-id");
+        document
+          .querySelectorAll("#performerRoomList .performer-room-id")
+          .forEach((button) => {
+            button.disabled = false;
+          });
         manualEntry.hidden = false;
         manualEntry.insertBefore(
           document.getElementById("performerRoomStatus"),

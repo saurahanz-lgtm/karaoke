@@ -63,6 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     roomFeedback.hidden = true;
+    const isSelectingRoomId = document
+      .getElementById("performerRoomStatus")
+      .classList.contains("is-selecting-room-id");
 
     const pageCount = Math.ceil(currentRooms.length / ROOMS_PER_PAGE);
     currentPage = Math.min(currentPage, pageCount);
@@ -113,8 +116,10 @@ document.addEventListener("DOMContentLoaded", () => {
         id.type = "button";
         id.className = "performer-room-id";
         id.dataset.roomId = room.id;
+        id.disabled = !isSelectingRoomId;
         id.setAttribute("aria-label", `Select Room ID ${room.id}`);
         id.textContent = `Room ID: ${room.id}`;
+        id.addEventListener("click", () => selectRoomId(room.id));
         details.append(name, id);
 
         const indicator = document.createElement("span");
@@ -144,17 +149,18 @@ document.addEventListener("DOMContentLoaded", () => {
     renderRooms();
   });
 
-  roomList.addEventListener("click", (event) => {
-    const button = event.target.closest(".performer-room-id");
-    if (!button || !roomList.contains(button)) return;
+  function selectRoomId(roomId) {
+    if (document.getElementById("manualRoomEntry")?.hidden !== false) return;
 
     const roomIdInput = document.getElementById("manualRoomId");
     const roomQrStatus = document.getElementById("roomQrStatus");
     if (!roomIdInput || !roomQrStatus) return;
 
-    roomIdInput.value = button.dataset.roomId;
-    roomQrStatus.textContent = `Room ID ${button.dataset.roomId} selected. Press Continue to join.`;
-  });
+    roomIdInput.value = roomId;
+    roomIdInput.dispatchEvent(new Event("input", { bubbles: true }));
+    roomIdInput.focus();
+    roomQrStatus.textContent = `Room ID ${roomId} selected. Press Continue to join.`;
+  }
 
   function handleRooms(rooms) {
     currentRooms = rooms;
