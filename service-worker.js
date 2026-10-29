@@ -6,7 +6,7 @@ const APP_SHELL = [
   "./karaoke-display.html",
   "./admin-dashboard.html",
   "./user-guide.html",
-  "./styles.css",
+  "./styles.css?v=19",
   "./app-dialogs.js",
   "./pwa-install.js",
   "./onboarding-tour.js",
