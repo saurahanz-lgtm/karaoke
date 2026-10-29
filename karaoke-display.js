@@ -2471,22 +2471,11 @@ function playScoreSound() {
 }
 
 function getScoreFeedback(score) {
-  if (!micScoringEnabled) {
-    return "Pitch scoring was off; enable it next time for a measured score.";
-  }
-
-  const feedbackByRange =
-    score >= 95
-      ? ["Perfect!", "Excellent!", "Professional!", "Superstar!", "Great Job!"]
-      : score >= 80
-        ? ["Good Job!", "Nice Try!", "Keep It Up!", "Not Bad!"]
-        : [
-            "Try Again!",
-            "More Practice!",
-            "Cheer Up!",
-            "Better Luck Next Time!",
-          ];
-  return feedbackByRange[Math.floor(Math.random() * feedbackByRange.length)];
+  if (score >= 96) return "Perfect";
+  if (score >= 90) return "Professional";
+  if (score >= 85) return "Excellent";
+  if (score >= 80) return "Great";
+  return "Good";
 }
 
 // Display score modal
