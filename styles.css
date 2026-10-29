@@ -3794,6 +3794,40 @@ body.karaoke-display-page {
   display: none;
 }
 
+#manualRoomEntry .performer-room-status {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  max-height: min(36vh, 220px);
+  margin: 8px 0;
+  padding: 8px;
+}
+
+#manualRoomEntry .performer-room-list {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#manualRoomEntry .performer-room-entry {
+  gap: 6px;
+  padding: 6px;
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  #manualRoomEntry .performer-room-status {
+    max-height: min(38vh, 150px);
+  }
+
+  #manualRoomEntry .performer-room-pagination {
+    margin-top: 4px;
+  }
+
+  #manualRoomEntry .performer-room-page-button {
+    width: 28px;
+    height: 28px;
+  }
+}
+
 @media (max-width: 420px), (max-height: 420px) and (orientation: landscape) {
   .performer-room-status {
     padding: 8px 9px;

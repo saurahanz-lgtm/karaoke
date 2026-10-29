@@ -568,55 +568,58 @@
       >
         Don’t have an account? Request access
       </button>
-      <section
-        class="performer-room-status"
-        aria-labelledby="performerRoomStatusTitle"
-      >
-        <div class="performer-room-status-heading">
-          <h2 id="performerRoomStatusTitle">Room availability</h2>
-          <span id="performerRoomStatusSummary" aria-live="polite"
-            >Checking room availability…</span
-          >
-        </div>
-        <ul
-          class="performer-room-list"
-          id="performerRoomList"
-          aria-label="Karaoke rooms"
-        ></ul>
-        <nav
-          class="performer-room-pagination"
-          id="performerRoomPagination"
-          aria-label="Room availability pages"
-          hidden
+      <div id="performerRoomStatusHomeSlot">
+        <section
+          class="performer-room-status"
+          id="performerRoomStatus"
+          aria-labelledby="performerRoomStatusTitle"
         >
-          <button
-            class="performer-room-page-button"
-            id="performerRoomPreviousPage"
-            type="button"
-            aria-label="Previous rooms"
-            title="Previous rooms"
-            disabled
+          <div class="performer-room-status-heading">
+            <h2 id="performerRoomStatusTitle">Room availability</h2>
+            <span id="performerRoomStatusSummary" aria-live="polite"
+              >Checking room availability…</span
+            >
+          </div>
+          <ul
+            class="performer-room-list"
+            id="performerRoomList"
+            aria-label="Karaoke rooms"
+          ></ul>
+          <nav
+            class="performer-room-pagination"
+            id="performerRoomPagination"
+            aria-label="Room availability pages"
+            hidden
           >
-            <i class="bi bi-chevron-left" aria-hidden="true"></i>
-          </button>
-          <span id="performerRoomPageInfo" aria-live="polite">1 / 1</span>
-          <button
-            class="performer-room-page-button"
-            id="performerRoomNextPage"
-            type="button"
-            aria-label="Next rooms"
-            title="Next rooms"
-          >
-            <i class="bi bi-chevron-right" aria-hidden="true"></i>
-          </button>
-        </nav>
-        <p
-          class="performer-room-status-feedback"
-          id="performerRoomStatusFeedback"
-          role="status"
-          hidden
-        ></p>
-      </section>
+            <button
+              class="performer-room-page-button"
+              id="performerRoomPreviousPage"
+              type="button"
+              aria-label="Previous rooms"
+              title="Previous rooms"
+              disabled
+            >
+              <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <span id="performerRoomPageInfo" aria-live="polite">1 / 1</span>
+            <button
+              class="performer-room-page-button"
+              id="performerRoomNextPage"
+              type="button"
+              aria-label="Next rooms"
+              title="Next rooms"
+            >
+              <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+          </nav>
+          <p
+            class="performer-room-status-feedback"
+            id="performerRoomStatusFeedback"
+            role="status"
+            hidden
+          ></p>
+        </section>
+      </div>
       <form id="accountRequestPanel" class="account-request-form" hidden>
         <div>
           <h2>Request an account</h2>
@@ -1358,17 +1361,33 @@
         document.getElementById("singerLoginSubmit").disabled = !hasRoom;
         document.getElementById("roomJoinChoices").hidden = hasRoom;
         document.getElementById("manualRoomEntry").hidden = true;
+        restorePerformerRoomStatus();
         document.getElementById("roomQrStatus").textContent = hasRoom
           ? `Room ${selectedRoomId} selected. Sign in to join.`
           : "Scan the room QR code or enter its Room ID.";
         return selectedRoomId;
       }
 
+      function restorePerformerRoomStatus() {
+        const status = document.getElementById("performerRoomStatus");
+        const homeSlot = document.getElementById(
+          "performerRoomStatusHomeSlot",
+        );
+        if (status && homeSlot && status.parentElement !== homeSlot) {
+          homeSlot.append(status);
+        }
+      }
+
       function showManualRoomEntry() {
         stopRoomQrScanner();
-        document.getElementById("manualRoomEntry").hidden = false;
+        const manualEntry = document.getElementById("manualRoomEntry");
+        manualEntry.hidden = false;
+        manualEntry.insertBefore(
+          document.getElementById("performerRoomStatus"),
+          document.getElementById("useRoomIdButton"),
+        );
         document.getElementById("roomQrStatus").textContent =
-          "Enter the Room ID shown on the Karaoke Display.";
+          "Choose a room below or enter its Room ID.";
         document.getElementById("manualRoomId").focus();
       }
 
@@ -1493,6 +1512,7 @@
       // Close Login Modal
       function closeLoginModal() {
         stopRoomQrScanner();
+        restorePerformerRoomStatus();
         document.getElementById("loginOverlay").classList.remove("show");
         document.getElementById("adminLoginModal").classList.remove("show");
         document.getElementById("singerLoginModal").classList.remove("show");
