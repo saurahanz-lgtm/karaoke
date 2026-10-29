@@ -1388,7 +1388,7 @@
               role="status"
               aria-live="polite"
             >
-              No song is currently playing.
+              Select a song.
             </div>
             <section
               class="phone-score-result"
@@ -2549,7 +2549,7 @@
           }
         }
         if (!videoId) {
-          setPerformerPhoneIdleState(true, "No song is currently playing.");
+          setPerformerPhoneIdleState(true, "Select a song.");
           performerPhoneDisplayPlayer?.stopVideo?.();
           performerPhoneDisplayedSongKey = null;
           return;
