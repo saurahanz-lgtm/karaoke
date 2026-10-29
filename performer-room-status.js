@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id.type = "button";
         id.className = "performer-room-id";
         id.dataset.roomId = room.id;
-        id.disabled = !isSelectingRoomId;
+        id.disabled = !isSelectingRoomId || status !== "available";
         id.setAttribute("aria-label", `Select Room ID ${room.id}`);
         id.textContent = `Room ID: ${room.id}`;
         id.addEventListener("click", () => selectRoomId(room.id));
@@ -151,6 +151,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function selectRoomId(roomId) {
     if (document.getElementById("manualRoomEntry")?.hidden !== false) return;
+    if (
+      roomAvailability.get(roomId) !== true ||
+      roomDisplayEnabled.get(roomId) !== true
+    ) {
+      return;
+    }
 
     const roomIdInput = document.getElementById("manualRoomId");
     const roomQrStatus = document.getElementById("roomQrStatus");
