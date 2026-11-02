@@ -133,24 +133,22 @@ vercel status
 ### Idle Room Queue Cleanup
 
 The `/api/cleanup-idle-rooms` endpoint clears a room's queued and current songs
-after the configured idle delay (three minutes by default). A Vercel Cron Job
-invokes it every minute, independently of the karaoke display and admin panel.
+after the configured idle delay (three minutes by default). A GitHub Actions
+workflow invokes it every five minutes, independently of the karaoke display
+and admin panel. This avoids Vercel Hobby's once-per-day cron limit.
 
-The scheduled job runs on production deployments, so configure these variables
-for the Vercel Production environment:
+Configure these variables for the Vercel Production environment:
 
 - `FIREBASE_DATABASE_URL`: the Realtime Database URL for this Firebase project.
 - `FIREBASE_SERVICE_ACCOUNT`: the JSON contents of a Firebase service account
   with permission to read and update the Realtime Database.
 - `CRON_SECRET`: a long, random secret used to authorize the cron request.
 
-The Vercel cron sends `CRON_SECRET` as a bearer token. For deployments that
-cannot use Vercel Cron Jobs, an external cron service can schedule a `GET`
-request to `https://sdkaraoke.vercel.app/api/cleanup-idle-rooms` every minute
-and set its
-`Authorization` header to `Bearer <CRON_SECRET>`. The endpoint starts the idle
-timer if needed and clears songs once the configured delay has elapsed since
-the last member heartbeat. Never commit the service account JSON or cron secret.
+Add the same `CRON_SECRET` value as a GitHub Actions repository secret under
+Settings > Secrets and variables > Actions. Enable Actions for the repository;
+the schedule runs from the default branch and can also be started manually.
+Scheduled runs may be delayed, and the five-minute interval means cleanup can
+happen up to roughly five minutes after the configured idle delay.
 
 ---
 

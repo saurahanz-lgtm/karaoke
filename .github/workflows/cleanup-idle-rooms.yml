@@ -1,0 +1,24 @@
+name: Clean up idle karaoke queues
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger idle room cleanup
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::The CRON_SECRET Actions repository secret is not configured."
+            exit 1
+          fi
+
+          curl --fail-with-body --silent --show-error --retry 2 --retry-delay 5 \
+            --request GET \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            https://sdkaraoke.vercel.app/api/cleanup-idle-rooms
