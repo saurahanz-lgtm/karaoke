@@ -1,4 +1,4 @@
-const CACHE_NAME = "sdkaraoke-v21";
+const CACHE_NAME = "sdkaraoke-v22";
 const APP_SHELL = [
   "./",
   "./index.html",

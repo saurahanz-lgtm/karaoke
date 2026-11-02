@@ -420,14 +420,61 @@
       }
 
       /* Volume Control Styles */
+      .volume-control-trigger {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .volume-control-trigger > .volume-control-button {
+        width: 100%;
+        height: 100%;
+      }
+
       .volume-control {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        position: absolute;
+        z-index: 20;
+        bottom: calc(100% + 10px);
+        left: 0;
+        width: min(340px, calc(100vw - 48px));
+        gap: 12px;
+        padding: 14px;
+        background: #17172a;
+        border: 1px solid rgba(147, 112, 219, 0.55);
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      }
+
+      .volume-control[hidden] {
+        display: none;
+      }
+
+      .controls .volume-mute-button {
+        align-self: flex-start;
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        color: white;
+        cursor: pointer;
+      }
+
+      .volume-control .performer-volume-notice {
+        margin: 0;
+      }
+
+      .volume-slider-row {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 14px;
-        background: rgba(102, 126, 234, 0.15);
-        border-radius: 12px;
-        margin-bottom: 12px;
+        width: 100%;
       }
 
       .performer-volume-notice {
@@ -1833,35 +1880,79 @@
         </div>
 
         <div class="controls">
-          <button class="gray" id="muteBtn" type="button" aria-label="Mute room audio" onclick="toggleMute()">🔊</button>
-          <button class="play" id="playPauseBtn" type="button" aria-label="Play or pause" onclick="togglePlayPause()">
+          <div class="volume-control-trigger">
+            <button
+              class="gray volume-control-button"
+              id="volumeControlToggle"
+              type="button"
+              aria-label="Open volume controls"
+              aria-controls="volumeControlPanel"
+              aria-expanded="false"
+              onclick="toggleVolumeControl()"
+            >
+              <span id="volumeControlIcon" aria-hidden="true">🔊</span>
+            </button>
+            <div
+              class="volume-control"
+              id="volumeControlPanel"
+              role="group"
+              aria-label="Room audio controls"
+              hidden
+            >
+              <button
+                class="gray volume-mute-button"
+                id="muteBtn"
+                type="button"
+                aria-label="Mute room audio"
+                onclick="toggleMute()"
+              >
+                <span id="muteControlIcon" aria-hidden="true">🔊</span>
+                <span id="muteControlLabel">Mute</span>
+              </button>
+              <div class="volume-slider-row">
+                <span class="volume-icon" aria-hidden="true">🔉</span>
+                <input
+                  type="range"
+                  id="volumeSlider"
+                  class="volume-slider"
+                  min="0"
+                  max="100"
+                  value="70"
+                  aria-label="Room volume"
+                  oninput="updateVolume(this.value)"
+                />
+                <span class="volume-value">
+                  <span id="volumeValue">70</span>%
+                </span>
+              </div>
+              <p
+                id="performerVolumeNotice"
+                class="performer-volume-notice"
+                role="status"
+                hidden
+              >
+                Use your device's volume buttons to adjust playback.
+              </p>
+            </div>
+          </div>
+          <button
+            class="play"
+            id="playPauseBtn"
+            type="button"
+            aria-label="Play or pause"
+            onclick="togglePlayPause()"
+          >
             ▶
           </button>
-          <button class="stop" type="button" aria-label="Skip to next song" onclick="stopPlayer()">■</button>
+          <button
+            class="stop"
+            type="button"
+            aria-label="Skip to next song"
+            onclick="stopPlayer()"
+          >
+            ■
+          </button>
         </div>
-
-        <!-- Volume Control -->
-        <div class="volume-control">
-          <span class="volume-icon" aria-hidden="true">🔉</span>
-          <input
-            type="range"
-            id="volumeSlider"
-            class="volume-slider"
-            min="0"
-            max="100"
-            value="70"
-            oninput="updateVolume(this.value)"
-          />
-          <span class="volume-value"><span id="volumeValue">70</span>%</span>
-        </div>
-        <p
-          id="performerVolumeNotice"
-          class="performer-volume-notice"
-          role="status"
-          hidden
-        >
-          Use your device's volume buttons to adjust playback.
-        </p>
 
         <!-- Hidden audio player for preview -->
         <audio id="audioPlayer" style="display: none"></audio>
@@ -3101,7 +3192,12 @@
         const useDeviceVolumeButtons =
           performerPhoneDisplayActive &&
           performerPhoneNeedsDeviceVolumeControl();
-        ["muteBtn", "playPauseBtn", "volumeSlider"].forEach((id) => {
+        [
+          "volumeControlToggle",
+          "muteBtn",
+          "playPauseBtn",
+          "volumeSlider",
+        ].forEach((id) => {
           const control = document.getElementById(id);
           if (control) {
             control.disabled =
@@ -5716,6 +5812,33 @@
         );
       }
 
+      function toggleVolumeControl() {
+        const panel = document.getElementById("volumeControlPanel");
+        const toggle = document.getElementById("volumeControlToggle");
+        if (!panel || !toggle) return;
+
+        const expanded = panel.hidden;
+        panel.hidden = !expanded;
+        toggle.setAttribute("aria-expanded", String(expanded));
+      }
+
+      function closeVolumeControl() {
+        const panel = document.getElementById("volumeControlPanel");
+        const toggle = document.getElementById("volumeControlToggle");
+        if (!panel || !toggle || panel.hidden) return;
+
+        panel.hidden = true;
+        toggle.setAttribute("aria-expanded", "false");
+      }
+
+      document.addEventListener("click", (event) => {
+        const trigger = document.querySelector(".volume-control-trigger");
+        if (trigger && !trigger.contains(event.target)) closeVolumeControl();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeVolumeControl();
+      });
+
       // Update volume control
       function updateVolume(value) {
         const numericVolume = Number(value);
@@ -5758,9 +5881,30 @@
       function updateMuteDisplay(muted) {
         roomMuted = Boolean(muted);
         const muteBtn = document.getElementById("muteBtn");
+        const muteControlIcon = document.getElementById("muteControlIcon");
+        const muteControlLabel = document.getElementById("muteControlLabel");
+        const volumeControlToggle = document.getElementById(
+          "volumeControlToggle",
+        );
+        const volumeControlIcon = document.getElementById("volumeControlIcon");
+        const icon = roomMuted ? "🔇" : "🔊";
         if (muteBtn) {
-          muteBtn.textContent = roomMuted ? "🔇" : "🔊";
+          if (muteControlIcon) muteControlIcon.textContent = icon;
+          if (muteControlLabel) {
+            muteControlLabel.textContent = roomMuted ? "Unmute" : "Mute";
+          }
           muteBtn.setAttribute("aria-pressed", String(roomMuted));
+          muteBtn.setAttribute(
+            "aria-label",
+            roomMuted ? "Unmute room audio" : "Mute room audio",
+          );
+        }
+        if (volumeControlIcon) volumeControlIcon.textContent = icon;
+        if (volumeControlToggle) {
+          volumeControlToggle.setAttribute(
+            "aria-label",
+            roomMuted ? "Open volume controls; audio muted" : "Open volume controls",
+          );
         }
         applyPerformerPhoneVolume();
       }
