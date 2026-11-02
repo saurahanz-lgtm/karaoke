@@ -75,6 +75,21 @@
         margin-bottom: 15px;
       }
 
+      .performer-display-control {
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+      }
+
+      .performer-display-label {
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 0.68rem;
+        font-weight: 600;
+        line-height: 1.1;
+      }
+
       #userDisplayName {
         min-width: 0;
         margin: 0 !important;
@@ -1797,7 +1812,7 @@
       <div class="card-ui">
         <div class="performer-player-heading">
           <div id="userDisplayName">Welcome</div>
-          <div class="performer-account-actions">
+          <div class="performer-account-actions performer-display-control">
             <button
               class="phone-display-toggle"
               id="performerPhoneDisplayToggle"
@@ -1811,6 +1826,7 @@
             >
               <i class="bi bi-display" aria-hidden="true"></i>
             </button>
+            <span class="performer-display-label">Display</span>
           </div>
         </div>
         <section
