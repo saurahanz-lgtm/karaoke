@@ -553,7 +553,7 @@
             <button
               type="button"
               class="login-btn login-btn-cancel"
-              onclick="closeLoginModal()"
+              onclick="cancelPerformerSignIn()"
             >
               Cancel
             </button>
@@ -1473,6 +1473,18 @@
         document.getElementById("adminLoginModal").classList.remove("show");
         document.getElementById("singerLoginModal").classList.remove("show");
         document.getElementById("passwordResetModal").classList.remove("show");
+      }
+
+      function cancelPerformerSignIn() {
+        const loginUrl = new URL(window.location.href);
+        loginUrl.searchParams.delete("room");
+        window.history.replaceState(null, "", loginUrl);
+
+        document.getElementById("manualRoomId").value = "";
+        document.getElementById("singerUsername").value = "";
+        document.getElementById("singerPassword").value = "";
+        closeLoginModal();
+        updatePerformerRoomLoginState();
       }
 
       function verifyLoginCredentials(user, password) {
