@@ -1295,6 +1295,7 @@
           "performerRoomStatusTitle",
         );
         const roomStatus = document.getElementById("performerRoomStatus");
+        roomStatus.hidden = hasRoom;
         document.getElementById("singerLoginForm").hidden = !hasRoom;
         document.getElementById("singerLoginSubmit").disabled = !hasRoom;
         document.getElementById("roomJoinChoices").hidden = hasRoom;
