@@ -2274,6 +2274,7 @@
       let songbookCatalog = [];
       let songbookSearchResults = [];
       let songbookNextPageToken = null;
+      let songbookSearchLoadingMore = false;
       let songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
       let songbookSelectedLetter = "";
       let songbookLetterSearchActive = false;
@@ -4788,6 +4789,7 @@
               songbookSearchController?.abort();
               songbookSearchResults = [];
               songbookNextPageToken = null;
+              songbookSearchLoadingMore = false;
               songbookSearchError = "";
               songbookLetterSearchActive = Boolean(
                 songbookSelectedLetter && songbookSelectedLetter !== "#",
@@ -4826,6 +4828,9 @@
             : songbookLetterSearchActive
               ? `${filteredSongs.length} verified songs beginning with ${songbookSelectedLetter}.`
               : `${filteredSongs.length} discovered songs${songbookSelectedLetter ? ` beginning with ${songbookSelectedLetter}` : ""}.`;
+        if (songbookSearchError && visibleSongs.length) {
+          statusElement.textContent += ` Could not load more songs: ${songbookSearchError}`;
+        }
 
         if (!visibleSongs.length) {
           let emptyMessage;
@@ -4885,6 +4890,10 @@
         loadMoreButton.hidden =
           filteredSongs.length <= songbookVisibleLimit &&
           !((query || songbookLetterSearchActive) && songbookNextPageToken);
+        loadMoreButton.disabled = songbookSearchLoadingMore;
+        loadMoreButton.textContent = songbookSearchLoadingMore
+          ? "Loading more songs..."
+          : "Load more songs";
       }
 
       function openSongbook() {
@@ -4913,6 +4922,7 @@
         songbookSearchResults = [];
         songbookSearchError = "";
         songbookNextPageToken = null;
+        songbookSearchLoadingMore = false;
         songbookSelectedLetter = "";
         songbookLetterSearchActive = false;
         songbookLetterSearchLoading = false;
@@ -4928,6 +4938,7 @@
         songbookSearchSequence += 1;
         songbookSearchError = "";
         songbookSearchResults = [];
+        songbookSearchLoadingMore = false;
         songbookLetterSearchActive = false;
         songbookLetterSearchLoading = false;
         songbookSearchQuery = document
@@ -4995,6 +5006,7 @@
         }
 
         try {
+          if (append) songbookSearchError = "";
           const page = await performSearch(normalizedQuery, {
             pageToken: options.pageToken || "",
             signal: controller.signal,
@@ -5022,29 +5034,33 @@
           if (error.name === "AbortError") return;
           if (requestSequence !== songbookSearchSequence) return;
           console.warn("Songbook search failed:", error.message);
-          songbookSearchResults = [];
-          songbookNextPageToken = null;
           songbookSearchError = error.message;
+          if (!append) {
+            songbookSearchResults = [];
+            songbookNextPageToken = null;
+          }
           songbookLetterSearchLoading = false;
           renderSongbookResults();
         }
       }
 
       async function loadMoreSongbookResults() {
-        const filteredSongs = getSongbookFilteredResults();
-        if (filteredSongs.length > songbookVisibleLimit) {
-          songbookVisibleLimit += SONGBOOK_VISIBLE_PAGE_SIZE;
-          renderSongbookResults();
-          return;
-        }
-        if (songbookSearchQuery && songbookNextPageToken) {
-          await searchSongbook(songbookSearchQuery, {
-            append: true,
-            pageToken: songbookNextPageToken,
-          });
-          return;
-        }
+        if (songbookSearchLoadingMore) return;
         songbookVisibleLimit += SONGBOOK_VISIBLE_PAGE_SIZE;
+        if (songbookSearchQuery && songbookNextPageToken) {
+          songbookSearchLoadingMore = true;
+          renderSongbookResults();
+          try {
+            await searchSongbook(songbookSearchQuery, {
+              append: true,
+              pageToken: songbookNextPageToken,
+            });
+          } finally {
+            songbookSearchLoadingMore = false;
+            renderSongbookResults();
+          }
+          return;
+        }
         renderSongbookResults();
       }
 
