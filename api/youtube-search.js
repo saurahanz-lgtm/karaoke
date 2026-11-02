@@ -75,10 +75,25 @@ function toVerifiedSong(video) {
     return null;
   }
 
+  const title = video.snippet?.title || "Untitled video";
+  const channelTitle = video.snippet?.channelTitle || "";
+  const description = video.snippet?.description || "";
+  const karaokeMarkers =
+    /\bkaraoke\b|\binstrumental\b|\bsing[\s-]?along\b|\bbacking track\b|\bminus one\b|\bno vocals\b|\bwithout vocals\b|\bvocals? removed\b|\bplayback track\b/i;
+  const descriptiveKaraokeMarkers =
+    /\bkaraoke (?:version|track|instrumental)\b|\binstrumental (?:version|track|karaoke)\b|\bbacking track\b|\bsing[\s-]?along version\b/i;
+  if (
+    !karaokeMarkers.test(title) &&
+    !karaokeMarkers.test(channelTitle) &&
+    !descriptiveKaraokeMarkers.test(description)
+  ) {
+    return null;
+  }
+
   return {
     videoId: video.id,
-    title: video.snippet?.title || "Untitled video",
-    artist: video.snippet?.channelTitle || "",
+    title,
+    artist: "",
     thumbnail:
       video.snippet?.thumbnails?.medium?.url ||
       video.snippet?.thumbnails?.default?.url ||

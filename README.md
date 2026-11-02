@@ -275,6 +275,11 @@ New accounts use a username and password. Before deploying:
   `videos.list` verification call costs 1 unit. Results are requested 50 at a
   time, cached on the server for five minutes and in the browser for ten
   minutes, and the endpoint applies a per-IP request limit.
+- Song search requests karaoke results and verifies karaoke/instrumental
+  indicators in video metadata before showing them. Searching with a singer's
+  name also returns matching karaoke videos; the displayed video title is
+  retained when the actual singer cannot be reliably determined from YouTube
+  metadata.
 - The Realtime Database has no curated song catalog. The songbook alphabet
   filters songs discovered in YouTube searches and saved in that browser; it
   is not a complete A–Z catalog. Search results are YouTube videos, not

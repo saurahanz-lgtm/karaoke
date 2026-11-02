@@ -4412,7 +4412,7 @@
       // ===== PERFORMER PORTAL FUNCTIONS =====
 
       function getSongbookStorageKey() {
-        return `karaoke_songbook_discovered_${encodeURIComponent(
+        return `karaoke_songbook_discovered_v2_${encodeURIComponent(
           String(loggedInUser?.username || "guest").toLowerCase(),
         )}`;
       }
