@@ -46,7 +46,7 @@
     <script src="performer-room-status.js?v=24" defer></script>
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="youtube-api.js"></script>
+    <script src="youtube-api.js?v=2"></script>
   </head>
   <body class="home-page">
     <div
@@ -884,79 +884,13 @@
 
       // YouTube API search function
       async function performSearch(query) {
-        try {
-          const results = await searchYouTubeKaraoke(query);
-          return results.map((item) => ({
-            title: item.title,
-            artist: item.artist,
-            videoId: item.videoId,
-            thumbnail: item.thumbnail,
-          }));
-        } catch (error) {
-          console.error("YouTube API Error:", error);
-          return getFallbackSongs(query);
-        }
-      }
-
-      // Fallback demo data
-      function getFallbackSongs(query) {
-        const allSongs = [
-          {
-            title: "Bohemian Rhapsody - Karaoke",
-            artist: "Queen",
-            videoId: "fJ9rUzIMt7o",
-          },
-          {
-            title: "Hallelujah - Karaoke",
-            artist: "Leonard Cohen",
-            videoId: "YAHxj0k0WL0",
-          },
-          {
-            title: "Someone Like You - Karaoke",
-            artist: "Adele",
-            videoId: "hHUbLv4ThOk",
-          },
-          {
-            title: "Perfect - Karaoke",
-            artist: "Ed Sheeran",
-            videoId: "2takcwFERG0",
-          },
-          {
-            title: "Shape of You - Karaoke",
-            artist: "Ed Sheeran",
-            videoId: "JGwWNGJdvx8",
-          },
-          {
-            title: "Rolling in the Deep - Karaoke",
-            artist: "Adele",
-            videoId: "rYEDA3JcQqw",
-          },
-          {
-            title: "Imagine - Karaoke",
-            artist: "John Lennon",
-            videoId: "DVg2EJvvlF8",
-          },
-          {
-            title: "Wonderwall - Karaoke",
-            artist: "Oasis",
-            videoId: "6hzrDeceEKc",
-          },
-          {
-            title: "Piano Man - Karaoke",
-            artist: "Billy Joel",
-            videoId: "1vrEljMfXWc",
-          },
-          {
-            title: "Don't Stop Believin' - Karaoke",
-            artist: "Journey",
-            videoId: "1k8craCGpgs",
-          },
-        ];
-        return allSongs.filter(
-          (song) =>
-            song.title.toLowerCase().includes(query.toLowerCase()) ||
-            song.artist.toLowerCase().includes(query.toLowerCase()),
-        );
+        const results = await searchYouTubeKaraoke(query);
+        return results.map((item) => ({
+          title: item.title,
+          artist: item.artist,
+          videoId: item.videoId,
+          thumbnail: item.thumbnail,
+        }));
       }
 
       // Display search results

@@ -46,7 +46,7 @@
       };
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="youtube-api.js"></script>
+    <script src="youtube-api.js?v=2"></script>
     <style>
       .performer-page {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -606,6 +606,369 @@
 
       .searchbtn:active {
         transform: scale(0.95);
+      }
+
+      body.songbook-open {
+        overflow: hidden;
+      }
+
+      .songbook-open-button,
+      .songbook-load-more {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid rgba(167, 139, 250, 0.4);
+        border-radius: 8px;
+        color: #f3f6fb;
+        background: rgba(139, 92, 246, 0.16);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .songbook-open-button {
+        width: 100%;
+        justify-content: flex-start;
+        margin-bottom: 10px;
+      }
+
+      .songbook-open-button:hover,
+      .songbook-load-more:hover:not(:disabled) {
+        border-color: rgba(192, 132, 252, 0.8);
+        background: rgba(139, 92, 246, 0.24);
+      }
+
+      .songbook-dialog {
+        width: min(900px, calc(100vw - 28px));
+        max-width: none;
+        height: min(820px, calc(100dvh - 28px));
+        max-height: calc(100dvh - 28px);
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid rgba(181, 160, 219, 0.32);
+        border-radius: 12px;
+        color: #f3f6fb;
+        background: #100b19;
+        box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62);
+      }
+
+      .songbook-dialog::backdrop {
+        background: rgba(4, 3, 10, 0.72);
+        backdrop-filter: blur(4px);
+      }
+
+      .songbook-panel {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        flex-direction: column;
+        padding: 22px;
+      }
+
+      .songbook-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .songbook-kicker {
+        margin: 0 0 4px;
+        color: #c4b5fd;
+        font-size: 0.68rem;
+        font-weight: 700;
+      }
+
+      .songbook-header h2 {
+        margin: 0;
+        color: #f3f6fb;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 1.35rem;
+      }
+
+      .songbook-catalog-note {
+        margin: 4px 0 0;
+        color: #b0a7bd;
+        font-size: 0.8rem;
+      }
+
+      .songbook-close-button {
+        display: grid;
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border: 1px solid rgba(181, 160, 219, 0.24);
+        border-radius: 7px;
+        color: #f3f6fb;
+        background: rgba(255, 255, 255, 0.04);
+        cursor: pointer;
+      }
+
+      .songbook-close-button:hover {
+        border-color: rgba(192, 132, 252, 0.65);
+        background: rgba(139, 92, 246, 0.18);
+      }
+
+      .songbook-search-form {
+        display: grid;
+        flex: 0 0 auto;
+        grid-template-columns: minmax(0, 1fr) 46px;
+        gap: 8px;
+      }
+
+      .songbook-search-form input {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 0 13px;
+        border: 1px solid rgba(181, 160, 219, 0.28);
+        border-radius: 7px;
+        outline: 0;
+        color: #f3f6fb;
+        background: #0a0710;
+        font: inherit;
+        font-size: 16px;
+      }
+
+      .songbook-search-form input:focus-visible {
+        border-color: #c084fc;
+        box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.17);
+      }
+
+      .songbook-search-form button {
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(192, 132, 252, 0.45);
+        border-radius: 7px;
+        color: #fff;
+        background: linear-gradient(120deg, #8b5cf6, #6d5bd0);
+        cursor: pointer;
+      }
+
+      .songbook-filter-row {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0 4px;
+      }
+
+      .songbook-alphabet {
+        display: flex;
+        min-width: 0;
+        flex: 1 1 auto;
+        gap: 3px;
+        overflow-x: auto;
+        padding: 3px 1px 6px;
+        overscroll-behavior-x: contain;
+        scrollbar-width: thin;
+      }
+
+      .songbook-letter {
+        flex: 0 0 30px;
+        min-height: 30px;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        color: #c8bfd3;
+        background: transparent;
+        font: inherit;
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .songbook-letter:hover,
+      .songbook-letter[aria-pressed="true"] {
+        border-color: rgba(192, 132, 252, 0.4);
+        color: #f3e8ff;
+        background: rgba(139, 92, 246, 0.22);
+      }
+
+      .songbook-clear-button {
+        flex: 0 0 auto;
+        min-height: 32px;
+        padding: 0 9px;
+        border: 1px solid rgba(181, 160, 219, 0.22);
+        border-radius: 5px;
+        color: #c8bfd3;
+        background: transparent;
+        font: inherit;
+        font-size: 0.72rem;
+        cursor: pointer;
+      }
+
+      .songbook-clear-button:hover {
+        color: #fff;
+        border-color: rgba(192, 132, 252, 0.55);
+      }
+
+      .songbook-status {
+        flex: 0 0 auto;
+        min-height: 20px;
+        margin: 4px 0 8px;
+        color: #b0a7bd;
+        font-size: 0.75rem;
+      }
+
+      .songbook-results {
+        display: grid;
+        min-height: 0;
+        flex: 1 1 auto;
+        align-content: start;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-top: 1px solid rgba(181, 160, 219, 0.16);
+      }
+
+      .songbook-result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        padding: 11px 4px;
+        border-bottom: 1px solid rgba(181, 160, 219, 0.13);
+      }
+
+      .songbook-result-copy {
+        min-width: 0;
+      }
+
+      .songbook-result-title {
+        overflow-wrap: anywhere;
+        color: #f3f6fb;
+        font-size: 0.9rem;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+
+      .songbook-result-artist {
+        margin-top: 3px;
+        overflow-wrap: anywhere;
+        color: #b0a7bd;
+        font-size: 0.76rem;
+      }
+
+      .songbook-result-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .songbook-favorite-button,
+      .songbook-add-button {
+        display: inline-grid;
+        flex: 0 0 auto;
+        min-width: 38px;
+        height: 36px;
+        place-items: center;
+        padding: 0 10px;
+        border: 1px solid rgba(181, 160, 219, 0.25);
+        border-radius: 6px;
+        color: #f3f6fb;
+        background: rgba(255, 255, 255, 0.04);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .songbook-favorite-button[aria-pressed="true"] {
+        color: #f5c2e7;
+        border-color: rgba(245, 194, 231, 0.36);
+      }
+
+      .songbook-add-button {
+        min-width: 92px;
+        border-color: rgba(192, 132, 252, 0.4);
+        color: #f8f2ff;
+        background: rgba(139, 92, 246, 0.2);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .songbook-favorite-button:hover:not(:disabled),
+      .songbook-add-button:hover:not(:disabled) {
+        border-color: rgba(192, 132, 252, 0.8);
+        background: rgba(139, 92, 246, 0.34);
+      }
+
+      .songbook-favorite-button:focus-visible,
+      .songbook-add-button:focus-visible,
+      .songbook-close-button:focus-visible,
+      .songbook-clear-button:focus-visible,
+      .songbook-letter:focus-visible,
+      .songbook-load-more:focus-visible {
+        outline: 2px solid #c084fc;
+        outline-offset: 2px;
+      }
+
+      .songbook-favorite-button:disabled,
+      .songbook-add-button:disabled,
+      .songbook-load-more:disabled {
+        cursor: default;
+        opacity: 0.55;
+      }
+
+      .songbook-empty-state {
+        padding: 28px 12px;
+        color: #b0a7bd;
+        font-size: 0.86rem;
+        line-height: 1.5;
+        text-align: center;
+      }
+
+      .songbook-load-more {
+        align-self: center;
+        flex: 0 0 auto;
+        margin-top: 10px;
+        font-size: 0.78rem;
+      }
+
+      .songbook-load-more[hidden] {
+        display: none;
+      }
+
+      .songbook-dialog button:focus-visible {
+        outline-color: #c084fc;
+      }
+
+      @media (max-width: 560px) {
+        .songbook-dialog {
+          width: 100vw;
+          height: 100dvh;
+          max-height: 100dvh;
+          border: 0;
+          border-radius: 0;
+        }
+
+        .songbook-panel {
+          padding: max(14px, env(safe-area-inset-top)) 14px
+            max(14px, env(safe-area-inset-bottom));
+        }
+
+        .songbook-header {
+          margin-bottom: 12px;
+        }
+
+        .songbook-result {
+          gap: 7px;
+          padding: 10px 2px;
+        }
+
+        .songbook-result-actions {
+          gap: 5px;
+        }
+
+        .songbook-add-button {
+          min-width: 78px;
+          padding: 0 7px;
+        }
       }
 
       .song-item {
@@ -1507,17 +1870,14 @@
       <!-- SEARCH & RESERVE -->
       <div class="card-ui">
         <h3>Find and reserve songs</h3>
-        <form id="searchForm">
-          <div class="searchbox">
-            <input
-              id="searchInput"
-              type="search"
-              enterkeyhint="search"
-              placeholder="Search by song title or artist"
-            />
-            <button type="submit" class="searchbtn">🔍</button>
-          </div>
-        </form>
+        <button
+          id="openSongbookButton"
+          class="songbook-open-button"
+          type="button"
+        >
+          <i class="bi bi-search" aria-hidden="true"></i>
+          Search songs
+        </button>
         <button
           id="favoritesToggleButton"
           class="searchbtn favorites-toggle"
@@ -1528,6 +1888,91 @@
         </button>
         <div id="resultsContainer"></div>
       </div>
+
+      <dialog
+        id="songbookDialog"
+        class="songbook-dialog"
+        aria-labelledby="songbookTitle"
+      >
+        <div class="songbook-panel">
+          <header class="songbook-header">
+            <div>
+              <p class="songbook-kicker">SD KARAOKE</p>
+              <h2 id="songbookTitle">Songbook</h2>
+              <p id="songbookCatalogNote" class="songbook-catalog-note">
+                Search by song title or artist.
+              </p>
+            </div>
+            <button
+              id="closeSongbookButton"
+              class="songbook-close-button"
+              type="button"
+              aria-label="Close songbook"
+              title="Close songbook"
+            >
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+          </header>
+          <form
+            id="songbookSearchForm"
+            class="songbook-search-form"
+            role="search"
+          >
+            <label class="visually-hidden" for="searchInput"
+              >Search song title or artist</label
+            >
+            <input
+              id="searchInput"
+              type="search"
+              enterkeyhint="search"
+              autocomplete="off"
+              placeholder="Search song title or artist"
+            />
+            <button
+              type="submit"
+              aria-label="Search songs"
+              title="Search songs"
+            >
+              <i class="bi bi-search" aria-hidden="true"></i>
+            </button>
+          </form>
+          <div class="songbook-filter-row">
+            <nav
+              id="songbookAlphabet"
+              class="songbook-alphabet"
+              aria-label="Filter by song title initial"
+            ></nav>
+            <button
+              id="songbookClearButton"
+              class="songbook-clear-button"
+              type="button"
+            >
+              Clear
+            </button>
+          </div>
+          <p
+            id="songbookStatus"
+            class="songbook-status"
+            role="status"
+            aria-live="polite"
+          >
+            Search to discover songs. A–Z filters songs found in your searches.
+          </p>
+          <div
+            id="songbookResults"
+            class="songbook-results"
+            aria-live="polite"
+          ></div>
+          <button
+            id="songbookLoadMoreButton"
+            class="songbook-load-more"
+            type="button"
+            hidden
+          >
+            Load more songs
+          </button>
+        </div>
+      </dialog>
 
       <!-- RESERVED -->
       <div class="card-ui">
@@ -1655,8 +2100,22 @@
       let favoriteSongs = [];
       let showingFavoriteSongs = false;
       let currentFavoritePage = 1;
+      const SONGBOOK_DISCOVERY_LIMIT = 500;
+      const SONGBOOK_VISIBLE_PAGE_SIZE = 24;
+      const SONGBOOK_SEARCH_DEBOUNCE_MS = 350;
+      let songbookCatalog = [];
+      let songbookSearchResults = [];
+      let songbookNextPageToken = null;
+      let songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
+      let songbookSelectedLetter = "";
+      let songbookSearchTimer = null;
+      let songbookSearchController = null;
+      let songbookSearchSequence = 0;
+      let songbookSearchQuery = "";
+      let songbookSearchError = "";
+      const songbookPendingSongKeys = new Set();
+      const songbookAddedSongKeys = new Set();
       let audioPlayer;
-      let allSongs = [];
       let reservedSongs = [];
       let usePerformerFirebase = false;
       let activeKaraokeRoomId = null;
@@ -2312,7 +2771,61 @@
         }, 1200);
       }
 
-      function handlePerformerPhonePlayerError(event) {
+      async function tryAlternatePerformerPhoneVideo(songKey, errorCode) {
+        const failedSong = roomCurrentSong;
+        if (
+          !activeKaraokeRoomId ||
+          !failedSong?.videoId ||
+          typeof KaraokeSessions.tryNextSongVideoAlternative !== "function"
+        ) {
+          return false;
+        }
+
+        try {
+          const alternateSong =
+            await KaraokeSessions.tryNextSongVideoAlternative(
+              activeKaraokeRoomId,
+              {
+                allowPhoneDisplay: true,
+                expectedSongId: failedSong.id || null,
+                failedVideoId: failedSong.videoId,
+              },
+            );
+          if (!alternateSong) return false;
+
+          const alternateSongKey = getPerformerPhoneSongKey(alternateSong);
+          if (getPerformerPhoneSongKey() === songKey) {
+            roomCurrentSong = alternateSong;
+          }
+          if (
+            getPerformerPhoneSongKey() === alternateSongKey &&
+            performerPhoneDisplayedSongKey !== alternateSongKey
+          ) {
+            performerPhoneDisplayPlayerReady = true;
+            updatePerformerPhoneDisplaySong();
+          }
+          const message = document.getElementById(
+            "performerPhoneDisplayMessage",
+          );
+          if (message) {
+            message.textContent =
+              "Trying another verified video for this song…";
+            message.hidden = false;
+          }
+          console.info(
+            `Trying an alternate video after YouTube error ${errorCode}.`,
+          );
+          return true;
+        } catch (error) {
+          console.warn(
+            "Could not try another video for this song:",
+            error.message,
+          );
+          return false;
+        }
+      }
+
+      async function handlePerformerPhonePlayerError(event) {
         const errorCode = Number(event?.data);
         const songKey =
           performerPhoneDisplayedSongKey || getPerformerPhoneSongKey();
@@ -2320,7 +2833,10 @@
         performerPhoneDisplayPlayerReady = false;
         console.error("Performer screen video error:", errorCode);
 
-        if ([2, 100, 101, 150].includes(errorCode)) {
+        if ([100, 101, 150].includes(errorCode)) {
+          if (await tryAlternatePerformerPhoneVideo(songKey, errorCode)) {
+            return;
+          }
           skipUnavailablePerformerPhoneVideo(songKey, errorCode);
           return;
         }
@@ -2330,7 +2846,11 @@
           performerPhoneRetryCount = 0;
         }
         if (performerPhoneRetryCount >= 1) {
-          skipUnavailablePerformerPhoneVideo(songKey, errorCode);
+          if (message) {
+            message.textContent =
+              "Playback could not be confirmed. The song remains in the queue; check the connection and retry.";
+            message.hidden = false;
+          }
           return;
         }
 
@@ -2356,7 +2876,11 @@
             applyPerformerPhoneVolume();
           } catch (error) {
             console.warn("Could not retry performer video:", error.message);
-            skipUnavailablePerformerPhoneVideo(songKey, errorCode);
+            if (message) {
+              message.textContent =
+                "Playback could not be confirmed. The song remains in the queue; check the connection and retry.";
+              message.hidden = false;
+            }
           }
         }, 600);
       }
@@ -2717,6 +3241,7 @@
         const button = event.target.closest("button[data-action]");
         if (!button) return;
         const { action, title, artist, videoId, thumbnail } = button.dataset;
+        const fromSongbook = Boolean(button.closest("#songbookResults"));
         if (action === "favorite") {
           const existingIndex = favoriteSongs.findIndex(
             (song) => song.videoId === videoId,
@@ -2731,14 +3256,39 @@
                 loggedInUser?.username || "Guest",
               );
             }
+            if (fromSongbook) renderSongbookResults();
           } else {
             favoriteSongs.push({ title, artist, videoId, thumbnail });
             showingFavoriteSongs = false;
             searchResults = [];
             saveFavoriteSongs();
-            document.getElementById("searchInput").value = "";
-            document.getElementById("resultsContainer").innerHTML = "";
+            if (fromSongbook) {
+              renderSongbookResults();
+            } else {
+              document.getElementById("searchInput").value = "";
+              document.getElementById("resultsContainer").innerHTML = "";
+            }
           }
+          return;
+        }
+        if (action === "songbook-add") {
+          const song = songbookCatalog.find(
+            (item) => item.songKey === button.dataset.songKey,
+          );
+          if (!song) return;
+          requestSong(
+            song.title,
+            song.artist,
+            song.videoId,
+            loggedInUser?.username || "",
+            button,
+            {
+              songbook: true,
+              songId: song.songId,
+              songKey: song.songKey,
+              videoAlternatives: song.videoAlternatives,
+            },
+          );
           return;
         }
         if (action === "reserve") {
@@ -3449,27 +3999,43 @@
           localStorage.setItem("karaoke_user_name", loggedInUser.username);
         }
 
-        const searchForm = document.getElementById("searchForm");
-        if (searchForm) {
-          searchForm.removeEventListener("submit", handleSearch);
-          searchForm.addEventListener("submit", handleSearch);
-        }
-        const searchInput = document.getElementById("searchInput");
-        if (searchInput) {
-          searchInput.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.keyCode === 13) {
-              event.preventDefault();
-              handleSearch(event);
-            }
-          });
-        }
+        document
+          .getElementById("openSongbookButton")
+          .addEventListener("click", openSongbook);
+        document
+          .getElementById("closeSongbookButton")
+          .addEventListener("click", closeSongbook);
+        const songbookDialog = document.getElementById("songbookDialog");
+        songbookDialog.addEventListener("close", () => {
+          document.body.classList.remove("songbook-open");
+          document.getElementById("openSongbookButton").focus();
+        });
+        songbookDialog.addEventListener("click", (event) => {
+          if (event.target === songbookDialog) closeSongbook();
+        });
+        document
+          .getElementById("songbookSearchForm")
+          .addEventListener("submit", handleSearch);
+        document
+          .getElementById("searchInput")
+          .addEventListener("input", handleSongbookQueryInput);
+        document
+          .getElementById("songbookClearButton")
+          .addEventListener("click", resetSongbookFilters);
+        document
+          .getElementById("songbookLoadMoreButton")
+          .addEventListener("click", loadMoreSongbookResults);
+        document
+          .getElementById("songbookResults")
+          .addEventListener("click", handleSongAction);
         document
           .getElementById("resultsContainer")
           .addEventListener("click", handleSongAction);
+        renderSongbookAlphabet();
+        loadSongbookCatalog();
         loadFavoriteSongs();
 
         // Initialize page data
-        loadAllSongs();
         loadReservedSongs();
         displayReservedSongs();
         updateUserDisplay();
@@ -3843,131 +4409,419 @@
 
       // ===== PERFORMER PORTAL FUNCTIONS =====
 
-      // Handle search form submission
-      async function handleSearch(e) {
-        e.preventDefault();
+      function getSongbookStorageKey() {
+        return `karaoke_songbook_discovered_${encodeURIComponent(
+          String(loggedInUser?.username || "guest").toLowerCase(),
+        )}`;
+      }
 
-        const searchInput = document.getElementById("searchInput");
-        const searchQuery = searchInput ? searchInput.value.trim() : "";
+      function normalizeSongbookText(value) {
+        return String(value || "")
+          .normalize("NFKD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")
+          .trim()
+          .replace(/\s+/g, " ");
+      }
 
-        if (!searchQuery) {
-          showAppToast("Enter a song title or artist to search.");
+      function cleanSongbookTitle(value) {
+        return String(value || "")
+          .trim()
+          .replace(
+            /\s*(?:[-–—|:]\s*)?(?:official\s+)?karaoke(?:\s+version)?\s*$/i,
+            "",
+          )
+          .replace(
+            /\s*\((?:karaoke(?:\s+version)?|instrumental karaoke)\)\s*$/i,
+            "",
+          )
+          .trim();
+      }
+
+      function getSongbookSongKey(song) {
+        const title = normalizeSongbookText(cleanSongbookTitle(song.title));
+        const artist = normalizeSongbookText(song.artist);
+        return title ? `${title}::${artist}` : "";
+      }
+
+      function mergeSongbookSongs(existingSongs, incomingSongs) {
+        const uniqueSongs = new Map();
+        [...existingSongs, ...incomingSongs].forEach((candidate) => {
+          if (!candidate?.videoId || !candidate.title) return;
+          const title = cleanSongbookTitle(candidate.title);
+          const artist = String(candidate.artist || "").trim();
+          const songKey = getSongbookSongKey({ title, artist });
+          if (!songKey) return;
+
+          const existing = uniqueSongs.get(songKey);
+          const candidateVideoIds = [
+            candidate.videoId,
+            ...(Array.isArray(candidate.videoAlternatives)
+              ? candidate.videoAlternatives
+              : []),
+          ].filter(Boolean);
+          if (existing) {
+            existing.videoAlternatives = [
+              ...new Set([
+                ...existing.videoAlternatives,
+                ...candidateVideoIds.filter(
+                  (videoId) => videoId !== existing.videoId,
+                ),
+              ]),
+            ].slice(0, 4);
+            return;
+          }
+
+          const videoAlternatives = [
+            ...new Set(
+              candidateVideoIds.filter(
+                (videoId) => videoId !== candidate.videoId,
+              ),
+            ),
+          ].slice(0, 4);
+          uniqueSongs.set(songKey, {
+            songId: candidate.songId || `youtube:${songKey}`,
+            songKey,
+            title,
+            artist,
+            videoId: candidate.videoId,
+            videoAlternatives,
+            thumbnail: candidate.thumbnail || "",
+          });
+        });
+        return [...uniqueSongs.values()];
+      }
+
+      function loadSongbookCatalog() {
+        try {
+          const saved = JSON.parse(
+            localStorage.getItem(getSongbookStorageKey()) || "[]",
+          );
+          songbookCatalog = Array.isArray(saved)
+            ? mergeSongbookSongs([], saved).slice(-SONGBOOK_DISCOVERY_LIMIT)
+            : [];
+        } catch (error) {
+          songbookCatalog = [];
+        }
+        const note = document.getElementById("songbookCatalogNote");
+        if (note) {
+          note.textContent = `${songbookCatalog.length} songs discovered through searches. No curated full catalog is configured.`;
+        }
+      }
+
+      function saveSongbookCatalog() {
+        try {
+          songbookCatalog = songbookCatalog.slice(-SONGBOOK_DISCOVERY_LIMIT);
+          localStorage.setItem(
+            getSongbookStorageKey(),
+            JSON.stringify(songbookCatalog),
+          );
+        } catch (error) {
+          console.warn("Could not save discovered songs:", error.message);
+        }
+        const note = document.getElementById("songbookCatalogNote");
+        if (note) {
+          note.textContent = `${songbookCatalog.length} songs discovered through searches. No curated full catalog is configured.`;
+        }
+      }
+
+      function getSongbookInitial(song) {
+        const title = cleanSongbookTitle(song.title)
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        const initial = title.charAt(0).toUpperCase();
+        return /^[A-Z]$/.test(initial) ? initial : "#";
+      }
+
+      function isSongbookSongQueued(song) {
+        return [...reservedSongs, ...roomQueue, roomCurrentSong]
+          .filter(Boolean)
+          .some(
+            (queuedSong) =>
+              queuedSong.songId === song.songId ||
+              queuedSong.videoId === song.videoId,
+          );
+      }
+
+      function getSongbookFilteredResults() {
+        const query = normalizeSongbookText(
+          document.getElementById("searchInput")?.value,
+        );
+        const source = query ? songbookSearchResults : songbookCatalog;
+        return source
+          .filter((song) => {
+            if (
+              songbookSelectedLetter &&
+              getSongbookInitial(song) !== songbookSelectedLetter
+            ) {
+              return false;
+            }
+            return (
+              !query ||
+              normalizeSongbookText(song.title).includes(query) ||
+              normalizeSongbookText(song.artist).includes(query)
+            );
+          })
+          .sort(
+            (first, second) =>
+              first.title.localeCompare(second.title) ||
+              first.artist.localeCompare(second.artist),
+          );
+      }
+
+      function renderSongbookAlphabet() {
+        const alphabet = document.getElementById("songbookAlphabet");
+        if (!alphabet) return;
+        alphabet.replaceChildren();
+        ["#", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"].forEach((letter) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "songbook-letter";
+          button.dataset.letter = letter;
+          button.textContent = letter;
+          button.setAttribute(
+            "aria-label",
+            letter === "#"
+              ? "Titles beginning with a number or symbol"
+              : `Titles beginning with ${letter}`,
+          );
+          button.setAttribute(
+            "aria-pressed",
+            String(songbookSelectedLetter === letter),
+          );
+          button.addEventListener("click", () => {
+            songbookSelectedLetter =
+              songbookSelectedLetter === letter ? "" : letter;
+            songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
+            renderSongbookAlphabet();
+            renderSongbookResults();
+          });
+          alphabet.append(button);
+        });
+      }
+
+      function renderSongbookResults() {
+        const resultsElement = document.getElementById("songbookResults");
+        const statusElement = document.getElementById("songbookStatus");
+        const loadMoreButton = document.getElementById(
+          "songbookLoadMoreButton",
+        );
+        if (!resultsElement || !statusElement || !loadMoreButton) return;
+
+        const query =
+          document.getElementById("searchInput")?.value.trim() || "";
+        const filteredSongs = getSongbookFilteredResults();
+        const visibleSongs = filteredSongs.slice(0, songbookVisibleLimit);
+        statusElement.textContent = query
+          ? `${filteredSongs.length} matching songs from YouTube search results.`
+          : `${filteredSongs.length} discovered songs${songbookSelectedLetter ? ` beginning with ${songbookSelectedLetter}` : ""}.`;
+
+        if (!visibleSongs.length) {
+          let emptyMessage;
+          if (songbookSearchError) {
+            emptyMessage = songbookSearchError;
+          } else if (query) {
+            emptyMessage = `No verified songs matched “${query}”. Try another title or artist.`;
+          } else if (songbookSelectedLetter) {
+            emptyMessage = `No discovered songs begin with ${songbookSelectedLetter}. Search for a title or artist first.`;
+          } else {
+            emptyMessage =
+              "Search for a title or artist to discover songs. There is no curated catalog in the database yet.";
+          }
+          resultsElement.innerHTML = `<p class="songbook-empty-state">${escapeHTML(emptyMessage)}</p>`;
+        } else {
+          resultsElement.innerHTML = visibleSongs
+            .map((song) => {
+              const isFavorite = isFavoriteSong(song.videoId);
+              const alreadyQueued =
+                songbookAddedSongKeys.has(song.songKey) ||
+                isSongbookSongQueued(song);
+              const addLabel = alreadyQueued ? "Added" : "Add to Queue";
+              return `
+                <article class="songbook-result" role="listitem">
+                  <div class="songbook-result-copy">
+                    <div class="songbook-result-title">${escapeHTML(song.title)}</div>
+                    <div class="songbook-result-artist">${escapeHTML(song.artist || "Artist not listed")}</div>
+                  </div>
+                  <div class="songbook-result-actions">
+                    <button
+                      class="songbook-favorite-button"
+                      type="button"
+                      data-action="favorite"
+                      data-title="${escapeHTML(song.title)}"
+                      data-artist="${escapeHTML(song.artist)}"
+                      data-video-id="${escapeHTML(song.videoId)}"
+                      data-thumbnail="${escapeHTML(song.thumbnail)}"
+                      aria-label="${isFavorite ? "Remove from" : "Add to"} favorites"
+                      aria-pressed="${isFavorite}"
+                      title="${isFavorite ? "Remove from" : "Add to"} favorites"
+                    >${isFavorite ? "★" : "☆"}</button>
+                    <button
+                      class="songbook-add-button"
+                      type="button"
+                      data-action="songbook-add"
+                      data-song-key="${escapeHTML(song.songKey)}"
+                      ${alreadyQueued || songbookPendingSongKeys.has(song.songKey) ? "disabled" : ""}
+                    >${songbookPendingSongKeys.has(song.songKey) ? "Adding…" : addLabel}</button>
+                  </div>
+                </article>`;
+            })
+            .join("");
+        }
+
+        loadMoreButton.hidden =
+          filteredSongs.length <= songbookVisibleLimit &&
+          !(query && songbookNextPageToken);
+      }
+
+      function openSongbook() {
+        const dialog = document.getElementById("songbookDialog");
+        if (!dialog || dialog.open) return;
+        loadSongbookCatalog();
+        songbookSearchError = "";
+        renderSongbookAlphabet();
+        renderSongbookResults();
+        document.body.classList.add("songbook-open");
+        dialog.showModal();
+        document.getElementById("searchInput").focus();
+      }
+
+      function closeSongbook() {
+        const dialog = document.getElementById("songbookDialog");
+        if (dialog?.open) dialog.close();
+      }
+
+      function resetSongbookFilters() {
+        if (songbookSearchTimer) clearTimeout(songbookSearchTimer);
+        songbookSearchController?.abort();
+        songbookSearchSequence += 1;
+        document.getElementById("searchInput").value = "";
+        songbookSearchQuery = "";
+        songbookSearchResults = [];
+        songbookSearchError = "";
+        songbookNextPageToken = null;
+        songbookSelectedLetter = "";
+        songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
+        renderSongbookAlphabet();
+        renderSongbookResults();
+        document.getElementById("searchInput").focus();
+      }
+
+      function handleSongbookQueryInput() {
+        if (songbookSearchTimer) clearTimeout(songbookSearchTimer);
+        songbookSearchController?.abort();
+        songbookSearchSequence += 1;
+        songbookSearchError = "";
+        songbookSearchResults = [];
+        songbookSearchQuery = document
+          .getElementById("searchInput")
+          .value.trim()
+          .replace(/\s+/g, " ");
+        songbookNextPageToken = null;
+        songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
+        if (!songbookSearchQuery) {
+          renderSongbookResults();
           return;
         }
-
-        const searchBtn = document.querySelector("#searchForm .searchbtn");
-        if (searchBtn) {
-          searchBtn.disabled = true;
-          searchBtn.textContent = "Searching…";
-        }
-
-        try {
-          searchResults = await performSearch(searchQuery);
-          showingFavoriteSongs = false;
-          updateFavoritesToggle();
-          const userName = loggedInUser ? loggedInUser.username : "Guest";
-          displaySearchResults(searchResults, userName);
-        } catch (error) {
-          console.error("Search error:", error);
-          showAlert(
-            "Song search could not be completed. Please try again.",
-            "danger",
-          );
-        } finally {
-          if (searchBtn) {
-            searchBtn.disabled = false;
-            searchBtn.textContent = "🔍 Search";
-          }
-        }
-      }
-
-      // YouTube API search function
-      async function performSearch(query) {
-        searchFallbackMessage = "";
-        try {
-          const results = await searchYouTubeKaraoke(query);
-          return results.map((item) => ({
-            title: item.title,
-            artist: item.artist,
-            videoId: item.videoId,
-            thumbnail: item.thumbnail,
-          }));
-        } catch (error) {
-          if (error.code === "YOUTUBE_RATE_LIMIT") {
-            console.warn("YouTube API is rate-limited:", error.message);
-            searchFallbackMessage =
-              "YouTube is temporarily rate-limiting searches. Showing popular karaoke picks instead.";
-          } else {
-            console.error("YouTube API Error:", error);
-            searchFallbackMessage =
-              "YouTube search is unavailable. Showing popular karaoke picks instead.";
-          }
-          const matchingFallbacks = getFallbackSongs(query);
-          return matchingFallbacks.length
-            ? matchingFallbacks
-            : getFallbackSongs("");
-        }
-      }
-
-      // Fallback demo data
-      function getFallbackSongs(query) {
-        const allSongs = [
-          {
-            title: "Bohemian Rhapsody - Karaoke",
-            artist: "Queen",
-            videoId: "fJ9rUzIMt7o",
-          },
-          {
-            title: "Hallelujah - Karaoke",
-            artist: "Leonard Cohen",
-            videoId: "YAHxj0k0WL0",
-          },
-          {
-            title: "Someone Like You - Karaoke",
-            artist: "Adele",
-            videoId: "hHUbLv4ThOk",
-          },
-          {
-            title: "Perfect - Karaoke",
-            artist: "Ed Sheeran",
-            videoId: "2takcwFERG0",
-          },
-          {
-            title: "Shape of You - Karaoke",
-            artist: "Ed Sheeran",
-            videoId: "JGwWNGJdvx8",
-          },
-          {
-            title: "Rolling in the Deep - Karaoke",
-            artist: "Adele",
-            videoId: "rYEDA3JcQqw",
-          },
-          {
-            title: "Imagine - Karaoke",
-            artist: "John Lennon",
-            videoId: "DVg2EJvvlF8",
-          },
-          {
-            title: "Wonderwall - Karaoke",
-            artist: "Oasis",
-            videoId: "6hzrDeceEKc",
-          },
-          {
-            title: "Piano Man - Karaoke",
-            artist: "Billy Joel",
-            videoId: "1vrEljMfXWc",
-          },
-          {
-            title: "Don't Stop Believin' - Karaoke",
-            artist: "Journey",
-            videoId: "1k8craCGpgs",
-          },
-        ];
-        return allSongs.filter(
-          (song) =>
-            song.title.toLowerCase().includes(query.toLowerCase()) ||
-            song.artist.toLowerCase().includes(query.toLowerCase()),
+        document.getElementById("songbookStatus").textContent =
+          "Searching verified YouTube results…";
+        document.getElementById("songbookResults").innerHTML =
+          '<p class="songbook-empty-state">Searching…</p>';
+        songbookSearchTimer = setTimeout(
+          () => searchSongbook(songbookSearchQuery),
+          SONGBOOK_SEARCH_DEBOUNCE_MS,
         );
+      }
+
+      async function handleSearch(event) {
+        event.preventDefault();
+        if (songbookSearchTimer) clearTimeout(songbookSearchTimer);
+        songbookSearchController?.abort();
+        const query = document
+          .getElementById("searchInput")
+          .value.trim()
+          .replace(/\s+/g, " ");
+        if (!query) {
+          renderSongbookResults();
+          return;
+        }
+        await searchSongbook(query);
+      }
+
+      async function performSearch(query, options = {}) {
+        return searchYouTubeKaraokePage(query, options);
+      }
+
+      async function searchSongbook(query, options = {}) {
+        const normalizedQuery = query.trim().replace(/\s+/g, " ");
+        if (!normalizedQuery) return;
+        const append = options.append === true;
+        if (!append) {
+          songbookSearchResults = [];
+          songbookNextPageToken = null;
+          songbookSearchError = "";
+          songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
+          songbookSearchQuery = normalizedQuery;
+        }
+
+        songbookSearchController?.abort();
+        const controller = new AbortController();
+        songbookSearchController = controller;
+        const requestSequence = ++songbookSearchSequence;
+        document.getElementById("songbookStatus").textContent =
+          "Searching verified YouTube results…";
+        if (!append) {
+          document.getElementById("songbookResults").innerHTML =
+            '<p class="songbook-empty-state">Searching…</p>';
+        }
+
+        try {
+          const page = await performSearch(normalizedQuery, {
+            pageToken: options.pageToken || "",
+            signal: controller.signal,
+          });
+          if (requestSequence !== songbookSearchSequence) return;
+          songbookSearchResults = mergeSongbookSongs(
+            append ? songbookSearchResults : [],
+            page.results,
+          );
+          songbookNextPageToken = page.nextPageToken || null;
+          songbookSearchError = "";
+          songbookCatalog = mergeSongbookSongs(
+            songbookCatalog,
+            page.results,
+          ).slice(-SONGBOOK_DISCOVERY_LIMIT);
+          saveSongbookCatalog();
+          renderSongbookResults();
+        } catch (error) {
+          if (error.name === "AbortError") return;
+          if (requestSequence !== songbookSearchSequence) return;
+          console.warn("Songbook search failed:", error.message);
+          songbookSearchResults = [];
+          songbookNextPageToken = null;
+          songbookSearchError = error.message;
+          renderSongbookResults();
+        }
+      }
+
+      async function loadMoreSongbookResults() {
+        const filteredSongs = getSongbookFilteredResults();
+        if (filteredSongs.length > songbookVisibleLimit) {
+          songbookVisibleLimit += SONGBOOK_VISIBLE_PAGE_SIZE;
+          renderSongbookResults();
+          return;
+        }
+        if (songbookSearchQuery && songbookNextPageToken) {
+          await searchSongbook(songbookSearchQuery, {
+            append: true,
+            pageToken: songbookNextPageToken,
+          });
+          return;
+        }
+        songbookVisibleLimit += SONGBOOK_VISIBLE_PAGE_SIZE;
+        renderSongbookResults();
       }
 
       function getSearchResultThumbnailMarkup(song) {
@@ -4083,6 +4937,7 @@
                 "ROOM_FULL",
                 "ROOM_NOT_FOUND",
                 "ROOM_TIME_EXPIRED",
+                "SONG_ALREADY_QUEUED",
               ]);
               if (permanentErrors.has(error.message)) {
                 const currentRequests = getOfflineSongRequests(roomId);
@@ -4134,7 +4989,14 @@
 
       window.addEventListener("online", syncPendingOfflineSongRequests);
 
-      async function requestSong(title, artist, videoId, userName, btn) {
+      async function requestSong(
+        title,
+        artist,
+        videoId,
+        userName,
+        btn,
+        songMetadata = {},
+      ) {
         if (!karaokeDisplayEnabled || performerRoomTimeExpired) {
           showAlert(
             `${tvDisabledAnnouncement} Song reservations are temporarily disabled.`,
@@ -4146,18 +5008,49 @@
           showAppToast("Enter your performer name before reserving a song.");
           return;
         }
+        if (
+          songMetadata.songbook &&
+          (songbookPendingSongKeys.has(songMetadata.songKey) ||
+            songbookAddedSongKeys.has(songMetadata.songKey) ||
+            isSongbookSongQueued({
+              songId: songMetadata.songId,
+              videoId,
+            }))
+        ) {
+          return;
+        }
 
+        if (songMetadata.songbook) {
+          songbookPendingSongKeys.add(songMetadata.songKey);
+        }
         btn.disabled = true;
         btn.textContent = "Adding…";
 
         try {
+          let selectedVideoId = videoId;
+          let remainingVideoAlternatives = songMetadata.videoAlternatives || [];
+          if (songMetadata.songbook && navigator.onLine) {
+            const verifiedSource = await chooseVerifiedSongVideo(
+              selectedVideoId,
+              remainingVideoAlternatives,
+            );
+            selectedVideoId = verifiedSource.videoId;
+            remainingVideoAlternatives = verifiedSource.videoAlternatives;
+          }
+
           const newSong = {
             id:
               globalThis.crypto?.randomUUID?.() ||
               `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            ...(songMetadata.songbook
+              ? {
+                  songId: songMetadata.songId,
+                  videoAlternatives: remainingVideoAlternatives,
+                }
+              : {}),
             title,
             artist,
-            videoId,
+            videoId: selectedVideoId,
             requestedBy: userName,
             timestamp: new Date().toLocaleString(),
           };
@@ -4165,8 +5058,12 @@
           if (!activeKaraokeRoomId) throw new Error("No karaoke room joined");
           if (!navigator.onLine) {
             queueOfflineSongRequest(activeKaraokeRoomId, newSong);
-            btn.disabled = false;
-            btn.textContent = "Reserve";
+            if (songMetadata.songbook) {
+              completeSongbookRequest(songMetadata, title, true);
+            } else {
+              btn.disabled = false;
+              btn.textContent = "Reserve";
+            }
             showAlert(
               `"${escapeHTML(title)}" was saved on this device and will sync when your connection is restored. It has not been added to the shared room queue yet.`,
               "info",
@@ -4175,13 +5072,28 @@
           }
           await KaraokeSessions.addSong(activeKaraokeRoomId, newSong);
           addToLocalQueue(newSong);
-          successCallback(btn, title);
+          successCallback(btn, title, songMetadata);
         } catch (error) {
           console.error("Error requesting song:", error);
+          if (songMetadata.songbook) {
+            songbookPendingSongKeys.delete(songMetadata.songKey);
+            if (error.message === "SONG_ALREADY_QUEUED") {
+              songbookAddedSongKeys.add(songMetadata.songKey);
+              document.getElementById("songbookStatus").textContent =
+                `“${title}” is already in this room's queue.`;
+              renderSongbookResults();
+              return;
+            }
+            btn.disabled = false;
+            btn.textContent = "Add to Queue";
+            renderSongbookResults();
+          }
           if (error.message === "ROOM_TIME_EXPIRED") {
             showPerformerRoomTimeExpired();
-            btn.disabled = false;
-            btn.textContent = "Reserve";
+            if (!songMetadata.songbook) {
+              btn.disabled = false;
+              btn.textContent = "Reserve";
+            }
             return;
           }
           showAlert(
@@ -4189,12 +5101,47 @@
               ? `${error.announcement || tvDisabledAnnouncement} Song reservations are temporarily disabled.`
               : error.message === "ROOM_FULL"
                 ? "This room has reached its device limit. Join another room from the karaoke display."
-                : "The song could not be added. Check your connection and try again.",
+                : error.code === "VIDEO_UNAVAILABLE"
+                  ? "This YouTube source is unavailable. Try another verified source for the same song."
+                  : error.code === "YOUTUBE_QUOTA_EXCEEDED" ||
+                      error.code === "YOUTUBE_TEMPORARY_ERROR" ||
+                      error.code === "YOUTUBE_RATE_LIMIT"
+                    ? `${error.message} The song was not added.`
+                    : "The song could not be added. Check your connection and try again.",
             "danger",
           );
-          btn.disabled = false;
-          btn.textContent = "Reserve";
+          if (!songMetadata.songbook) {
+            btn.disabled = false;
+            btn.textContent = "Reserve";
+          }
         }
+      }
+
+      async function chooseVerifiedSongVideo(videoId, alternatives = []) {
+        const candidates = [
+          ...new Set([videoId, ...alternatives].filter(Boolean)),
+        ];
+        let lastUnavailableError = null;
+        for (let index = 0; index < candidates.length; index += 1) {
+          try {
+            await getVideoDetails(candidates[index]);
+            return {
+              videoId: candidates[index],
+              videoAlternatives: candidates.filter(
+                (candidate) => candidate !== candidates[index],
+              ),
+            };
+          } catch (error) {
+            if (error.code !== "VIDEO_UNAVAILABLE") throw error;
+            lastUnavailableError = error;
+          }
+        }
+        const error = new Error(
+          lastUnavailableError?.message ||
+            "No verified video is available for this song.",
+        );
+        error.code = "VIDEO_UNAVAILABLE";
+        throw error;
       }
 
       // Helper function to add song to local queue
@@ -4271,8 +5218,22 @@
       }
 
       // Helper function for successful request
-      function successCallback(btn, title) {
+      function completeSongbookRequest(songMetadata, title, offline = false) {
+        songbookPendingSongKeys.delete(songMetadata.songKey);
+        songbookAddedSongKeys.add(songMetadata.songKey);
+        document.getElementById("songbookStatus").textContent = offline
+          ? `“${title}” is saved on this device and will sync when you reconnect.`
+          : `“${title}” was added to this room's queue.`;
+        renderSongbookResults();
+        if (!offline) showAppToast(`“${title}” was added to the room queue.`);
+      }
+
+      function successCallback(btn, title, songMetadata = {}) {
         setTimeout(() => {
+          if (songMetadata.songbook) {
+            completeSongbookRequest(songMetadata, title);
+            return;
+          }
           showAlert(`"${title}" was added to the room queue.`, "success");
           btn.disabled = false;
           btn.textContent = "Reserve";
@@ -4487,27 +5448,6 @@
           JSON.stringify(reservedSongs),
         );
         displayReservedSongs();
-      }
-
-      // Load all songs
-      function loadAllSongs() {
-        allSongs = [
-          {
-            title: "Bohemian Rhapsody - Karaoke",
-            artist: "Queen",
-            videoId: "fJ9rUzIMt7o",
-          },
-          {
-            title: "Hallelujah - Karaoke",
-            artist: "Leonard Cohen",
-            videoId: "YAHxj0k0WL0",
-          },
-          {
-            title: "Someone Like You - Karaoke",
-            artist: "Adele",
-            videoId: "hHUbLv4ThOk",
-          },
-        ];
       }
 
       // Update user display

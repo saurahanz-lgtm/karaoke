@@ -2,22 +2,7 @@
 // This file handles all YouTube API interactions for the karaoke app
 
 const YOUTUBE_CONFIG = {
-  // Replace with your own YouTube API key from Google Cloud Console
-  // Get one at: https://console.cloud.google.com/
-  API_KEY: "AIzaSyDv5FWbW8p_KD0en7SeakNqoBvGMPpovDI",
-
-  // YouTube Data API endpoint
-  SEARCH_ENDPOINT: "https://www.googleapis.com/youtube/v3/search",
-
-  // Search parameters
-  SEARCH_PARAMS: {
-    part: "snippet",
-    maxResults: 15,
-    type: "video",
-    safeSearch: "strict",
-    regionCode: "US",
-    relevanceLanguage: "en",
-  },
+  SEARCH_ENDPOINT: "/api/youtube-search",
 };
 
 const YOUTUBE_RATE_LIMIT_COOLDOWN_MS = 60000;
@@ -43,9 +28,9 @@ function writeYouTubeStorage(key, value) {
   }
 }
 
-function getCachedYouTubeSearch(query, allowExpired = false) {
+function getCachedYouTubeSearch(query, pageToken = "", allowExpired = false) {
   const cacheKey = `${YOUTUBE_SEARCH_CACHE_PREFIX}${encodeURIComponent(
-    query.toLowerCase(),
+    `${query.toLowerCase()}|${pageToken}`,
   )}`;
   try {
     const cached = JSON.parse(readYouTubeStorage(cacheKey) || "null");
@@ -61,7 +46,10 @@ function getCachedYouTubeSearch(query, allowExpired = false) {
         allowExpired ||
         globalThis.navigator?.onLine === false
       ) {
-        return cached.results;
+        return {
+          results: cached.results,
+          nextPageToken: cached.nextPageToken || null,
+        };
       }
       return null;
     }
@@ -72,16 +60,17 @@ function getCachedYouTubeSearch(query, allowExpired = false) {
   return null;
 }
 
-function cacheYouTubeSearch(query, results) {
+function cacheYouTubeSearch(query, pageToken, page) {
   const cacheKey = `${YOUTUBE_SEARCH_CACHE_PREFIX}${encodeURIComponent(
-    query.toLowerCase(),
+    `${query.toLowerCase()}|${pageToken}`,
   )}`;
   writeYouTubeStorage(
     cacheKey,
     JSON.stringify({
       cachedAt: Date.now(),
       expiresAt: Date.now() + YOUTUBE_SEARCH_CACHE_TTL_MS,
-      results,
+      results: page.results,
+      nextPageToken: page.nextPageToken,
     }),
   );
 }
@@ -101,13 +90,19 @@ function createYouTubeRateLimitError(
  * @returns {Promise<Array>} Array of video objects
  */
 async function searchYouTubeKaraoke(query) {
+  const page = await searchYouTubeKaraokePage(query);
+  return page.results;
+}
+
+async function searchYouTubeKaraokePage(query, options = {}) {
   if (!query || query.trim().length === 0) {
     throw new Error("Search query cannot be empty");
   }
 
-  const searchQuery = `${query.trim()} karaoke`;
-  const cachedResults = getCachedYouTubeSearch(searchQuery);
-  if (cachedResults) return cachedResults;
+  const searchQuery = query.trim().replace(/\s+/g, " ");
+  const pageToken = options.pageToken || "";
+  const cachedPage = getCachedYouTubeSearch(searchQuery, pageToken);
+  if (cachedPage) return cachedPage;
 
   youtubeRateLimitUntil = Math.max(
     youtubeRateLimitUntil,
@@ -118,29 +113,26 @@ async function searchYouTubeKaraoke(query) {
   }
 
   try {
-    const url = new URL(YOUTUBE_CONFIG.SEARCH_ENDPOINT);
-    url.searchParams.append("key", YOUTUBE_CONFIG.API_KEY);
-    url.searchParams.append("q", searchQuery);
-
-    Object.entries(YOUTUBE_CONFIG.SEARCH_PARAMS).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
-
-    const response = await fetch(url.toString());
+    const url = new URL(YOUTUBE_CONFIG.SEARCH_ENDPOINT, window.location.href);
+    url.searchParams.set("q", searchQuery);
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    const response = await fetch(url, { signal: options.signal });
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      if (response.status === 429) {
-        const retryAfter = response.headers?.get("Retry-After");
-        const retryAfterSeconds = Number(retryAfter);
-        const retryAfterDate = Date.parse(retryAfter || "");
-        const headerDelay = Number.isFinite(retryAfterSeconds)
-          ? retryAfterSeconds * 1000
-          : Number.isFinite(retryAfterDate)
-            ? retryAfterDate - Date.now()
-            : 0;
+      const error = new Error(
+        data.error || "YouTube search could not be completed.",
+      );
+      error.code = data.code || "YOUTUBE_SEARCH_ERROR";
+      error.status = response.status;
+      if (
+        response.status === 429 ||
+        error.code === "YOUTUBE_RATE_LIMIT" ||
+        error.code === "SEARCH_RATE_LIMIT"
+      ) {
         const cooldownMs = Math.max(
           YOUTUBE_RATE_LIMIT_COOLDOWN_MS,
-          headerDelay,
+          Number(response.headers?.get("Retry-After")) * 1000 || 0,
         );
         youtubeRateLimitUntil = Date.now() + cooldownMs;
         writeYouTubeStorage(
@@ -148,37 +140,20 @@ async function searchYouTubeKaraoke(query) {
           String(youtubeRateLimitUntil),
         );
         throw createYouTubeRateLimitError(cooldownMs);
-      } else if (response.status === 403) {
-        throw new Error("YouTube API quota exceeded or invalid key");
-      } else if (response.status === 400) {
-        throw new Error("Invalid search parameters");
-      } else {
-        throw new Error(`YouTube API error: ${response.status}`);
       }
+      throw error;
     }
 
-    const data = await response.json();
-
-    if (!data.items || data.items.length === 0) {
-      return [];
-    }
-
-    const results = data.items.map((item) => ({
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      artist: item.snippet.channelTitle,
-      thumbnail:
-        item.snippet.thumbnails.medium?.url ||
-        item.snippet.thumbnails.default.url,
-      publishedAt: item.snippet.publishedAt,
-      description: item.snippet.description,
-    }));
-    cacheYouTubeSearch(searchQuery, results);
-    return results;
+    const page = {
+      results: Array.isArray(data.results) ? data.results : [],
+      nextPageToken: data.nextPageToken || null,
+    };
+    cacheYouTubeSearch(searchQuery, pageToken, page);
+    return page;
   } catch (error) {
     if (error instanceof TypeError || globalThis.navigator?.onLine === false) {
-      const staleResults = getCachedYouTubeSearch(searchQuery, true);
-      if (staleResults) return staleResults;
+      const stalePage = getCachedYouTubeSearch(searchQuery, pageToken, true);
+      if (stalePage) return stalePage;
     }
     if (error.code === "YOUTUBE_RATE_LIMIT") {
       console.warn("YouTube Search Rate Limit:", error.message);
@@ -195,43 +170,30 @@ async function searchYouTubeKaraoke(query) {
  * @returns {Promise<Object>} Video details object
  */
 async function getVideoDetails(videoId) {
-  const endpoint = "https://www.googleapis.com/youtube/v3/videos";
-
   try {
-    const url = new URL(endpoint);
-    url.searchParams.append("key", YOUTUBE_CONFIG.API_KEY);
-    url.searchParams.append("id", videoId);
-    url.searchParams.append("part", "contentDetails,snippet,statistics");
-
-    const response = await fetch(url.toString());
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch video details: ${response.status}`);
+    const url = new URL(YOUTUBE_CONFIG.SEARCH_ENDPOINT, window.location.href);
+    url.searchParams.set("videoId", videoId);
+    const response = await fetch(url);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.video) {
+      const error = new Error(data.error || "Video could not be verified.");
+      error.code = data.code || "VIDEO_UNAVAILABLE";
+      error.status = response.status;
+      throw error;
     }
 
-    const data = await response.json();
-
-    if (!data.items || data.items.length === 0) {
-      throw new Error("Video not found");
-    }
-
-    const video = data.items[0];
-
-    // Parse duration from ISO 8601 format (PT#H#M#S)
-    const duration = parseDuration(video.contentDetails.duration);
+    const video = data.video;
 
     return {
-      videoId: video.id,
-      title: video.snippet.title,
-      description: video.snippet.description,
-      channel: video.snippet.channelTitle,
-      thumbnail:
-        video.snippet.thumbnails.high?.url ||
-        video.snippet.thumbnails.medium.url,
-      duration: duration,
-      views: parseInt(video.statistics.viewCount || 0),
-      likes: parseInt(video.statistics.likeCount || 0),
-      publishedAt: video.snippet.publishedAt,
+      videoId: video.videoId,
+      title: video.title,
+      description: video.description,
+      channel: video.channel,
+      thumbnail: video.thumbnail,
+      duration: parseDuration(video.duration),
+      views: video.views,
+      likes: video.likes,
+      publishedAt: video.publishedAt,
     };
   } catch (error) {
     console.error("Get Video Details Error:", error);
@@ -504,6 +466,7 @@ function getYouTubeVolume() {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     searchYouTubeKaraoke,
+    searchYouTubeKaraokePage,
     getVideoDetails,
     extractVideoId,
     buildYouTubeEmbedUrl,

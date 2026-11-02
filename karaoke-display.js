@@ -30,6 +30,7 @@ let firebaseReady = false;
 let playerReady = false;
 let isLoadingSong = false;
 let currentVideoId = null;
+const handledUnavailableSongVideos = new Set();
 
 // Boot-up video configuration (DISABLED)
 // Skip boot-up video and go directly to karaoke songs
@@ -1994,6 +1995,53 @@ function toggleFullscreen() {
   document.addEventListener(eventName, updateFullscreenUi),
 );
 
+async function handleUnavailableRoomSong(errorCode) {
+  const failedSong = currentSong;
+  if (!activeKaraokeRoomId || !failedSong?.videoId) return;
+  const failedSongKey = `${failedSong.id || failedSong.timestamp || ""}:${failedSong.videoId}`;
+  if (handledUnavailableSongVideos.has(failedSongKey)) return;
+  handledUnavailableSongVideos.add(failedSongKey);
+
+  try {
+    const alternateSong = await KaraokeSessions.tryNextSongVideoAlternative(
+      activeKaraokeRoomId,
+      {
+        expectedSongId: failedSong.id || null,
+        failedVideoId: failedSong.videoId,
+      },
+    );
+    if (alternateSong) {
+      document.getElementById("videoUnavailableMsg")?.remove();
+      console.info(
+        `Trying another verified source for the same song after video error ${errorCode}.`,
+      );
+      return;
+    }
+  } catch (error) {
+    console.warn("Could not try another video for this song:", error.message);
+  }
+
+  const latestRoom = await KaraokeSessions.roomRef(activeKaraokeRoomId)
+    .once("value")
+    .catch(() => null);
+  if (
+    latestRoom?.val()?.currentSong?.videoId !== failedSong.videoId ||
+    (failedSong.id && latestRoom?.val()?.currentSong?.id !== failedSong.id)
+  ) {
+    return;
+  }
+
+  showVideoUnavailableMessage();
+  window.setTimeout(() => {
+    if (
+      currentSong?.videoId === failedSong.videoId &&
+      (!failedSong.id || currentSong.id === failedSong.id)
+    ) {
+      playNextSong();
+    }
+  }, 3000);
+}
+
 // D. LOAD SONG - Unified playback handler
 // E. PLAYER CREATION (ONCE LANG)
 function loadSong(song, startSeconds = 0, shouldPlay = true) {
@@ -2075,25 +2123,13 @@ function loadSong(song, startSeconds = 0, shouldPlay = true) {
         onStateChange: onPlayerStateChange,
         onError: (e) => {
           console.error("❌ Karaoke video error:", e.data);
-          // Error 150 = Video is restricted/blocked from embedding
-          if (e.data === 150) {
-            console.warn(
-              "⚠️ Video blocked (error 150) - skipping to next song",
+          if ([100, 101, 150].includes(Number(e.data))) {
+            handleUnavailableRoomSong(Number(e.data));
+          } else {
+            showVideoUnavailableMessage(
+              "Playback issue",
+              "The current song remains in the queue. Check the connection and retry.",
             );
-            showVideoUnavailableMessage();
-            setTimeout(() => {
-              playNextSong();
-            }, 3000);
-          }
-          // Error 101 = Owner does not allow embedding
-          else if (e.data === 101) {
-            console.warn(
-              "⚠️ Video blocked by owner (error 101) - skipping to next song",
-            );
-            showVideoUnavailableMessage();
-            setTimeout(() => {
-              playNextSong();
-            }, 3000);
           }
         },
       },
@@ -2342,14 +2378,13 @@ function playVideo(videoId, title, artist, singer) {
       onStateChange: onPlayerStateChange,
       onError: function (event) {
         console.error("❌ YouTube player error:", event.data);
-        if (event.data === 150 || event.data === 101) {
-          console.warn(
-            "⚠️ Video is blocked from embedding - skipping to next song",
+        if ([100, 101, 150].includes(Number(event.data))) {
+          handleUnavailableRoomSong(Number(event.data));
+        } else {
+          showVideoUnavailableMessage(
+            "Playback issue",
+            "The current song remains in the queue. Check the connection and retry.",
           );
-          showVideoUnavailableMessage();
-          setTimeout(() => {
-            playNextSong();
-          }, 3000);
         }
       },
     },
@@ -2428,9 +2463,7 @@ async function showScore() {
     pitchDetectedMs > 0
       ? Math.min(1, Math.max(0, pitchStableMs / pitchDetectedMs))
       : 0;
-  const score = micScoringEnabled
-    ? 75 + Math.round(pitchSteadiness * 25)
-    : 75;
+  const score = micScoringEnabled ? 75 + Math.round(pitchSteadiness * 25) : 75;
   const pitchSeconds = (pitchDetectedMs / 1000).toFixed(1);
   const stableSeconds = (pitchStableMs / 1000).toFixed(1);
 
@@ -2579,11 +2612,14 @@ function displayScoreModal(score) {
         }
     `;
   document.head.appendChild(style);
-    return scoreReveal;
+  return scoreReveal;
 }
 
 // Show video unavailable message
-function showVideoUnavailableMessage() {
+function showVideoUnavailableMessage(
+  title = "Video Unavailable",
+  message = "Please select another song",
+) {
   // Remove existing message if any
   const existingMsg = document.getElementById("videoUnavailableMsg");
   if (existingMsg) {
@@ -2621,8 +2657,8 @@ function showVideoUnavailableMessage() {
 
   msgDisplay.innerHTML = `
         <div style="font-size: 3.5rem; font-weight: 900; margin-bottom: 20px; animation: popIn 0.5s ease 0.1s both;">⚠️</div>
-        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 15px; animation: slideInDown 0.5s ease 0.2s both;">Video Unavailable</div>
-        <div style="font-size: 1.3rem; margin-bottom: 20px; opacity: 0.95; animation: slideInDown 0.5s ease 0.3s both;">Please select another song</div>
+        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 15px; animation: slideInDown 0.5s ease 0.2s both;">${title}</div>
+        <div style="font-size: 1.3rem; margin-bottom: 20px; opacity: 0.95; animation: slideInDown 0.5s ease 0.3s both;">${message}</div>
     `;
 
   modal.appendChild(msgDisplay);
@@ -2651,6 +2687,7 @@ function playNextSong() {
 
   const nextSong = tvQueue.shift();
   currentSong = {
+    ...nextSong,
     title: nextSong.title,
     artist: nextSong.artist,
     videoId: nextSong.videoId,

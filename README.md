@@ -261,16 +261,30 @@ New accounts use a username and password. Before deploying:
 
 ### API Keys
 
-- **YouTube API Key:** `AIzaSyAVq2Rno7lN9xilCpUzgOJMKSZCCqB96jQ`
-- **Status:** Active key
-- **Quota:** 10,000 units/day free
-- **Recommendation:** Create personal key for production
+- The YouTube Data API key is read by the serverless `/api/youtube-search`
+  function from the `YOUTUBE_DATA_API_KEY` Vercel environment variable. It is no
+  longer read from browser JavaScript.
+- Configure the variable for Production, Preview, and Development in Vercel,
+  then redeploy. For local API-function testing, use `vercel dev` with the
+  variable set in the local environment; the static `npm run dev` server does
+  not run Vercel functions.
+- A YouTube `search.list` call costs 100 quota units. Each batched
+  `videos.list` verification call costs 1 unit. Results are requested 50 at a
+  time, cached on the server for five minutes and in the browser for ten
+  minutes, and the endpoint applies a per-IP request limit.
+- The Realtime Database has no curated song catalog. The songbook alphabet
+  filters songs discovered in YouTube searches and saved in that browser; it
+  is not a complete A–Z catalog. Search results are YouTube videos, not
+  guaranteed playable sources.
+- Rotate and restrict any YouTube Data API keys that were previously committed
+  to the repository. Removing a key from the current source does not remove it
+  from Git history.
 
 ### Data Security
 
 - **User passwords:** Stored in localStorage (dev) or Firebase (production)
 - **Queue data:** Stored in localStorage (dev) or Firebase (production)
-- **API key:** Visible in code (frontend) - acceptable for internal use
+- **YouTube API key:** Server-side environment variable; do not commit it
 
 ### For Production
 

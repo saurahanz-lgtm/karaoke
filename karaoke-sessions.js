@@ -1471,7 +1471,10 @@
       const queue = normalizeQueue(room.queue);
       if (
         room.currentSong?.id === song.id ||
-        queue.some((item) => item.id === song.id)
+        queue.some((item) => item.id === song.id) ||
+        (song.songId &&
+          (room.currentSong?.songId === song.songId ||
+            queue.some((item) => item.songId === song.songId)))
       ) {
         return undefined;
       }
@@ -1492,6 +1495,9 @@
         ...getRoomActivityFields(room),
       };
     });
+    if (!result.committed && song.songId) {
+      throw new Error("SONG_ALREADY_QUEUED");
+    }
     return result.snapshot.val();
   }
 
@@ -1567,6 +1573,59 @@
         ...getRoomActivityFields(room),
       };
     });
+  }
+
+  async function tryNextSongVideoAlternative(
+    roomId,
+    {
+      allowPhoneDisplay = false,
+      expectedSongId = null,
+      failedVideoId = null,
+    } = {},
+  ) {
+    if (allowPhoneDisplay) {
+      if (!roomId) throw new Error("ROOM_REQUIRED");
+      const roomSnapshot = await database()
+        .ref(`${ROOM_LIST_PATH}/${roomId}`)
+        .once("value");
+      if (!roomSnapshot.exists()) throw new Error("ROOM_NOT_FOUND");
+      throwIfRoomTimeExpired(roomSnapshot.val());
+    } else {
+      await assertKaraokeDisplayEnabled(roomId);
+    }
+
+    const result = await roomRef(roomId).transaction((current) => {
+      const song = current?.currentSong;
+      if (
+        !song?.videoId ||
+        (expectedSongId && song.id !== expectedSongId) ||
+        (failedVideoId && song.videoId !== failedVideoId)
+      ) {
+        return undefined;
+      }
+
+      const alternatives = Array.isArray(song.videoAlternatives)
+        ? song.videoAlternatives.filter(
+            (videoId) =>
+              typeof videoId === "string" &&
+              videoId.length > 0 &&
+              videoId !== song.videoId,
+          )
+        : [];
+      const nextVideoId = alternatives.shift();
+      if (!nextVideoId) return undefined;
+
+      return {
+        ...current,
+        currentSong: {
+          ...song,
+          videoId: nextVideoId,
+          videoAlternatives: alternatives,
+        },
+        ...getRoomActivityFields(current),
+      };
+    });
+    return result.committed ? result.snapshot.val()?.currentSong || null : null;
   }
 
   async function sendControl(roomId, command, payload = {}) {
@@ -1647,6 +1706,7 @@
     setPlaybackPosition,
     touchRoomActivity,
     setRoomTimeLimit,
+    tryNextSongVideoAlternative,
     setRoomDeviceLimit,
     getRoomDeviceLimit,
     sendControl,
