@@ -7,7 +7,7 @@ const YOUTUBE_CONFIG = {
 
 const YOUTUBE_RATE_LIMIT_COOLDOWN_MS = 60000;
 const YOUTUBE_RATE_LIMIT_STORAGE_KEY = "youtubeSearchRateLimitUntil";
-const YOUTUBE_SEARCH_CACHE_PREFIX = "youtubeSearchCache:karaoke-v1:";
+const YOUTUBE_SEARCH_CACHE_PREFIX = "youtubeSearchCache:karaoke-v2:";
 const YOUTUBE_SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
 const YOUTUBE_SEARCH_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 let youtubeRateLimitUntil = 0;

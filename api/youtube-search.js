@@ -143,7 +143,6 @@ async function searchVideos(query, pageToken, apiKey) {
       type: "video",
       maxResults: 50,
       safeSearch: "strict",
-      regionCode: "US",
       relevanceLanguage: "en",
       pageToken,
     },

@@ -4725,9 +4725,20 @@
         const query = normalizeSongbookText(
           document.getElementById("searchInput")?.value,
         );
+        const matchesQuery = (song) =>
+          normalizeSongbookText(song.title).includes(query) ||
+          normalizeSongbookText(song.artist).includes(query);
+        const searchResultKeys = new Set(
+          songbookSearchResults.map((song) => getSongbookSongKey(song)),
+        );
         const source =
           query || songbookLetterSearchActive
-            ? mergeSongbookSongs(songbookCatalog, songbookSearchResults)
+            ? mergeSongbookSongs(
+                query
+                  ? songbookCatalog.filter(matchesQuery)
+                  : songbookCatalog,
+                songbookSearchResults,
+              )
             : songbookCatalog;
         return source
           .filter((song) => {
@@ -4738,9 +4749,7 @@
               return false;
             }
             return (
-              !query ||
-              normalizeSongbookText(song.title).includes(query) ||
-              normalizeSongbookText(song.artist).includes(query)
+              !query || searchResultKeys.has(song.songKey) || matchesQuery(song)
             );
           })
           .sort(
