@@ -1339,7 +1339,7 @@
         manualEntry.hidden = false;
         manualEntry.insertBefore(
           document.getElementById("performerRoomStatus"),
-          document.getElementById("manualRoomId").parentElement,
+          document.getElementById("manualRoomId").parentElement.nextSibling,
         );
         document.getElementById("roomQrStatus").textContent =
           "Choose a room below or enter its Room ID.";
