@@ -2108,6 +2108,8 @@
       let songbookNextPageToken = null;
       let songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
       let songbookSelectedLetter = "";
+      let songbookLetterSearchActive = false;
+      let songbookLetterSearchLoading = false;
       let songbookSearchTimer = null;
       let songbookSearchController = null;
       let songbookSearchSequence = 0;
@@ -4549,7 +4551,10 @@
         const query = normalizeSongbookText(
           document.getElementById("searchInput")?.value,
         );
-        const source = query ? songbookSearchResults : songbookCatalog;
+        const source =
+          query || songbookLetterSearchActive
+            ? mergeSongbookSongs(songbookCatalog, songbookSearchResults)
+            : songbookCatalog;
         return source
           .filter((song) => {
             if (
@@ -4595,8 +4600,25 @@
             songbookSelectedLetter =
               songbookSelectedLetter === letter ? "" : letter;
             songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
+            if (!document.getElementById("searchInput").value.trim()) {
+              if (songbookSearchTimer) clearTimeout(songbookSearchTimer);
+              songbookSearchController?.abort();
+              songbookSearchResults = [];
+              songbookNextPageToken = null;
+              songbookSearchError = "";
+              songbookLetterSearchActive = Boolean(
+                songbookSelectedLetter && songbookSelectedLetter !== "#",
+              );
+              songbookLetterSearchLoading = songbookLetterSearchActive;
+            } else {
+              songbookLetterSearchActive = false;
+              songbookLetterSearchLoading = false;
+            }
             renderSongbookAlphabet();
             renderSongbookResults();
+            if (songbookLetterSearchActive) {
+              searchSongbook(letter);
+            }
           });
           alphabet.append(button);
         });
@@ -4616,7 +4638,11 @@
         const visibleSongs = filteredSongs.slice(0, songbookVisibleLimit);
         statusElement.textContent = query
           ? `${filteredSongs.length} matching songs from YouTube search results.`
-          : `${filteredSongs.length} discovered songs${songbookSelectedLetter ? ` beginning with ${songbookSelectedLetter}` : ""}.`;
+          : songbookLetterSearchLoading
+            ? `Searching YouTube for songs beginning with ${songbookSelectedLetter}…`
+            : songbookLetterSearchActive
+              ? `${filteredSongs.length} verified songs beginning with ${songbookSelectedLetter}.`
+              : `${filteredSongs.length} discovered songs${songbookSelectedLetter ? ` beginning with ${songbookSelectedLetter}` : ""}.`;
 
         if (!visibleSongs.length) {
           let emptyMessage;
@@ -4625,7 +4651,9 @@
           } else if (query) {
             emptyMessage = `No verified songs matched “${query}”. Try another title or artist.`;
           } else if (songbookSelectedLetter) {
-            emptyMessage = `No discovered songs begin with ${songbookSelectedLetter}. Search for a title or artist first.`;
+            emptyMessage = songbookLetterSearchActive
+              ? `No verified songs beginning with ${songbookSelectedLetter} were found. Try another letter or search by title or artist.`
+              : `No discovered songs begin with ${songbookSelectedLetter}.`;
           } else {
             emptyMessage =
               "Search for a title or artist to discover songs. There is no curated catalog in the database yet.";
@@ -4673,7 +4701,7 @@
 
         loadMoreButton.hidden =
           filteredSongs.length <= songbookVisibleLimit &&
-          !(query && songbookNextPageToken);
+          !((query || songbookLetterSearchActive) && songbookNextPageToken);
       }
 
       function openSongbook() {
@@ -4703,6 +4731,8 @@
         songbookSearchError = "";
         songbookNextPageToken = null;
         songbookSelectedLetter = "";
+        songbookLetterSearchActive = false;
+        songbookLetterSearchLoading = false;
         songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
         renderSongbookAlphabet();
         renderSongbookResults();
@@ -4715,6 +4745,8 @@
         songbookSearchSequence += 1;
         songbookSearchError = "";
         songbookSearchResults = [];
+        songbookLetterSearchActive = false;
+        songbookLetterSearchLoading = false;
         songbookSearchQuery = document
           .getElementById("searchInput")
           .value.trim()
@@ -4747,6 +4779,8 @@
           renderSongbookResults();
           return;
         }
+        songbookLetterSearchActive = false;
+        songbookLetterSearchLoading = false;
         await searchSongbook(query);
       }
 
@@ -4789,6 +4823,12 @@
           );
           songbookNextPageToken = page.nextPageToken || null;
           songbookSearchError = "";
+          if (
+            songbookLetterSearchActive &&
+            normalizedQuery === songbookSelectedLetter
+          ) {
+            songbookLetterSearchLoading = false;
+          }
           songbookCatalog = mergeSongbookSongs(
             songbookCatalog,
             page.results,
@@ -4802,6 +4842,7 @@
           songbookSearchResults = [];
           songbookNextPageToken = null;
           songbookSearchError = error.message;
+          songbookLetterSearchLoading = false;
           renderSongbookResults();
         }
       }
