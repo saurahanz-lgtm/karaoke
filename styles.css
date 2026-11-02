@@ -4721,6 +4721,19 @@ body.admin-page {
   background: rgba(75, 43, 116, 0.85);
 }
 
+html body.performer-page .controls .volume-control-trigger .volume-control {
+  width: min(190px, calc(100vw - 32px));
+  gap: 6px;
+  padding: 8px;
+}
+
+html body.performer-page
+  .controls
+  .volume-control-trigger
+  .volume-slider-row {
+  gap: 4px;
+}
+
 .admin-page .display-control-info h3 {
   color: #eadcff;
 }
