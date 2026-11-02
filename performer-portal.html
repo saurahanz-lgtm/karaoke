@@ -503,17 +503,28 @@
         width: 100%;
       }
 
+      .volume-mute-toggle {
+        flex: 0 0 auto;
+        border: 0;
+        padding: 4px;
+        background: transparent;
+        color: white;
+        font-size: 1.3rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .volume-mute-toggle:focus-visible {
+        outline: 2px solid #a78bfa;
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
       .performer-volume-notice {
         margin: -4px 14px 12px;
         color: rgba(255, 255, 255, 0.72);
         font-size: 0.82rem;
         line-height: 1.4;
-      }
-
-      .volume-icon {
-        font-size: 1.3rem;
-        min-width: 30px;
-        text-align: center;
       }
 
       .volume-slider {
@@ -1934,11 +1945,10 @@
               class="gray volume-control-button"
               id="volumeControlToggle"
               type="button"
-              aria-label="Mute room audio"
+              aria-label="Open volume controls"
               aria-controls="volumeControlPanel"
               aria-expanded="false"
-              aria-pressed="false"
-              onclick="toggleMuteAndOpenVolumeControl()"
+              onclick="toggleVolumeControl()"
             >
               <span id="volumeControlIcon" aria-hidden="true">🔊</span>
             </button>
@@ -1951,7 +1961,16 @@
               hidden
             >
               <div class="volume-slider-row">
-                <span class="volume-icon" aria-hidden="true">🔉</span>
+                <button
+                  class="volume-mute-toggle"
+                  id="volumeMuteToggle"
+                  type="button"
+                  aria-label="Mute room audio"
+                  aria-pressed="false"
+                  onclick="toggleMute()"
+                >
+                  <span id="volumeMuteIcon" aria-hidden="true">🔉</span>
+                </button>
                 <input
                   type="range"
                   id="volumeSlider"
@@ -3242,6 +3261,7 @@
           performerPhoneNeedsDeviceVolumeControl();
         [
           "volumeControlToggle",
+          "volumeMuteToggle",
           "playPauseBtn",
           "volumeSlider",
         ].forEach((id) => {
@@ -5884,16 +5904,14 @@
         );
       }
 
-      function toggleMuteAndOpenVolumeControl() {
+      function toggleVolumeControl() {
         const panel = document.getElementById("volumeControlPanel");
         const toggle = document.getElementById("volumeControlToggle");
         if (!panel || !toggle) return;
 
-        if (panel.hidden) {
-          panel.hidden = false;
-          toggle.setAttribute("aria-expanded", "true");
-        }
-        toggleMute();
+        const expanded = panel.hidden;
+        panel.hidden = !expanded;
+        toggle.setAttribute("aria-expanded", String(expanded));
       }
 
       function closeVolumeControl() {
@@ -5954,15 +5972,13 @@
 
       function updateMuteDisplay(muted) {
         roomMuted = Boolean(muted);
-        const volumeControlToggle = document.getElementById(
-          "volumeControlToggle",
-        );
-        const volumeControlIcon = document.getElementById("volumeControlIcon");
-        const icon = roomMuted ? "🔇" : "🔊";
-        if (volumeControlIcon) volumeControlIcon.textContent = icon;
-        if (volumeControlToggle) {
-          volumeControlToggle.setAttribute("aria-pressed", String(roomMuted));
-          volumeControlToggle.setAttribute(
+        const volumeMuteToggle = document.getElementById("volumeMuteToggle");
+        const volumeMuteIcon = document.getElementById("volumeMuteIcon");
+        const icon = roomMuted ? "🔇" : "🔉";
+        if (volumeMuteIcon) volumeMuteIcon.textContent = icon;
+        if (volumeMuteToggle) {
+          volumeMuteToggle.setAttribute("aria-pressed", String(roomMuted));
+          volumeMuteToggle.setAttribute(
             "aria-label",
             roomMuted ? "Unmute room audio" : "Mute room audio",
           );
