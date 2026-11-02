@@ -196,7 +196,7 @@ async function handler(request, response) {
     return sendJson(response, 503, {
       code: "YOUTUBE_NOT_CONFIGURED",
       error:
-        "Song search is not configured. Ask the administrator to set up YouTube search.",
+        "Song search is not enabled for this deployment. Configure the YOUTUBE_DATA_API_KEY environment variable in Vercel for Production, then redeploy.",
     });
   }
 

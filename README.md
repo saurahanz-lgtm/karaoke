@@ -264,10 +264,13 @@ New accounts use a username and password. Before deploying:
 - The YouTube Data API key is read by the serverless `/api/youtube-search`
   function from the `YOUTUBE_DATA_API_KEY` Vercel environment variable. It is no
   longer read from browser JavaScript.
-- Configure the variable for Production, Preview, and Development in Vercel,
-  then redeploy. For local API-function testing, use `vercel dev` with the
-  variable set in the local environment; the static `npm run dev` server does
-  not run Vercel functions.
+- Add `YOUTUBE_DATA_API_KEY` under Vercel → Project Settings → Environment
+  Variables for Production (and Preview/Development if needed), then redeploy.
+  Never put the key in browser code or commit it to the repository.
+- For local API-function testing, use `vercel dev` with the variable configured
+  for Development; XAMPP and the static `npm run dev` server do not run Vercel
+  functions. The songbook displays a setup error instead of treating a missing
+  API response as an empty search result.
 - A YouTube `search.list` call costs 100 quota units. Each batched
   `videos.list` verification call costs 1 unit. Results are requested 50 at a
   time, cached on the server for five minutes and in the browser for ten

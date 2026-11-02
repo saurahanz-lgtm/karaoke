@@ -117,7 +117,16 @@ async function searchYouTubeKaraokePage(query, options = {}) {
     url.searchParams.set("q", searchQuery);
     if (pageToken) url.searchParams.set("pageToken", pageToken);
     const response = await fetch(url, { signal: options.signal });
-    const data = await response.json().catch(() => ({}));
+    const data = await response.json().catch(() => null);
+
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      const error = new Error(
+        "The song search service did not return a valid response. Local XAMPP hosting does not run Vercel API functions; use the deployed site or start the project with `vercel dev`.",
+      );
+      error.code = "YOUTUBE_API_UNAVAILABLE";
+      error.status = response.status;
+      throw error;
+    }
 
     if (!response.ok) {
       const error = new Error(
@@ -151,6 +160,11 @@ async function searchYouTubeKaraokePage(query, options = {}) {
     cacheYouTubeSearch(searchQuery, pageToken, page);
     return page;
   } catch (error) {
+    if (error instanceof TypeError && globalThis.navigator?.onLine !== false) {
+      error.message =
+        "The song search service could not be reached. Check the deployment API or use `vercel dev` for local testing.";
+      error.code = "YOUTUBE_API_UNAVAILABLE";
+    }
     if (error instanceof TypeError || globalThis.navigator?.onLine === false) {
       const stalePage = getCachedYouTubeSearch(searchQuery, pageToken, true);
       if (stalePage) return stalePage;
