@@ -469,6 +469,6 @@ For issues or questions:
 ---
 
 **Last Updated:** January 3, 2026  
-**Version:** 1.2.0
+**Version:** 2.0.0
 **Status:** Production Ready  
 **Deploy Status:** ✅ Live at sdkaraoke.vercel.app
