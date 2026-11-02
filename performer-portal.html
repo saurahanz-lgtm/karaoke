@@ -399,6 +399,31 @@
         transform: scale(0.95);
       }
 
+      .player-control {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        min-width: 0;
+        text-align: center;
+      }
+
+      .player-control > button {
+        flex: 0 0 auto;
+        width: 100%;
+        min-height: 48px;
+        padding: 9px 10px;
+        font-size: 1.15rem;
+      }
+
+      .player-control-label {
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 0.72rem;
+        font-weight: 600;
+        line-height: 1.15;
+      }
+
       .play {
         background: #22c55e;
       }
@@ -428,7 +453,7 @@
 
       .volume-control-trigger > .volume-control-button {
         width: 100%;
-        height: 100%;
+        height: auto;
       }
 
       .volume-control {
@@ -456,14 +481,19 @@
         align-self: flex-start;
         display: flex;
         flex: 0 0 auto;
+        flex-direction: column;
         align-items: center;
-        gap: 8px;
+        gap: 4px;
         border: 0;
         border-radius: 8px;
         padding: 8px 12px;
         font-size: 0.95rem;
         color: white;
         cursor: pointer;
+      }
+
+      .volume-mute-button .player-control-label {
+        font-size: 0.68rem;
       }
 
       .volume-control .performer-volume-notice {
@@ -586,12 +616,12 @@
       }
 
       .refresh {
+        width: 100%;
         background: white;
         color: black;
         border-radius: 10px;
         padding: 12px;
         text-align: center;
-        margin-bottom: 18px;
         cursor: pointer;
         transition: all 0.3s ease;
         font-size: 1.5rem;
@@ -599,10 +629,24 @@
         align-items: center;
         justify-content: center;
         min-height: 44px;
+        border: 0;
+      }
+
+      .refresh-control {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 18px;
+        text-align: center;
       }
 
       .refresh:hover {
         transform: scale(1.05);
+      }
+
+      .refresh:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
       }
 
       .refresh-icon {
@@ -1875,12 +1919,20 @@
           <p id="roomCapacityRequestStatus" aria-live="polite"></p>
         </div>
 
-        <div class="refresh" onclick="reloadPlayer()">
-          <span class="refresh-icon">🔄</span>
+        <div class="refresh-control">
+          <button
+            class="refresh"
+            type="button"
+            aria-label="Restart current song"
+            onclick="reloadPlayer()"
+          >
+            <span class="refresh-icon" aria-hidden="true">🔄</span>
+          </button>
+          <span class="player-control-label">Restart</span>
         </div>
 
         <div class="controls">
-          <div class="volume-control-trigger">
+          <div class="volume-control-trigger player-control">
             <button
               class="gray volume-control-button"
               id="volumeControlToggle"
@@ -1892,6 +1944,7 @@
             >
               <span id="volumeControlIcon" aria-hidden="true">🔊</span>
             </button>
+            <span class="player-control-label">Sound</span>
             <div
               class="volume-control"
               id="volumeControlPanel"
@@ -1907,7 +1960,9 @@
                 onclick="toggleMute()"
               >
                 <span id="muteControlIcon" aria-hidden="true">🔊</span>
-                <span id="muteControlLabel">Mute</span>
+                <span id="muteControlLabel" class="player-control-label"
+                  >Mute</span
+                >
               </button>
               <div class="volume-slider-row">
                 <span class="volume-icon" aria-hidden="true">🔉</span>
@@ -1935,23 +1990,29 @@
               </p>
             </div>
           </div>
-          <button
-            class="play"
-            id="playPauseBtn"
-            type="button"
-            aria-label="Play or pause"
-            onclick="togglePlayPause()"
-          >
-            ▶
-          </button>
-          <button
-            class="stop"
-            type="button"
-            aria-label="Skip to next song"
-            onclick="stopPlayer()"
-          >
-            ■
-          </button>
+          <div class="player-control">
+            <button
+              class="play"
+              id="playPauseBtn"
+              type="button"
+              aria-label="Play or pause"
+              onclick="togglePlayPause()"
+            >
+              <span id="playPauseIcon" aria-hidden="true">▶</span>
+            </button>
+            <span class="player-control-label" id="playPauseLabel">Play</span>
+          </div>
+          <div class="player-control">
+            <button
+              class="stop"
+              type="button"
+              aria-label="Skip to next song"
+              onclick="stopPlayer()"
+            >
+              <span aria-hidden="true">■</span>
+            </button>
+            <span class="player-control-label">Next</span>
+          </div>
         </div>
 
         <!-- Hidden audio player for preview -->
@@ -3221,6 +3282,7 @@
         if (refreshButton) {
           refreshButton.classList.toggle("is-disabled", disabled);
           refreshButton.setAttribute("aria-disabled", String(disabled));
+          refreshButton.disabled = disabled;
         }
         document.querySelectorAll(".song-item-btn").forEach((button) => {
           button.disabled = disabled;
@@ -5920,7 +5982,12 @@
           Number(control.playbackPositionUpdatedAt) || 0;
         const button = document.getElementById("playPauseBtn");
         if (button) {
-          button.textContent = playing ? "⏸" : "▶";
+          const icon = document.getElementById("playPauseIcon");
+          const label = document.getElementById("playPauseLabel");
+          const actionLabel = playing ? "Pause" : "Play";
+          if (icon) icon.textContent = playing ? "⏸" : "▶";
+          if (label) label.textContent = actionLabel;
+          button.setAttribute("aria-label", actionLabel);
           button.setAttribute("aria-pressed", String(roomPlaybackIsPlaying));
         }
       }
