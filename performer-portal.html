@@ -4726,7 +4726,7 @@
                 songbookSearchResults,
               )
             : songbookCatalog;
-        return source
+        const sortedSongs = source
           .filter((song) => {
             if (
               songbookSelectedLetter &&
@@ -4743,6 +4743,15 @@
               first.title.localeCompare(second.title) ||
               first.artist.localeCompare(second.artist),
           );
+        const seenTitles = new Set();
+        return sortedSongs.filter((song) => {
+          const titleKey = normalizeSongbookText(
+            cleanSongbookTitle(song.title),
+          );
+          if (!titleKey || seenTitles.has(titleKey)) return false;
+          seenTitles.add(titleKey);
+          return true;
+        });
       }
 
       function renderSongbookAlphabet() {
