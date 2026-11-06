@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const performerOptions = document.getElementById("performerSignInOptions");
+  const roomStatus = document.getElementById("performerRoomStatus");
   const openRequestButton = document.getElementById("showAccountRequestButton");
   const requestForm = document.getElementById("accountRequestPanel");
   const usernameInput = document.getElementById("requestedAccountUsername");
@@ -17,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let requestApprovalAudioContext = null;
   let pendingRequestApprovalSoundId = null;
   let requestCooldownTimeout = null;
+  let roomStatusWasHidden = true;
   const requestLimitStorageKey = "karaoke_account_request_limit_v1";
   const maxAccountRequestsPerDevice = 3;
   const accountRequestCooldownMs = 24 * 60 * 60 * 1000;
@@ -277,6 +279,8 @@ document.addEventListener("DOMContentLoaded", () => {
   openRequestButton.addEventListener("click", () => {
     stopRoomQrScanner();
     performerOptions.hidden = true;
+    roomStatusWasHidden = roomStatus.hidden;
+    roomStatus.hidden = true;
     openRequestButton.hidden = true;
     requestForm.hidden = false;
     const requestId = sessionStorage.getItem("karaoke_account_request_id");
@@ -357,6 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
       stopWatchingRequest = null;
       requestForm.hidden = true;
       performerOptions.hidden = false;
+      roomStatus.hidden = roomStatusWasHidden;
       openRequestButton.hidden = false;
       setDefaultRequestButtonText();
     });

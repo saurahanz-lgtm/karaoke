@@ -142,13 +142,15 @@ Configure these variables for the Vercel Production environment:
 - `FIREBASE_DATABASE_URL`: the Realtime Database URL for this Firebase project.
 - `FIREBASE_SERVICE_ACCOUNT`: the JSON contents of a Firebase service account
   with permission to read and update the Realtime Database.
-- `CRON_SECRET`: a long, random secret used to authorize the cron request.
 
-Add the same `CRON_SECRET` value as a GitHub Actions repository secret under
-Settings > Secrets and variables > Actions. Enable Actions for the repository;
-the schedule runs from the default branch and can also be started manually.
+The GitHub Actions workflow uses a short-lived OIDC token and needs no shared
+repository secret. The endpoint accepts only tokens issued for this repository's
+cleanup workflow on the `master` branch. Enable Actions for the repository; the
+schedule runs from the default branch and can also be started manually.
 Scheduled runs may be delayed, and the five-minute interval means cleanup can
-happen up to roughly five minutes after the configured idle delay.
+happen up to roughly five minutes after the configured idle delay. `CRON_SECRET`
+is still supported as an optional authorization method for external cron
+services or manual requests.
 
 ---
 
