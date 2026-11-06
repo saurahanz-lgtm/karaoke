@@ -1,5 +1,5 @@
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
-const RESPONSE_CACHE_TTL_MS = 5 * 60 * 1000;
+const RESPONSE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 30;
 const responseCache = new Map();
@@ -102,6 +102,41 @@ function toVerifiedSong(video) {
   };
 }
 
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function cleanKaraokeTitle(title) {
+  return String(title || "")
+    .replace(
+      /\s*(?:[-–—|:]\s*)?(?:official\s+)?karaoke(?:\s+version)?\s*$/i,
+      "",
+    )
+    .replace(
+      /\s*\((?:karaoke(?:\s+version)?|instrumental karaoke)\)\s*$/i,
+      "",
+    )
+    .trim();
+}
+
+function matchesSongTitle(title, query) {
+  const normalizedQuery = normalizeSearchText(query);
+  const normalizedTitle = normalizeSearchText(cleanKaraokeTitle(title));
+  return Boolean(
+    normalizedQuery &&
+      (normalizedTitle === normalizedQuery ||
+        normalizedTitle.includes(` ${normalizedQuery} `) ||
+        normalizedTitle.startsWith(`${normalizedQuery} `) ||
+        normalizedTitle.endsWith(` ${normalizedQuery}`)),
+  );
+}
+
 function mapYouTubeError(error) {
   if (error.reason === "quotaExceeded" || error.status === 403) {
     return {
@@ -139,11 +174,10 @@ async function searchVideos(query, pageToken, apiKey) {
     "search",
     {
       part: "snippet",
-      q: `${query} karaoke`,
+      q: `"${query}" karaoke`,
       type: "video",
-      maxResults: 50,
+      maxResults: 25,
       safeSearch: "strict",
-      relevanceLanguage: "en",
       pageToken,
     },
     apiKey,
@@ -169,7 +203,7 @@ async function searchVideos(query, pageToken, apiKey) {
   );
   const results = videoIds
     .map((videoId) => verifiedById.get(videoId))
-    .filter(Boolean);
+    .filter((song) => song && matchesSongTitle(song.title, query));
   return { results, nextPageToken: search.nextPageToken || null };
 }
 
@@ -289,3 +323,4 @@ async function handler(request, response) {
 module.exports = handler;
 module.exports.searchVideos = searchVideos;
 module.exports.toVerifiedSong = toVerifiedSong;
+module.exports.matchesSongTitle = matchesSongTitle;

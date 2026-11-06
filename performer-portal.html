@@ -2259,16 +2259,12 @@
       let currentFavoritePage = 1;
       const SONGBOOK_DISCOVERY_LIMIT = 500;
       const SONGBOOK_VISIBLE_PAGE_SIZE = 24;
-      const SONGBOOK_SEARCH_DEBOUNCE_MS = 350;
       let songbookCatalog = [];
       let songbookSearchResults = [];
       let songbookNextPageToken = null;
       let songbookSearchLoadingMore = false;
       let songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
       let songbookSelectedLetter = "";
-      let songbookLetterSearchActive = false;
-      let songbookLetterSearchLoading = false;
-      let songbookSearchTimer = null;
       let songbookSearchController = null;
       let songbookSearchSequence = 0;
       let songbookSearchQuery = "";
@@ -4722,7 +4718,7 @@
           songbookSearchResults.map((song) => getSongbookSongKey(song)),
         );
         const source =
-          query || songbookLetterSearchActive
+          query
             ? mergeSongbookSongs(
                 query
                   ? songbookCatalog.filter(matchesQuery)
@@ -4773,26 +4769,8 @@
             songbookSelectedLetter =
               songbookSelectedLetter === letter ? "" : letter;
             songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
-            if (!document.getElementById("searchInput").value.trim()) {
-              if (songbookSearchTimer) clearTimeout(songbookSearchTimer);
-              songbookSearchController?.abort();
-              songbookSearchResults = [];
-              songbookNextPageToken = null;
-              songbookSearchLoadingMore = false;
-              songbookSearchError = "";
-              songbookLetterSearchActive = Boolean(
-                songbookSelectedLetter && songbookSelectedLetter !== "#",
-              );
-              songbookLetterSearchLoading = songbookLetterSearchActive;
-            } else {
-              songbookLetterSearchActive = false;
-              songbookLetterSearchLoading = false;
-            }
             renderSongbookAlphabet();
             renderSongbookResults();
-            if (songbookLetterSearchActive) {
-              searchSongbook(letter);
-            }
           });
           alphabet.append(button);
         });
@@ -4808,15 +4786,17 @@
 
         const query =
           document.getElementById("searchInput")?.value.trim() || "";
+        const hasSearchedQuery =
+          normalizeSongbookText(query) ===
+            normalizeSongbookText(songbookSearchQuery) &&
+          Boolean(songbookSearchQuery);
         const filteredSongs = getSongbookFilteredResults();
         const visibleSongs = filteredSongs.slice(0, songbookVisibleLimit);
         statusElement.textContent = query
-          ? `${filteredSongs.length} matching songs from YouTube search results.`
-          : songbookLetterSearchLoading
-            ? `Searching YouTube for songs beginning with ${songbookSelectedLetter}…`
-            : songbookLetterSearchActive
-              ? `${filteredSongs.length} verified songs beginning with ${songbookSelectedLetter}.`
-              : `${filteredSongs.length} discovered songs${songbookSelectedLetter ? ` beginning with ${songbookSelectedLetter}` : ""}.`;
+          ? hasSearchedQuery
+            ? `${filteredSongs.length} exact matching songs from YouTube search results.`
+            : `${filteredSongs.length} saved matches. Press Search to find exact YouTube results.`
+          : `${filteredSongs.length} discovered songs${songbookSelectedLetter ? ` beginning with ${songbookSelectedLetter}` : ""}.`;
         if (songbookSearchError && visibleSongs.length) {
           statusElement.textContent += ` Could not load more songs: ${songbookSearchError}`;
         }
@@ -4826,11 +4806,11 @@
           if (songbookSearchError) {
             emptyMessage = songbookSearchError;
           } else if (query) {
-            emptyMessage = `No verified songs matched “${query}”. Try another title or artist.`;
+            emptyMessage = hasSearchedQuery
+              ? `No verified songs matched “${query}”. Try another title or artist.`
+              : `Type a song title or artist and press Search to find exact matches.`;
           } else if (songbookSelectedLetter) {
-            emptyMessage = songbookLetterSearchActive
-              ? `No verified songs beginning with ${songbookSelectedLetter} were found. Try another letter or search by title or artist.`
-              : `No discovered songs begin with ${songbookSelectedLetter}.`;
+            emptyMessage = `No discovered songs begin with ${songbookSelectedLetter}. Search for songs to add them to your catalog.`;
           } else {
             emptyMessage =
               "Search for a title or artist to discover songs. There is no curated catalog in the database yet.";
@@ -4878,7 +4858,7 @@
 
         loadMoreButton.hidden =
           filteredSongs.length <= songbookVisibleLimit &&
-          !((query || songbookLetterSearchActive) && songbookNextPageToken);
+          !(hasSearchedQuery && songbookNextPageToken);
         loadMoreButton.disabled = songbookSearchLoadingMore;
         loadMoreButton.textContent = songbookSearchLoadingMore
           ? "Loading more songs..."
@@ -4903,7 +4883,6 @@
       }
 
       function resetSongbookFilters() {
-        if (songbookSearchTimer) clearTimeout(songbookSearchTimer);
         songbookSearchController?.abort();
         songbookSearchSequence += 1;
         document.getElementById("searchInput").value = "";
@@ -4913,8 +4892,6 @@
         songbookNextPageToken = null;
         songbookSearchLoadingMore = false;
         songbookSelectedLetter = "";
-        songbookLetterSearchActive = false;
-        songbookLetterSearchLoading = false;
         songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
         renderSongbookAlphabet();
         renderSongbookResults();
@@ -4922,37 +4899,19 @@
       }
 
       function handleSongbookQueryInput() {
-        if (songbookSearchTimer) clearTimeout(songbookSearchTimer);
         songbookSearchController?.abort();
         songbookSearchSequence += 1;
         songbookSearchError = "";
         songbookSearchResults = [];
         songbookSearchLoadingMore = false;
-        songbookLetterSearchActive = false;
-        songbookLetterSearchLoading = false;
-        songbookSearchQuery = document
-          .getElementById("searchInput")
-          .value.trim()
-          .replace(/\s+/g, " ");
+        songbookSearchQuery = "";
         songbookNextPageToken = null;
         songbookVisibleLimit = SONGBOOK_VISIBLE_PAGE_SIZE;
-        if (!songbookSearchQuery) {
-          renderSongbookResults();
-          return;
-        }
-        document.getElementById("songbookStatus").textContent =
-          "Searching verified YouTube results…";
-        document.getElementById("songbookResults").innerHTML =
-          '<p class="songbook-empty-state">Searching…</p>';
-        songbookSearchTimer = setTimeout(
-          () => searchSongbook(songbookSearchQuery),
-          SONGBOOK_SEARCH_DEBOUNCE_MS,
-        );
+        renderSongbookResults();
       }
 
       async function handleSearch(event) {
         event.preventDefault();
-        if (songbookSearchTimer) clearTimeout(songbookSearchTimer);
         songbookSearchController?.abort();
         const query = document
           .getElementById("searchInput")
@@ -4962,8 +4921,8 @@
           renderSongbookResults();
           return;
         }
-        songbookLetterSearchActive = false;
-        songbookLetterSearchLoading = false;
+        songbookSelectedLetter = "";
+        renderSongbookAlphabet();
         await searchSongbook(query);
       }
 
@@ -5007,12 +4966,6 @@
           );
           songbookNextPageToken = page.nextPageToken || null;
           songbookSearchError = "";
-          if (
-            songbookLetterSearchActive &&
-            normalizedQuery === songbookSelectedLetter
-          ) {
-            songbookLetterSearchLoading = false;
-          }
           songbookCatalog = mergeSongbookSongs(
             songbookCatalog,
             page.results,
@@ -5028,7 +4981,6 @@
             songbookSearchResults = [];
             songbookNextPageToken = null;
           }
-          songbookLetterSearchLoading = false;
           renderSongbookResults();
         }
       }
