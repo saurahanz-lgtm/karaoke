@@ -4588,21 +4588,26 @@
       }
 
       function cleanSongbookTitle(value) {
-        return String(value || "")
-          .trim()
-          .replace(
-            /\s*(?:[-–—|:]\s*)?(?:official\s+)?karaoke(?:\s+version)?\s*$/i,
-            "",
-          )
-          .replace(
-            /\s*\((?:karaoke(?:\s+version)?|instrumental karaoke)\)\s*$/i,
-            "",
-          )
-          .trim();
+        let title = String(value || "").trim();
+        let previousTitle;
+        do {
+          previousTitle = title;
+          title = title
+            .replace(
+              /\s*(?:[-\u2013\u2014|:]\s*)?(?:\((?:official\s+)?(?:karaoke(?:\s+(?:version|track))?|instrumental(?:\s+karaoke)?)\)|\[(?:official\s+)?(?:karaoke(?:\s+(?:version|track))?|instrumental(?:\s+karaoke)?)\]|(?:official\s+)?(?:karaoke(?:\s+(?:version|track))?|instrumental(?:\s+karaoke)?))\s*$/i,
+              "",
+            )
+            .trim();
+        } while (title !== previousTitle);
+        return title;
+      }
+
+      function getSongbookTitleKey(song) {
+        return normalizeSongbookText(cleanSongbookTitle(song?.title));
       }
 
       function getSongbookSongKey(song) {
-        const title = normalizeSongbookText(cleanSongbookTitle(song.title));
+        const title = getSongbookTitleKey(song);
         const artist = normalizeSongbookText(song.artist);
         return title ? `${title}::${artist}` : "";
       }
@@ -4744,12 +4749,18 @@
               first.artist.localeCompare(second.artist),
           );
         const seenTitles = new Set();
+        const seenVideoIds = new Set();
         return sortedSongs.filter((song) => {
-          const titleKey = normalizeSongbookText(
-            cleanSongbookTitle(song.title),
-          );
-          if (!titleKey || seenTitles.has(titleKey)) return false;
+          const titleKey = getSongbookTitleKey(song);
+          if (
+            !titleKey ||
+            seenTitles.has(titleKey) ||
+            seenVideoIds.has(song.videoId)
+          ) {
+            return false;
+          }
           seenTitles.add(titleKey);
+          seenVideoIds.add(song.videoId);
           return true;
         });
       }
