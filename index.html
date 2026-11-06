@@ -1859,6 +1859,48 @@
         }
       }
 
+      function welcomeAndNavigate(destinationUrl) {
+        if (
+          !window.speechSynthesis ||
+          typeof SpeechSynthesisUtterance !== "function"
+        ) {
+          window.location.href = destinationUrl;
+          return;
+        }
+
+        let navigationStarted = false;
+        const openRoom = () => {
+          if (navigationStarted) return;
+          navigationStarted = true;
+          clearTimeout(fallbackTimer);
+          window.location.href = destinationUrl;
+        };
+        const fallbackTimer = setTimeout(() => {
+          console.warn(
+            "Welcome speech did not finish; continuing to the signed-in page.",
+          );
+          window.speechSynthesis.cancel();
+          openRoom();
+        }, 6000);
+        const welcome = new SpeechSynthesisUtterance(
+          "Welcome to SD Karaoke.",
+        );
+        welcome.lang = "en-US";
+        welcome.rate = 0.95;
+        welcome.onend = openRoom;
+        welcome.onerror = (error) => {
+          console.warn("Could not play the welcome speech:", error.error);
+          openRoom();
+        };
+
+        try {
+          window.speechSynthesis.speak(welcome);
+        } catch (error) {
+          console.warn("Could not start the welcome speech:", error.message);
+          openRoom();
+        }
+      }
+
       function validateAdminLogin(event) {
         event.preventDefault();
         const adminName = document.getElementById("adminName").value.trim();
@@ -1936,7 +1978,7 @@
                     "karaoke_logged_in_user",
                     JSON.stringify(adminUser),
                   );
-                  window.location.href = "admin-dashboard.html";
+                  welcomeAndNavigate("admin-dashboard.html");
                 },
               );
             });
@@ -2048,7 +2090,9 @@
                       JSON.stringify(singerUser),
                     );
                     closeLoginModal();
-                    window.location.href = `performer-portal.html?room=${encodeURIComponent(roomId)}`;
+                    welcomeAndNavigate(
+                      `performer-portal.html?room=${encodeURIComponent(roomId)}`,
+                    );
                   },
                 );
               },
