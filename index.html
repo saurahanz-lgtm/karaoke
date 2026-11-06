@@ -1859,15 +1859,51 @@
         }
       }
 
-      function welcomeAndNavigate(destinationUrl) {
+      let pendingWelcomeSpeech = null;
+
+      function prepareWelcomeSpeech() {
         if (
           !window.speechSynthesis ||
           typeof SpeechSynthesisUtterance !== "function"
         ) {
+          return;
+        }
+
+        try {
+          window.speechSynthesis.cancel();
+          const welcome = new SpeechSynthesisUtterance(
+            "Welcome to SD Karaoke.",
+          );
+          welcome.lang = "en-US";
+          welcome.rate = 0.95;
+          window.speechSynthesis.speak(welcome);
+          window.speechSynthesis.pause();
+          pendingWelcomeSpeech = welcome;
+        } catch (error) {
+          pendingWelcomeSpeech = null;
+          console.warn("Could not prepare the welcome speech:", error.message);
+        }
+      }
+
+      function cancelWelcomeSpeech() {
+        if (!pendingWelcomeSpeech) return;
+        pendingWelcomeSpeech = null;
+        window.speechSynthesis.cancel();
+      }
+
+      function welcomeAndNavigate(destinationUrl) {
+        if (
+          !window.speechSynthesis ||
+          typeof SpeechSynthesisUtterance !== "function" ||
+          !pendingWelcomeSpeech
+        ) {
+          pendingWelcomeSpeech = null;
           window.location.href = destinationUrl;
           return;
         }
 
+        const welcome = pendingWelcomeSpeech;
+        pendingWelcomeSpeech = null;
         let navigationStarted = false;
         const openRoom = () => {
           if (navigationStarted) return;
@@ -1882,11 +1918,6 @@
           window.speechSynthesis.cancel();
           openRoom();
         }, 6000);
-        const welcome = new SpeechSynthesisUtterance(
-          "Welcome to SD Karaoke.",
-        );
-        welcome.lang = "en-US";
-        welcome.rate = 0.95;
         welcome.onend = openRoom;
         welcome.onerror = (error) => {
           console.warn("Could not play the welcome speech:", error.error);
@@ -1894,7 +1925,7 @@
         };
 
         try {
-          window.speechSynthesis.speak(welcome);
+          window.speechSynthesis.resume();
         } catch (error) {
           console.warn("Could not start the welcome speech:", error.message);
           openRoom();
@@ -1913,6 +1944,7 @@
         }
         if (adminLoginInProgress) return;
         adminLoginInProgress = true;
+        prepareWelcomeSpeech();
 
         console.log("👤 Admin login attempt:", adminName);
 
@@ -1920,6 +1952,7 @@
         forceReloadUsersForLogin(async function (users, loadError) {
           if (loadError) {
             adminLoginInProgress = false;
+            cancelWelcomeSpeech();
             showAppToast(
               "Unable to verify your account with Firebase. Check your connection and try again.",
             );
@@ -1954,6 +1987,7 @@
             checkIfLoggedInElsewhere(adminName, function (isLoggedInElsewhere) {
               if (isLoggedInElsewhere) {
                 adminLoginInProgress = false;
+                cancelWelcomeSpeech();
                 console.log(
                   "❌ Login blocked - user already logged in elsewhere",
                 );
@@ -1969,6 +2003,7 @@
                 (registered) => {
                   if (!registered) {
                     adminLoginInProgress = false;
+                    cancelWelcomeSpeech();
                     showAppToast(
                       "Login could not sync with Firebase. Please try again.",
                     );
@@ -1985,6 +2020,7 @@
           } else {
             adminLoginInProgress = false;
             console.log("❌ Admin user not found or password incorrect");
+            cancelWelcomeSpeech();
             const failure = recordFailedLogin("admin", adminName);
             showAppToast(
               failure.lockedUntil
@@ -2018,6 +2054,7 @@
         }
         if (singerLoginInProgress) return;
         singerLoginInProgress = true;
+        prepareWelcomeSpeech();
 
         console.log("👤 Performer login attempt:", singerUsername);
 
@@ -2025,6 +2062,7 @@
         forceReloadUsersForLogin(async function (users, loadError) {
           if (loadError) {
             singerLoginInProgress = false;
+            cancelWelcomeSpeech();
             showAppToast(
               "Unable to verify your account with Firebase. Check your connection and try again.",
             );
@@ -2046,6 +2084,7 @@
             // Check if user is disabled
             if (singerUser.disabled) {
               singerLoginInProgress = false;
+              cancelWelcomeSpeech();
               console.log(
                 "❌ Performer user is disabled:",
                 singerUser.username,
@@ -2065,6 +2104,7 @@
               function (isLoggedInElsewhere) {
                 if (isLoggedInElsewhere) {
                   singerLoginInProgress = false;
+                  cancelWelcomeSpeech();
                   console.log(
                     "❌ Login blocked - user already logged in elsewhere",
                   );
@@ -2080,6 +2120,7 @@
                   (registered) => {
                     if (!registered) {
                       singerLoginInProgress = false;
+                      cancelWelcomeSpeech();
                       showAppToast(
                         "Login could not sync with Firebase. Please try again.",
                       );
@@ -2100,6 +2141,7 @@
           } else {
             singerLoginInProgress = false;
             console.log("❌ Performer user not found or password incorrect");
+            cancelWelcomeSpeech();
             const failure = recordFailedLogin("singer", singerUsername);
             showAppToast(
               failure.lockedUntil
