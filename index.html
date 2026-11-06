@@ -1859,77 +1859,97 @@
         }
       }
 
-      let pendingWelcomeSpeech = null;
+      let pendingLoginAudioContext = null;
 
-      function prepareWelcomeSpeech() {
-        if (
-          !window.speechSynthesis ||
-          typeof SpeechSynthesisUtterance !== "function"
-        ) {
-          return;
-        }
+      function prepareLoginSound() {
+        const AudioContextConstructor =
+          window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextConstructor) return;
 
         try {
-          window.speechSynthesis.cancel();
-          const welcome = new SpeechSynthesisUtterance(
-            "Welcome to SD Karaoke.",
-          );
-          welcome.lang = "en-US";
-          welcome.rate = 0.95;
-          window.speechSynthesis.speak(welcome);
-          window.speechSynthesis.pause();
-          pendingWelcomeSpeech = welcome;
+          pendingLoginAudioContext = new AudioContextConstructor();
+          pendingLoginAudioContext.resume().catch((error) => {
+            console.warn("Could not enable the login sound:", error.message);
+          });
         } catch (error) {
-          pendingWelcomeSpeech = null;
-          console.warn("Could not prepare the welcome speech:", error.message);
+          pendingLoginAudioContext = null;
+          console.warn("Could not prepare the login sound:", error.message);
         }
       }
 
-      function cancelWelcomeSpeech() {
-        if (!pendingWelcomeSpeech) return;
-        pendingWelcomeSpeech = null;
-        window.speechSynthesis.cancel();
+      function cancelLoginSound() {
+        const audioContext = pendingLoginAudioContext;
+        pendingLoginAudioContext = null;
+        if (audioContext && audioContext.state !== "closed") {
+          audioContext.close().catch((error) => {
+            console.warn("Could not close the login sound:", error.message);
+          });
+        }
       }
 
-      function welcomeAndNavigate(destinationUrl) {
-        if (
-          !window.speechSynthesis ||
-          typeof SpeechSynthesisUtterance !== "function" ||
-          !pendingWelcomeSpeech
-        ) {
-          pendingWelcomeSpeech = null;
-          window.location.href = destinationUrl;
-          return;
-        }
-
-        const welcome = pendingWelcomeSpeech;
-        pendingWelcomeSpeech = null;
+      function playLoginSoundAndNavigate(destinationUrl) {
+        const audioContext = pendingLoginAudioContext;
+        pendingLoginAudioContext = null;
         let navigationStarted = false;
-        const openRoom = () => {
+        const navigate = () => {
           if (navigationStarted) return;
           navigationStarted = true;
-          clearTimeout(fallbackTimer);
           window.location.href = destinationUrl;
         };
         const fallbackTimer = setTimeout(() => {
-          console.warn(
-            "Welcome speech did not finish; continuing to the signed-in page.",
-          );
-          window.speechSynthesis.cancel();
-          openRoom();
-        }, 6000);
-        welcome.onend = openRoom;
-        welcome.onerror = (error) => {
-          console.warn("Could not play the welcome speech:", error.error);
-          openRoom();
+          console.warn("Login sound timed out; continuing to the signed-in page.");
+          finish();
+        }, 1200);
+        const finish = () => {
+          clearTimeout(fallbackTimer);
+          if (audioContext && audioContext.state !== "closed") {
+            audioContext.close().catch((error) => {
+              console.warn("Could not close the login sound:", error.message);
+            });
+          }
+          navigate();
         };
 
-        try {
-          window.speechSynthesis.resume();
-        } catch (error) {
-          console.warn("Could not start the welcome speech:", error.message);
-          openRoom();
+        if (!audioContext) {
+          finish();
+          return;
         }
+
+        audioContext
+          .resume()
+          .then(() => {
+            if (audioContext.state !== "running") {
+              finish();
+              return;
+            }
+
+            const startAt = audioContext.currentTime;
+            [880, 1174].forEach((frequency, index) => {
+              const oscillator = audioContext.createOscillator();
+              const volume = audioContext.createGain();
+              const toneStart = startAt + index * 0.12;
+              oscillator.type = "sine";
+              oscillator.frequency.setValueAtTime(frequency, toneStart);
+              volume.gain.setValueAtTime(0.0001, toneStart);
+              volume.gain.exponentialRampToValueAtTime(
+                0.16,
+                toneStart + 0.015,
+              );
+              volume.gain.exponentialRampToValueAtTime(
+                0.0001,
+                toneStart + 0.2,
+              );
+              oscillator.connect(volume);
+              volume.connect(audioContext.destination);
+              oscillator.start(toneStart);
+              oscillator.stop(toneStart + 0.22);
+            });
+            setTimeout(finish, 420);
+          })
+          .catch((error) => {
+            console.warn("Could not play the login sound:", error.message);
+            finish();
+          });
       }
 
       function validateAdminLogin(event) {
@@ -1944,7 +1964,7 @@
         }
         if (adminLoginInProgress) return;
         adminLoginInProgress = true;
-        prepareWelcomeSpeech();
+        prepareLoginSound();
 
         console.log("👤 Admin login attempt:", adminName);
 
@@ -1952,7 +1972,7 @@
         forceReloadUsersForLogin(async function (users, loadError) {
           if (loadError) {
             adminLoginInProgress = false;
-            cancelWelcomeSpeech();
+            cancelLoginSound();
             showAppToast(
               "Unable to verify your account with Firebase. Check your connection and try again.",
             );
@@ -1987,7 +2007,7 @@
             checkIfLoggedInElsewhere(adminName, function (isLoggedInElsewhere) {
               if (isLoggedInElsewhere) {
                 adminLoginInProgress = false;
-                cancelWelcomeSpeech();
+                cancelLoginSound();
                 console.log(
                   "❌ Login blocked - user already logged in elsewhere",
                 );
@@ -2003,7 +2023,7 @@
                 (registered) => {
                   if (!registered) {
                     adminLoginInProgress = false;
-                    cancelWelcomeSpeech();
+                    cancelLoginSound();
                     showAppToast(
                       "Login could not sync with Firebase. Please try again.",
                     );
@@ -2013,14 +2033,14 @@
                     "karaoke_logged_in_user",
                     JSON.stringify(adminUser),
                   );
-                  welcomeAndNavigate("admin-dashboard.html");
+                  playLoginSoundAndNavigate("admin-dashboard.html");
                 },
               );
             });
           } else {
             adminLoginInProgress = false;
             console.log("❌ Admin user not found or password incorrect");
-            cancelWelcomeSpeech();
+            cancelLoginSound();
             const failure = recordFailedLogin("admin", adminName);
             showAppToast(
               failure.lockedUntil
@@ -2054,7 +2074,7 @@
         }
         if (singerLoginInProgress) return;
         singerLoginInProgress = true;
-        prepareWelcomeSpeech();
+        prepareLoginSound();
 
         console.log("👤 Performer login attempt:", singerUsername);
 
@@ -2062,7 +2082,7 @@
         forceReloadUsersForLogin(async function (users, loadError) {
           if (loadError) {
             singerLoginInProgress = false;
-            cancelWelcomeSpeech();
+            cancelLoginSound();
             showAppToast(
               "Unable to verify your account with Firebase. Check your connection and try again.",
             );
@@ -2084,7 +2104,7 @@
             // Check if user is disabled
             if (singerUser.disabled) {
               singerLoginInProgress = false;
-              cancelWelcomeSpeech();
+              cancelLoginSound();
               console.log(
                 "❌ Performer user is disabled:",
                 singerUser.username,
@@ -2104,7 +2124,7 @@
               function (isLoggedInElsewhere) {
                 if (isLoggedInElsewhere) {
                   singerLoginInProgress = false;
-                  cancelWelcomeSpeech();
+                  cancelLoginSound();
                   console.log(
                     "❌ Login blocked - user already logged in elsewhere",
                   );
@@ -2120,7 +2140,7 @@
                   (registered) => {
                     if (!registered) {
                       singerLoginInProgress = false;
-                      cancelWelcomeSpeech();
+                      cancelLoginSound();
                       showAppToast(
                         "Login could not sync with Firebase. Please try again.",
                       );
@@ -2131,7 +2151,7 @@
                       JSON.stringify(singerUser),
                     );
                     closeLoginModal();
-                    welcomeAndNavigate(
+                    playLoginSoundAndNavigate(
                       `performer-portal.html?room=${encodeURIComponent(roomId)}`,
                     );
                   },
@@ -2141,7 +2161,7 @@
           } else {
             singerLoginInProgress = false;
             console.log("❌ Performer user not found or password incorrect");
-            cancelWelcomeSpeech();
+            cancelLoginSound();
             const failure = recordFailedLogin("singer", singerUsername);
             showAppToast(
               failure.lockedUntil
