@@ -1457,6 +1457,16 @@
         .catch(() => {});
       await memberRef.remove();
     }
+    if (targetRoomId) {
+      try {
+        await markRoomEmptySince(targetRoomId);
+      } catch (error) {
+        console.warn(
+          "Could not start room idle timer after leaving:",
+          error.message,
+        );
+      }
+    }
     if (!roomId || roomId === joinedRoomId) {
       joinedRoomId = null;
       joinedMemberRef = null;

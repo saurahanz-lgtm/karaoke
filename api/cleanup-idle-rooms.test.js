@@ -93,3 +93,17 @@ test("idle room cleanup respects activity and the configured delay", () => {
     null,
   );
 });
+
+test("scheduled cleanup starts an idle timer without a client listener", () => {
+  const now = 1000000;
+  const room = { queue: [{ videoId: "queued-song" }] };
+
+  const idleRoom = updateIdleRoomSession(room, now, 180000);
+  assert.equal(idleRoom.emptySince, now);
+  assert.deepEqual(updateIdleRoomSession(idleRoom, now + 180000, 180000), {
+    ...idleRoom,
+    queue: null,
+    currentSong: null,
+    emptySince: null,
+  });
+});

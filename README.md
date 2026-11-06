@@ -136,6 +136,9 @@ The `/api/cleanup-idle-rooms` endpoint clears a room's queued and current songs
 after the configured idle delay (three minutes by default). A GitHub Actions
 workflow invokes it every five minutes, independently of the karaoke display
 and admin panel. This avoids Vercel Hobby's once-per-day cron limit.
+When the last performer leaves normally, the room idle timer is saved
+immediately; scheduled cleanup also starts the timer when a room becomes empty
+after an unexpected disconnect.
 
 Configure these variables for the Vercel Production environment:
 
